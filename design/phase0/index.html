@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lecturer.bd — Phase 0 design directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Hind+Siliguri:wght@400;500;600&family=Newsreader:opsz,wght@6..72,600&family=Noto+Serif+Bengali:wght@600&family=Manrope:wght@700;800&family=Anek+Bangla:wght@600;700&family=Noto+Sans+Bengali:wght@400;500&family=Baloo+Da+2:wght@600;700&family=Nunito+Sans:wght@400;600&display=swap">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#EEF0F3;color:#1F2937;font:16px/1.6 Inter,system-ui,sans-serif}
+  .wrap{max-width:1240px;margin:0 auto;padding:40px 24px 80px}
+  h1{font-size:30px;line-height:1.25;margin:0}
+  .lead{margin:10px 0 0;color:#4B5563;max-width:62em}
+  .how{display:flex;flex-wrap:wrap;gap:10px 22px;margin:18px 0 0;padding:0;list-style:none;color:#374151;font-size:14.5px}
+  .how li{display:flex;gap:8px}
+  .how b{color:#111827}
+  .dir{margin-top:34px;background:#fff;border:1px solid #E2E5EA;border-radius:18px;overflow:hidden}
+  .dir-head{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:28px;padding:26px 28px;border-bottom:1px solid #EDEFF2}
+  .tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.06em;color:#6B7280}
+  .name{margin:4px 0 0;font-size:24px;line-height:1.3}
+  .name span{font-weight:500;color:#6B7280;font-size:18px}
+  .mood{margin:8px 0 0;color:#4B5563;font-size:14.5px}
+  .label{font-size:12px;font-weight:700;letter-spacing:.06em;color:#6B7280;margin-bottom:10px}
+  .sw{display:flex;gap:8px;flex-wrap:wrap}
+  .sw div{width:62px}
+  .sw i{display:block;height:44px;border-radius:10px;border:1px solid rgba(0,0,0,.08)}
+  .sw small{display:block;margin-top:4px;font-size:11px;color:#6B7280;line-height:1.3}
+  .spec .h{font-size:26px;line-height:1.35}
+  .spec .b{margin-top:4px;font-size:15px;color:#374151}
+  .spec .f{margin-top:8px;font-size:12.5px;color:#6B7280}
+  .shots{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;padding:22px 28px 26px;background:#F8F9FA}
+  .shot{display:flex;flex-direction:column;gap:10px}
+  .shot a.thumb{display:block;height:300px;border-radius:12px;overflow:hidden;border:1px solid #E2E5EA;background:#fff;box-shadow:0 6px 18px -10px rgba(15,23,42,.25)}
+  .shot img{width:100%;height:100%;object-fit:cover;object-position:top}
+  .links{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13.5px}
+  .links a{color:#1D4ED8;text-decoration:none;font-weight:600}
+  .links span{color:#374151;font-weight:600}
+  @media (max-width:900px){.dir-head{grid-template-columns:1fr}.shots{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Lecturer.bd — three design directions</h1>
+  <p class="lead">The same three screens in three looks: a teacher's public website (lecturer.bd/tanvir), a student's chapter page with MCQ and CQ math, and the teacher dashboard. The teacher, students and numbers are made up. Pick one direction, or mix (e.g. "A's colours with B's dashboard menu"). Everything after this is built on the pick.</p>
+  <ul class="how">
+    <li><b>Live pages:</b> click a thumbnail's "open" link; the dark switcher at the bottom-left flips A / B / C and pages.</li>
+    <li><b>Phone view:</b> each "phone" image shows the whole 360px-wide page in columns.</li>
+  </ul>
+
+  <section class="dir">
+    <div class="dir-head">
+      <div>
+        <span class="tag">DIRECTION A</span>
+        <h2 class="name">Ink &amp; Paper <span>কালি ও কাগজ</span></h2>
+        <p class="mood">Editorial and academic, like a well-made textbook: warm paper, ink text, deep teal, antique-gold rules, serif headings. Calm, credible, timeless.</p>
+      </div>
+      <div>
+        <div class="label">PALETTE</div>
+        <div class="sw">
+          <div><i style="background:#F7F3EA"></i><small>paper #F7F3EA</small></div>
+          <div><i style="background:#1E2A2F"></i><small>ink #1E2A2F</small></div>
+          <div><i style="background:#1C5D5B"></i><small>teal #1C5D5B</small></div>
+          <div><i style="background:#B0822F"></i><small>gold #B0822F</small></div>
+          <div><i style="background:#E2EEEA"></i><small>soft #E2EEEA</small></div>
+        </div>
+      </div>
+      <div class="spec">
+        <div class="label">TYPE</div>
+        <div class="h" style="font-family:Newsreader,'Noto Serif Bengali',serif;font-weight:600">তানভীর আহমেদ · Physics</div>
+        <div class="b" style="font-family:Inter,'Hind Siliguri',sans-serif">সূত্র মুখস্থ নয়—ধারণা বুঝে প্রস্তুতি। Clear, readable body text.</div>
+        <div class="f">Headings: Newsreader + Noto Serif Bengali · Body: Inter + Hind Siliguri</div>
+      </div>
+    </div>
+    <div class="shots">
+      <div class="shot"><a class="thumb" href="screens/a-teacher-home-1280.png"><img src="screens/a-teacher-home-1280.png" alt="A teacher website"></a><div class="links"><span>Teacher website</span><a href="teacher-home.html?d=a">open</a><a href="screens/a-teacher-home-1280.png">desktop</a><a href="screens/a-teacher-home-360.png">phone</a></div></div>
+      <div class="shot"><a class="thumb" href="screens/a-chapter-1280.png"><img src="screens/a-chapter-1280.png" alt="A chapter page"></a><div class="links"><span>Chapter page</span><a href="chapter.html?d=a">open</a><a href="screens/a-chapter-1280.png">desktop</a><a href="screens/a-chapter-360.png">phone</a></div></div>
+      <div class="shot"><a class="thumb" href="screens/a-dashboard-1280.png"><img src="screens/a-dashboard-1280.png" alt="A dashboard"></a><div class="links"><span>Dashboard</span><a href="dashboard.html?d=a">open</a><a href="screens/a-dashboard-1280.png">desktop</a><a href="screens/a-dashboard-360.png">phone</a></div></div>
+    </div>
+  </section>
+
+  <section class="dir">
+    <div class="dir-head">
+      <div>
+        <span class="tag">DIRECTION B</span>
+        <h2 class="name">Mist <span>কুয়াশা</span></h2>
+        <p class="mood">Modern product feel: cool misty blue-grey, steel blue with a soft teal accent, bold sans headings, gentle depth. The dashboard has a deep navy menu.</p>
+      </div>
+      <div>
+        <div class="label">PALETTE</div>
+        <div class="sw">
+          <div><i style="background:#F3F6F9"></i><small>mist #F3F6F9</small></div>
+          <div><i style="background:#13212F"></i><small>ink #13212F</small></div>
+          <div><i style="background:#2B5C8A"></i><small>steel #2B5C8A</small></div>
+          <div><i style="background:#3E9C9E"></i><small>teal #3E9C9E</small></div>
+          <div><i style="background:#12233A"></i><small>navy #12233A</small></div>
+        </div>
+      </div>
+      <div class="spec">
+        <div class="label">TYPE</div>
+        <div class="h" style="font-family:Manrope,'Anek Bangla',sans-serif;font-weight:800;letter-spacing:-.02em">তানভীর আহমেদ · Physics</div>
+        <div class="b" style="font-family:Inter,'Noto Sans Bengali',sans-serif">সূত্র মুখস্থ নয়—ধারণা বুঝে প্রস্তুতি। Clear, readable body text.</div>
+        <div class="f">Headings: Manrope + Anek Bangla · Body: Inter + Noto Sans Bengali</div>
+      </div>
+    </div>
+    <div class="shots">
+      <div class="shot"><a class="thumb" href="screens/b-teacher-home-1280.png"><img src="screens/b-teacher-home-1280.png" alt="B teacher website"></a><div class="links"><span>Teacher website</span><a href="teacher-home.html?d=b">open</a><a href="screens/b-teacher-home-1280.png">desktop</a><a href="screens/b-teacher-home-360.png">phone</a></div></div>
+      <div class="shot"><a class="thumb" href="screens/b-chapter-1280.png"><img src="screens/b-chapter-1280.png" alt="B chapter page"></a><div class="links"><span>Chapter page</span><a href="chapter.html?d=b">open</a><a href="screens/b-chapter-1280.png">desktop</a><a href="screens/b-chapter-360.png">phone</a></div></div>
+      <div class="shot"><a class="thumb" href="screens/b-dashboard-1280.png"><img src="screens/b-dashboard-1280.png" alt="B dashboard"></a><div class="links"><span>Dashboard</span><a href="dashboard.html?d=b">open</a><a href="screens/b-dashboard-1280.png">desktop</a><a href="screens/b-dashboard-360.png">phone</a></div></div>
+    </div>
+  </section>
+
+  <section class="dir">
+    <div class="dir-head">
+      <div>
+        <span class="tag">DIRECTION C</span>
+        <h2 class="name">Sage <span>সবুজ পাতা</span></h2>
+        <p class="mood">A friendly study room: sage green and warm sand, rounded shapes and pill buttons, soft pastel course covers. Approachable for school students.</p>
+      </div>
+      <div>
+        <div class="label">PALETTE</div>
+        <div class="sw">
+          <div><i style="background:#F6F4EE"></i><small>sand #F6F4EE</small></div>
+          <div><i style="background:#1F2D26"></i><small>ink #1F2D26</small></div>
+          <div><i style="background:#3F6E55"></i><small>sage #3F6E55</small></div>
+          <div><i style="background:#D49A4E"></i><small>ochre #D49A4E</small></div>
+          <div><i style="background:#E4EEE6"></i><small>soft #E4EEE6</small></div>
+        </div>
+      </div>
+      <div class="spec">
+        <div class="label">TYPE</div>
+        <div class="h" style="font-family:'Baloo Da 2','Hind Siliguri',sans-serif;font-weight:700">তানভীর আহমেদ · Physics</div>
+        <div class="b" style="font-family:'Nunito Sans','Hind Siliguri',sans-serif">সূত্র মুখস্থ নয়—ধারণা বুঝে প্রস্তুতি। Clear, readable body text.</div>
+        <div class="f">Headings: Baloo Da 2 · Body: Nunito Sans + Hind Siliguri</div>
+      </div>
+    </div>
+    <div class="shots">
+      <div class="shot"><a class="thumb" href="screens/c-teacher-home-1280.png"><img src="screens/c-teacher-home-1280.png" alt="C teacher website"></a><div class="links"><span>Teacher website</span><a href="teacher-home.html?d=c">open</a><a href="screens/c-teacher-home-1280.png">desktop</a><a href="screens/c-teacher-home-360.png">phone</a></div></div>
+      <div class="shot"><a class="thumb" href="screens/c-chapter-1280.png"><img src="screens/c-chapter-1280.png" alt="C chapter page"></a><div class="links"><span>Chapter page</span><a href="chapter.html?d=c">open</a><a href="screens/c-chapter-1280.png">desktop</a><a href="screens/c-chapter-360.png">phone</a></div></div>
+      <div class="shot"><a class="thumb" href="screens/c-dashboard-1280.png"><img src="screens/c-dashboard-1280.png" alt="C dashboard"></a><div class="links"><span>Dashboard</span><a href="dashboard.html?d=c">open</a><a href="screens/c-dashboard-1280.png">desktop</a><a href="screens/c-dashboard-360.png">phone</a></div></div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

@@ -1,0 +1,39 @@
+# dependencies
+node_modules/
+
+# Next.js and build output
+.next/
+out/
+build/
+dist/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+
+# environment files: real values never go into git, only .env.example
+.env
+.env.*
+!.env.example
+
+# Android / Gradle (scanner app)
+.gradle/
+local.properties
+keystore.properties
+*.jks
+*.keystore
+*.apk
+*.aab
+.cxx/
+.externalNativeBuild/
+captures/
+
+# editors and OS
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
+npm-debug.log*
