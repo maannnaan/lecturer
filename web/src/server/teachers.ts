@@ -135,9 +135,14 @@ export async function resolveHandle(
 export async function lookupHandle(
   db: Database,
   handle: string,
-): Promise<{ current: boolean; currentHandle: string; status: TeacherStatus } | null> {
+): Promise<{ teacherId: string; current: boolean; currentHandle: string; status: TeacherStatus } | null> {
   const [row] = await db
-    .select({ current: handles.current, currentHandle: teachers.handle, status: teachers.status })
+    .select({
+      teacherId: teachers.id,
+      current: handles.current,
+      currentHandle: teachers.handle,
+      status: teachers.status,
+    })
     .from(handles)
     .innerJoin(teachers, eq(teachers.id, handles.teacherId))
     .where(eq(handles.handle, handle))

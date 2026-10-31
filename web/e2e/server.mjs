@@ -5,9 +5,11 @@ import { execSync, spawn } from "node:child_process";
 import { rmSync } from "node:fs";
 
 const port = process.env.PORT ?? "3124";
-const env = { ...process.env, PGLITE_DIR: ".data/e2e" };
+// Photos are stored on local disk for the tests (production uses Cloudinary).
+const env = { ...process.env, PGLITE_DIR: ".data/e2e", LOCAL_UPLOADS: "1", UPLOADS_DIR: ".data/e2e-uploads" };
 
 rmSync(".data/e2e", { recursive: true, force: true });
+rmSync(".data/e2e-uploads", { recursive: true, force: true });
 execSync("npx tsx scripts/seed-demo.ts", { env, stdio: "inherit" });
 
 const server = spawn("npx", ["next", "start", "-p", port], { env, stdio: "inherit", shell: true });

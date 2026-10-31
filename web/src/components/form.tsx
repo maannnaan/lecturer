@@ -1,7 +1,132 @@
 "use client";
 
-import type { InputHTMLAttributes, ReactNode } from "react";
+import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { useFormStatus } from "react-dom";
+
+/** What a dashboard form action answers: per-field messages, what was typed, or a success flag. */
+export type FormState = {
+  ok?: boolean;
+  errors: Record<string, string>;
+  /** What was submitted, so a refused form comes back as the teacher typed it. */
+  values?: Record<string, string>;
+  formError?: string;
+};
+
+export const emptyForm: FormState = { errors: {} };
+
+/** The "saved" line or the form-wide error, announced to screen readers. */
+export function FormMessages({ state, saved }: { state: FormState; saved: string }) {
+  if (state.formError)
+    return (
+      <p className="form-alert" role="alert">
+        {state.formError}
+      </p>
+    );
+  if (state.ok)
+    return (
+      <p className="form-ok" role="status">
+        {saved}
+      </p>
+    );
+  return null;
+}
+
+function describedBy(id: string, hint?: string, error?: string) {
+  return [error && `${id}-error`, hint && `${id}-hint`].filter(Boolean).join(" ") || undefined;
+}
+
+function FieldFrame({
+  id,
+  label,
+  labelNote,
+  hint,
+  error,
+  children,
+}: {
+  id: string;
+  label: string;
+  labelNote?: string;
+  hint?: string;
+  error?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="field">
+      <label className="field-label" htmlFor={id}>
+        {label}
+        {labelNote && <span className="optional"> ({labelNote})</span>}
+      </label>
+      {children}
+      {error && (
+        <p className="field-error" id={`${id}-error`}>
+          {error}
+        </p>
+      )}
+      {hint && (
+        <p className="field-hint" id={`${id}-hint`}>
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function TextAreaField({
+  name,
+  label,
+  hint,
+  error,
+  labelNote,
+  id = name,
+  rows = 5,
+  ...rest
+}: TextareaHTMLAttributes<HTMLTextAreaElement> & {
+  name: string;
+  label: string;
+  hint?: string;
+  error?: string;
+  labelNote?: string;
+}) {
+  return (
+    <FieldFrame id={id} label={label} labelNote={labelNote} hint={hint} error={error}>
+      <textarea
+        id={id}
+        name={name}
+        rows={rows}
+        className="input"
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy(id, hint, error)}
+        {...rest}
+      />
+    </FieldFrame>
+  );
+}
+
+export function SelectField({
+  name,
+  label,
+  options,
+  error,
+  id = name,
+  ...rest
+}: SelectHTMLAttributes<HTMLSelectElement> & {
+  name: string;
+  label: string;
+  options: { value: string; label: string }[];
+  error?: string;
+}) {
+  return (
+    <FieldFrame id={id} label={label} error={error}>
+      <select id={id} name={name} className="input" aria-invalid={error ? true : undefined} {...rest}>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </FieldFrame>
+  );
+}
 
 type FieldProps = InputHTMLAttributes<HTMLInputElement> & {
   name: string;

@@ -4,6 +4,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   BookOpen,
   ExternalLink,
+  Globe,
   House,
   Layers,
   LayoutDashboard,
@@ -23,6 +24,7 @@ import { getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { requireTeacher } from "@/server/auth/current";
 import { logoutAction } from "./actions";
+import { NavLink } from "./nav-link";
 
 // Everything here belongs to the signed-in teacher, so it renders per request.
 export const instant = false;
@@ -57,14 +59,24 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             <ExternalLink className="ml-auto size-4" aria-hidden="true" />
           </Link>
 
-          <Link href="/dashboard" className="side-link" aria-current="page">
+          <NavLink href="/dashboard" exact className="side-link">
             <LayoutDashboard aria-hidden="true" />
             {t.nav.overview}
-          </Link>
+          </NavLink>
           <p className="side-label">{t.groups.teaching}</p>
-          {soon(BookOpen, t.nav.courses)}
+          <NavLink href="/dashboard/courses" className="side-link">
+            <BookOpen aria-hidden="true" />
+            {t.nav.courses}
+          </NavLink>
           {soon(Library, t.nav.bank)}
-          {soon(Megaphone, t.nav.website)}
+          <NavLink href="/dashboard/website" className="side-link">
+            <Globe aria-hidden="true" />
+            {t.nav.website}
+          </NavLink>
+          <NavLink href="/dashboard/notices" className="side-link">
+            <Megaphone aria-hidden="true" />
+            {t.nav.notices}
+          </NavLink>
           <p className="side-label">{t.groups.students}</p>
           {soon(Users, t.nav.students)}
           {soon(Layers, t.nav.batches)}
@@ -110,25 +122,25 @@ export default async function DashboardLayout({ children }: { children: ReactNod
       </div>
 
       <nav className="bottom-nav" aria-label={d.common.menu}>
-        <Link href="/dashboard" aria-current="page">
+        <NavLink href="/dashboard" exact>
           <House aria-hidden="true" />
           {t.mobileNav.home}
-        </Link>
+        </NavLink>
+        <NavLink href="/dashboard/courses">
+          <BookOpen aria-hidden="true" />
+          {t.nav.courses}
+        </NavLink>
+        <NavLink href="/dashboard/website">
+          <Globe aria-hidden="true" />
+          {t.nav.website}
+        </NavLink>
+        <NavLink href="/dashboard/notices">
+          <Megaphone aria-hidden="true" />
+          {t.nav.notices}
+        </NavLink>
         <span aria-disabled="true">
           <Users aria-hidden="true" />
           {t.mobileNav.students}
-        </span>
-        <span aria-disabled="true">
-          <Library aria-hidden="true" />
-          {t.mobileNav.questions}
-        </span>
-        <span aria-disabled="true">
-          <Radio aria-hidden="true" />
-          {t.mobileNav.exams}
-        </span>
-        <span aria-disabled="true">
-          <Wallet aria-hidden="true" />
-          {t.mobileNav.payments}
         </span>
       </nav>
     </div>

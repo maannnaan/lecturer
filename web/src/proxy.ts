@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { RESERVED_HANDLES } from "@/lib/handles";
 import { ADMIN_COOKIE, TEACHER_COOKIE } from "@/server/auth/cookies";
+import { courseVisibility } from "@/server/courses";
 import { getDb } from "@/server/db";
 import { lookupHandle } from "@/server/teachers";
 
@@ -31,12 +32,19 @@ export async function proxy(request: NextRequest) {
   const handle = first.toLowerCase();
   if (handle !== first) return redirect(request, `/${handle}${tail}${search}`, 308);
 
-  const site = await lookupHandle(await getDb(), handle);
+  const db = await getDb();
+  const site = await lookupHandle(db, handle);
   if (!site) return notFound(request);
   if (!site.current) return redirect(request, `/${site.currentHandle}${tail}${search}`, 308);
-  // An unapproved site is visible only to its owner, who would arrive signed in.
-  if ((site.status === "pending" || site.status === "rejected") && !request.cookies.has(TEACHER_COOKIE)) {
-    return notFound(request);
+  // An unapproved site, or a draft course, is visible only to its owner, who would arrive signed in.
+  const signedIn = request.cookies.has(TEACHER_COOKIE);
+  if ((site.status === "pending" || site.status === "rejected") && !signedIn) return notFound(request);
+
+  // lecturer.bd/<handle>/courses/<number>
+  if (rest[0] === "courses" && rest.length === 2) {
+    if (!/^\d{1,6}$/.test(rest[1])) return notFound(request);
+    const course = await courseVisibility(db, site.teacherId, Number(rest[1]));
+    if (!course || (course === "draft" && !signedIn)) return notFound(request);
   }
   return NextResponse.next();
 }

@@ -8,6 +8,13 @@
       "when": 1793387367418,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793389541804,
+      "tag": "0001_site_courses_notices",
+      "breakpoints": true
     }
   ]
 }

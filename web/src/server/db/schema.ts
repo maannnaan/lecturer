@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  date,
   index,
   integer,
   jsonb,
@@ -34,8 +35,42 @@ export const admins = pgTable(
   (t) => [uniqueIndex("admins_email_key").on(t.email)],
 );
 
-/** What the teacher's own website shows beyond the account fields. Filled in from Phase 2. */
-export type TeacherSite = Record<string, unknown>;
+export type SiteStat = { value: string; label: string };
+export type RoutineRow = { batch: string; days: string; time: string };
+export type SiteContact = {
+  phone?: string;
+  whatsapp?: string;
+  email?: string;
+  facebook?: string;
+  youtube?: string;
+  address?: string;
+  hours?: string;
+};
+
+/**
+ * What the teacher's own website shows beyond the account fields. Every part is optional: a
+ * section with nothing in it is simply left off the site. Validated in src/lib/site.ts.
+ */
+export type TeacherSite = {
+  /** e.g. "প্রভাষক, পদার্থবিজ্ঞান" */
+  designation?: string;
+  /** One line under the name. */
+  tagline?: string;
+  /** Plain paragraphs for now; becomes rich text with the Phase 3 editor. */
+  about?: string;
+  /** e.g. "মিরপুর-১০, ঢাকা" */
+  location?: string;
+  /** e.g. "ভর্তি চলছে: এইচএসসি ২০২৮" */
+  admission?: string;
+  /** The one achievement shown on the photo, e.g. { value: "৪২ জন জিপিএ-৫", label: "এইচএসসি ২০২৫" }. */
+  highlight?: SiteStat | null;
+  /** Up to four figures under the hero. */
+  stats?: SiteStat[];
+  photo?: { mediaId: string; url: string } | null;
+  contact?: SiteContact;
+  /** The class schedule table: which batch meets when. */
+  routine?: RoutineRow[];
+};
 
 /**
  * A teacher is a tenant: every course, question, student and payment hangs off one of these rows.
@@ -63,6 +98,8 @@ export const teachers = pgTable(
     /** The language the teacher's website opens in; a visitor's own choice overrides it. */
     locale: localeName("locale").notNull().default("bn"),
     site: jsonb("site").$type<TeacherSite>().notNull().default({}),
+    /** The last course number handed out; numbers are never reused, so old links never repoint. */
+    courseCounter: integer("course_counter").notNull().default(0),
     approvedAt: timestamp("approved_at", { withTimezone: true }),
     trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
     createdAt: createdAt(),
@@ -142,6 +179,121 @@ export const sessions = pgTable(
         or (${t.kind} = 'student' and ${t.studentId} is not null and ${t.teacherId} is not null and ${t.adminId} is null)`,
     ),
   ],
+);
+
+export const courseAccess = pgEnum("course_access", ["free", "approval", "paid"]);
+export const pricePeriod = pgEnum("price_period", ["one_time", "monthly"]);
+export const chapterStatus = pgEnum("chapter_status", ["upcoming", "ongoing", "done"]);
+export const mediaStorage = pgEnum("media_storage", ["cloudinary", "local"]);
+
+/**
+ * A course a teacher runs, e.g. HSC Physics 1st paper. Its public address is
+ * lecturer.bd/<handle>/courses/<number>; the number comes from teachers.course_counter and is
+ * never reused. `access` and the price are shown now and enforced from Phase 4.
+ */
+export const courses = pgTable(
+  "courses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => teachers.id, { onDelete: "cascade" }),
+    number: integer("number").notNull(),
+    title: text("title").notNull(),
+    /** e.g. "এইচএসসি", "এসএসসি", "Class 8" */
+    level: text("level").notNull().default(""),
+    /** e.g. "এইচএসসি ২০২৮ ব্যাচ · সেপ্টেম্বর–ফেব্রুয়ারি" */
+    session: text("session").notNull().default(""),
+    description: text("description").notNull().default(""),
+    /** One of COURSE_ICONS in src/lib/courses.ts. */
+    icon: text("icon").notNull().default("book-open"),
+    /** Which of the theme's four cover colours, 1–4. */
+    cover: integer("cover").notNull().default(1),
+    access: courseAccess("access").notNull().default("approval"),
+    /** Taka; 0 for a free course. */
+    price: integer("price").notNull().default(0),
+    pricePeriod: pricePeriod("price_period").notNull().default("monthly"),
+    published: boolean("published").notNull().default(false),
+    position: integer("position").notNull().default(0),
+    /** The last chapter number handed out in this course. */
+    chapterCounter: integer("chapter_counter").notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("courses_teacher_number_key").on(t.teacherId, t.number),
+    index("courses_teacher_position_idx").on(t.teacherId, t.position),
+  ],
+);
+
+/**
+ * A chapter of a course, in the order the teacher teaches it. `number` is its stable address
+ * inside the course (chapter pages arrive in Phase 3); `label` overrides the shown "অধ্যায় N",
+ * which otherwise follows the chapter's position.
+ */
+export const chapters = pgTable(
+  "chapters",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => teachers.id, { onDelete: "cascade" }),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    number: integer("number").notNull(),
+    label: text("label").notNull().default(""),
+    title: text("title").notNull(),
+    position: integer("position").notNull().default(0),
+    status: chapterStatus("status").notNull().default("upcoming"),
+    startsOn: date("starts_on"),
+    endsOn: date("ends_on"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("chapters_course_number_key").on(t.courseId, t.number),
+    index("chapters_course_position_idx").on(t.courseId, t.position),
+    index("chapters_teacher_idx").on(t.teacherId),
+  ],
+);
+
+/** A notice on the teacher's website: a class moved, results out, admissions open. */
+export const notices = pgTable(
+  "notices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => teachers.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    body: text("body").notNull().default(""),
+    pinned: boolean("pinned").notNull().default(false),
+    publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("notices_teacher_published_idx").on(t.teacherId, t.publishedAt)],
+);
+
+/** An image a teacher uploaded, wherever it is stored. Counted against storage limits later. */
+export const media = pgTable(
+  "media",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => teachers.id, { onDelete: "cascade" }),
+    storage: mediaStorage("storage").notNull(),
+    /** Cloudinary public_id, or the file name under the local uploads folder. */
+    key: text("key").notNull(),
+    url: text("url").notNull(),
+    contentType: text("content_type").notNull(),
+    bytes: integer("bytes").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("media_teacher_idx").on(t.teacherId)],
 );
 
 /** Fixed-window counters for throttling sign-in attempts and similar abuse-prone actions. */

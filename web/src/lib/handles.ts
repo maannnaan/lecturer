@@ -10,7 +10,7 @@ export const HANDLE_MAX = 30;
 
 export const RESERVED_HANDLES: ReadonlySet<string> = new Set([
   // top-level routes in src/app
-  "admin", "api", "dashboard", "login", "register",
+  "admin", "api", "dashboard", "login", "media", "register",
   // likely future platform pages
   "about", "help", "support", "contact", "pricing", "plans", "terms", "privacy", "policy", "blog",
   "docs", "faq", "search", "find", "explore", "home", "index", "settings", "account", "profile",
