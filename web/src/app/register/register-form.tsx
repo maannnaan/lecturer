@@ -7,7 +7,16 @@ import { type RegisterState, registerTeacherAction } from "./actions";
 
 const initial: RegisterState = { values: {}, errors: {} };
 
-export function RegisterForm({ t, optional }: { t: Dictionary["register"]; optional: string }) {
+export function RegisterForm({
+  t,
+  optional,
+  initialHandle = "",
+}: {
+  t: Dictionary["register"];
+  optional: string;
+  /** From the landing page's address box (?handle=), until the form has been sent once. */
+  initialHandle?: string;
+}) {
   const [state, action] = useActionState(registerTeacherAction, initial);
   const { values, errors } = state;
 
@@ -66,7 +75,7 @@ export function RegisterForm({ t, optional }: { t: Dictionary["register"]; optio
         label={t.handle}
         prefix="lecturer.bd/"
         hint={t.handleHint}
-        defaultValue={values.handle}
+        defaultValue={values.handle ?? (initialHandle || undefined)}
         error={errors.handle}
         autoCapitalize="none"
         autoCorrect="off"

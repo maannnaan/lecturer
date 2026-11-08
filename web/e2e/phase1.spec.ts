@@ -28,6 +28,14 @@ test("the landing page opens in Bangla and switches to English", async ({ page }
   await expect(page.locator("h1")).toHaveText("আপনার ক্লাস, আপনার নিজের ওয়েবসাইট");
 });
 
+test("the landing page's address box carries the address into sign-up", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("#claim-hero").fill("My-Name");
+  await page.locator("form:has(#claim-hero) button[type=submit]").click();
+  await expect(page).toHaveURL(/\/register\?handle=My-Name$/);
+  await expect(page.getByLabel("ওয়েবসাইটের ঠিকানা")).toHaveValue("my-name");
+});
+
 test("sign-up explains what's wrong, in Bangla, and keeps what was typed", async ({ page }) => {
   await page.goto("/register");
   await page.getByRole("button", { name: "নিবন্ধন করুন" }).click();

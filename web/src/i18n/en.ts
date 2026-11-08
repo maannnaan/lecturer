@@ -32,35 +32,35 @@ export const en: Dictionary = {
     kicker: "For teachers",
     title: "Your classes, your own website",
     lead:
-      "Sign up and get your own website at lecturer.bd/your-name. It shows your courses, chapter-wise questions and exams; your dashboard keeps your students, batches and payments.",
+      "Sign up and get your own website at lecturer.bd/your-name, with your profile, courses, lesson plan and notices in one place. No coding: fill in a few forms in your dashboard and it's done.",
     cta: "Sign up as a teacher",
     haveAccount: "Already signed up?",
+    nav: { features: "Features", themes: "Themes", steps: "Get started", faq: "FAQ" },
+    claim: {
+      label: "Your website address",
+      placeholder: "your-name",
+      button: "Claim it",
+    },
+    trust: ["Free for 14 days", "Bangla and English", "Works on phones"],
+    themesTitle: "Pick a look",
+    themesLead: "Three themes, three moods. Switch any time from your dashboard; your words and courses stay just as they are.",
     featuresTitle: "What you get",
-    features: [
-      {
-        title: "Your own website",
-        text: "Your profile, courses, lesson plan and notices. Pick any of three themes.",
-      },
-      {
-        title: "Question bank",
-        text: "Chapter-wise MCQ, short and creative questions, textbook problems and board questions, with maths and images.",
-      },
-      {
-        title: "Live MCQ exams",
-        text: "Everyone at a fixed time, or each student whenever suits them within a window. Results and merit lists straight away.",
-      },
-      {
-        title: "Question papers and OMR",
-        text: "As many questions and sets as you need, each set with its own question and option order. Scan OMR sheets with the phone app.",
-      },
-      {
-        title: "Students and batches",
-        text: "Every online and offline student, by course and batch, with roll numbers, in one list.",
-      },
-      {
-        title: "Payments",
-        text: "Monthly fees, bKash payment checks, receipts and a list of dues, offline students included.",
-      },
+    readyTitle: "Ready today",
+    soonTitle: "Coming soon",
+    ready: [
+      { title: "Your own website", text: "Your profile, photo, contact details, class times and address at lecturer.bd/your-name." },
+      { title: "Courses and chapters", text: "A chapter-by-chapter lesson plan for each course, with dates and how far you've got." },
+      { title: "Notices", text: "Admissions, exams or holidays, on your website straight away." },
+      { title: "Three themes", text: "Ink & Paper, Mist or Sage. Change any time." },
+      { title: "Bangla and English", text: "Students read your website in the language they prefer." },
+      { title: "Made for phones", text: "Your website and your dashboard both work well on a phone." },
+    ],
+    soon: [
+      { title: "Question bank", text: "Chapter-wise MCQ, short, creative and board questions, with maths and images." },
+      { title: "Live MCQ exams", text: "Everyone at a fixed time, or each student within a window. Results straight away." },
+      { title: "Question papers and OMR", text: "Each set with its own question and option order. Scan OMR sheets with the phone app." },
+      { title: "Students and batches", text: "Every online and offline student, with batches and roll numbers, in one list." },
+      { title: "Payments", text: "Monthly fees, bKash payment checks, receipts and a list of dues." },
     ],
     stepsTitle: "How to start",
     steps: [
@@ -68,6 +68,50 @@ export const en: Dictionary = {
       { title: "Approval", text: "We check your details and approve the account. You can set things up meanwhile." },
       { title: "Go live", text: "Once approved, everyone can see your website, and a 14-day free trial starts." },
     ],
+    faqTitle: "Questions",
+    faq: [
+      {
+        q: "Do I need to know coding or design?",
+        a: "No. Write your details, courses and notices in the dashboard, save, and they're on your website.",
+      },
+      {
+        q: "What address can I have?",
+        a: "3 to 30 characters: lowercase English letters, numbers, - and _, starting and ending with a letter or number, like lecturer.bd/tanvir.",
+      },
+      {
+        q: "Can I change my theme or address later?",
+        a: "Yes, both from the dashboard. If you change your address, anyone visiting the old one is sent to the new one.",
+      },
+      {
+        q: "Why is there an approval step?",
+        a: "So that Lecturer.bd only has genuine teachers' websites. While you wait, you can set everything up and preview it yourself.",
+      },
+      {
+        q: "Do students need an account?",
+        a: "Not to see your website; anyone can. Student accounts come with exams and payments.",
+      },
+      {
+        q: "What happens after the 14-day trial?",
+        a: "We'll tell you about plans and prices before your trial ends.",
+      },
+    ],
+    ctaTitle: "Claim your address today",
+    ctaText: "Signing up takes a few minutes. Get the address you want before someone else does.",
+    mock: {
+      handle: "tanvir",
+      initial: "T",
+      name: "Tanvir Ahmed",
+      role: "Physics and Higher Maths",
+      lead: "Chapter-by-chapter classes for SSC and HSC students.",
+      button: "See courses",
+      courses: [
+        { title: "HSC Physics, 1st paper", level: "HSC", price: "৳1,200/month" },
+        { title: "SSC Higher Maths", level: "SSC", price: "৳800/month" },
+      ],
+      noticeDay: "12",
+      noticeMonth: "Nov",
+      notice: "Admissions open for the new batch",
+    },
   },
   register: {
     title: "Teacher sign-up",

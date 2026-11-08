@@ -1,81 +1,118 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, Globe, Printer, Radio, Users, Wallet } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  Check,
+  Globe,
+  Languages,
+  Library,
+  Megaphone,
+  Palette,
+  Printer,
+  Radio,
+  Smartphone,
+  Users,
+  Wallet,
+} from "lucide-react";
+import { ClaimForm } from "@/components/landing/claim-form";
+import { Faq } from "@/components/landing/faq";
+import { SiteMockup } from "@/components/landing/site-mockup";
 import { PlatformFooter, PlatformHeader } from "@/components/platform-chrome";
 import { formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
-import { THEMES, THEME_SWATCHES } from "@/lib/themes";
+import { THEMES } from "@/lib/themes";
 
 // Rendered per request in the visitor's language (a cookie), so it opts out of the static shell.
 export const instant = false;
 
-const FEATURE_ICONS = [Globe, BookOpen, Radio, Printer, Users, Wallet];
+// In the same order as landing.ready and landing.soon in the dictionaries.
+const READY_ICONS = [Globe, BookOpen, Megaphone, Palette, Languages, Smartphone];
+const SOON_ICONS = [Library, Radio, Printer, Users, Wallet];
 
 export default async function LandingPage() {
   const locale = await getLocale();
   const d = getDictionary(locale);
+  const t = d.landing;
+
+  const nav = [
+    { href: "#features", label: t.nav.features },
+    { href: "#themes", label: t.nav.themes },
+    { href: "#steps", label: t.nav.steps },
+    { href: "#faq", label: t.nav.faq },
+  ];
 
   return (
     <div lang={locale}>
-      <PlatformHeader locale={locale} d={d} />
+      <PlatformHeader locale={locale} d={d} nav={nav} />
       <main>
-        <section className="border-b border-line" style={{ background: "var(--lb-hero-bg)" }}>
-          <div className="wrap grid items-center gap-12 py-16 lg:grid-cols-[1.15fr_0.85fr] lg:py-24">
+        {/* Hero: what you get, the address box, and a drawing of a teacher's site */}
+        <section className="lp-hero">
+          <div className="wrap lp-hero-grid">
             <div>
-              <p className="eyebrow">{d.landing.kicker}</p>
-              <h1 className="mt-3 text-[clamp(36px,5vw,58px)] leading-[1.15]">{d.landing.title}</h1>
-              <p className="mt-5 max-w-[34em] text-lg leading-relaxed text-ink-2">{d.landing.lead}</p>
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <Link href="/register" className="btn btn-primary">
-                  {d.landing.cta}
-                  <ArrowRight aria-hidden="true" />
-                </Link>
-                <span className="text-[15px] text-muted">
-                  {d.landing.haveAccount}{" "}
-                  <Link href="/login" className="link">
-                    {d.common.login}
-                  </Link>
-                </span>
+              <p className="eyebrow">{t.kicker}</p>
+              <h1 className="lp-title">{t.title}</h1>
+              <p className="lp-lead">{t.lead}</p>
+              <div className="mt-8">
+                <ClaimForm t={t.claim} id="claim-hero" />
               </div>
+              <ul className="lp-trust">
+                {t.trust.map((item) => (
+                  <li key={item}>
+                    <Check aria-hidden="true" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-4 text-[15px] text-muted">
+                {t.haveAccount}{" "}
+                <Link href="/login" className="link">
+                  {d.common.login}
+                </Link>
+              </p>
             </div>
-
-            {/* The three themes a teacher can choose from, each drawn in its own look. */}
-            <div className="grid gap-3" aria-hidden="true">
-              {THEMES.map((theme, i) => (
-                <div
-                  key={theme}
-                  data-style={theme}
-                  className="card flex items-center gap-4 bg-surface p-4"
-                  style={{ marginLeft: `${i * 18}px`, background: THEME_SWATCHES[theme][0] }}
-                >
-                  <span className="brand-mark">{["ক", "খ", "গ"][i]}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-head text-xl text-ink">{d.dashboard.theme.names[theme]}</span>
-                    <span className="mt-1 flex gap-1.5">
-                      {THEME_SWATCHES[theme].map((c) => (
-                        <i key={c} className="block size-4 rounded-full border border-line" style={{ background: c }} />
-                      ))}
-                    </span>
-                  </span>
-                  <span className="btn btn-primary btn-xs">lecturer.bd</span>
-                </div>
-              ))}
+            <div className="lp-hero-figure">
+              <SiteMockup theme="ink" m={t.mock} />
             </div>
           </div>
         </section>
 
-        <section className="py-16 lg:py-20">
+        {/* Features: what works today, then what's on the way */}
+        <section id="features" className="section lp-anchor">
           <div className="wrap">
-            <h2 className="text-[clamp(26px,3vw,34px)]">{d.landing.featuresTitle}</h2>
-            <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {d.landing.features.map((f, i) => {
-                const Icon = FEATURE_ICONS[i];
+            <div className="section-head">
+              <h2>{t.featuresTitle}</h2>
+            </div>
+
+            <h3 className="lp-group-title">{t.readyTitle}</h3>
+            <ul className="lp-features">
+              {t.ready.map((f, i) => {
+                const Icon = READY_ICONS[i] ?? Globe;
                 return (
-                  <li key={f.title} className="card flex flex-col gap-2 p-5">
-                    <span className="grid size-10 place-items-center rounded-md bg-primary-soft text-primary-text">
-                      <Icon className="size-5" aria-hidden="true" />
+                  <li key={f.title} className="card lp-feature">
+                    <span className="lp-feature-icon">
+                      <Icon aria-hidden="true" />
                     </span>
-                    <h3 className="mt-1 text-lg">{f.title}</h3>
-                    <p className="text-[15px] text-ink-2">{f.text}</p>
+                    <h4>{f.title}</h4>
+                    <p>{f.text}</p>
+                  </li>
+                );
+              })}
+            </ul>
+
+            <h3 className="lp-group-title mt-12">{t.soonTitle}</h3>
+            <ul className="lp-features">
+              {t.soon.map((f, i) => {
+                const Icon = SOON_ICONS[i] ?? Library;
+                return (
+                  <li key={f.title} className="lp-feature lp-feature-soon">
+                    <span className="flex items-center justify-between gap-3">
+                      <span className="lp-feature-icon">
+                        <Icon aria-hidden="true" />
+                      </span>
+                      <span className="badge badge-warn">{d.common.soon}</span>
+                    </span>
+                    <h4>{f.title}</h4>
+                    <p>{f.text}</p>
                   </li>
                 );
               })}
@@ -83,28 +120,72 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        <section className="border-t border-line bg-bg-2 py-16 lg:py-20">
+        {/* The three themes, each drawn in its own look */}
+        <section id="themes" className="section section-alt lp-anchor">
           <div className="wrap">
-            <h2 className="text-[clamp(26px,3vw,34px)]">{d.landing.stepsTitle}</h2>
-            <ol className="mt-8 grid gap-4 md:grid-cols-3">
-              {d.landing.steps.map((s, i) => (
-                <li key={s.title} className="card flex gap-4 p-5">
-                  <span className="font-num text-3xl leading-none text-accent-ink">{formatNumber(i + 1, locale)}</span>
-                  <span>
-                    <h3 className="text-lg">{s.title}</h3>
-                    <p className="mt-1 text-[15px] text-ink-2">{s.text}</p>
-                  </span>
+            <div className="section-head">
+              <div>
+                <h2>{t.themesTitle}</h2>
+                <p className="lp-section-lead">{t.themesLead}</p>
+              </div>
+            </div>
+            <ul className="lp-themes">
+              {THEMES.map((theme) => (
+                <li key={theme} className="lp-theme">
+                  <SiteMockup theme={theme} m={t.mock} compact />
+                  <span className="lp-theme-name">{d.dashboard.theme.names[theme]}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* How to start */}
+        <section id="steps" className="section lp-anchor">
+          <div className="wrap">
+            <div className="section-head">
+              <h2>{t.stepsTitle}</h2>
+            </div>
+            <ol className="lp-steps">
+              {t.steps.map((s, i) => (
+                <li key={s.title} className="lp-step">
+                  <span className="lp-step-num">{formatNumber(i + 1, locale)}</span>
+                  <h3>{s.title}</h3>
+                  <p>{s.text}</p>
                 </li>
               ))}
             </ol>
-            <Link href="/register" className="btn btn-primary mt-8">
-              {d.landing.cta}
-              <ArrowRight aria-hidden="true" />
-            </Link>
+          </div>
+        </section>
+
+        {/* Questions */}
+        <section id="faq" className="section section-alt lp-anchor">
+          <div className="wrap lp-faq-grid">
+            <div className="section-head">
+              <h2>{t.faqTitle}</h2>
+            </div>
+            <Faq items={t.faq} />
+          </div>
+        </section>
+
+        {/* Last call */}
+        <section className="lp-cta">
+          <div className="wrap lp-cta-inner">
+            <div>
+              <h2>{t.ctaTitle}</h2>
+              <p>{t.ctaText}</p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <ClaimForm t={t.claim} id="claim-cta" onDark />
+              <Link href="/register" className="lp-cta-link">
+                {t.cta}
+                <ArrowRight aria-hidden="true" />
+              </Link>
+            </div>
           </div>
         </section>
       </main>
-      <PlatformFooter />
+      <PlatformFooter d={d} />
     </div>
   );
 }
