@@ -10,6 +10,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/server/db";
 import { upsertAdmin } from "@/server/admins";
 import { notices as noticesTable, type TeacherSite } from "@/server/db/schema";
+import { databaseUrl } from "@/server/db/url";
 import type { ThemeName } from "@/lib/themes";
 import { addChapter, createCourse, listCourses } from "@/server/courses";
 import { createNotice } from "@/server/notices";
@@ -287,8 +288,8 @@ async function main() {
   console.log("Admin: admin@lecturer.test / admin-password · Teachers: 01710000001…3 / teacher-password");
 }
 
-if (/^postgres(ql)?:\/\//.test(process.env.DATABASE_URL ?? "")) {
-  console.error("seed:demo only writes to the local embedded database. Unset DATABASE_URL.");
+if (/^postgres(ql)?:\/\//.test(databaseUrl() ?? "")) {
+  console.error("seed:demo only writes to the local embedded database. Unset DATABASE_URL and LECTURER_DATABASE_URL.");
   process.exit(1);
 }
 

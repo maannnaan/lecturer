@@ -7,6 +7,7 @@ import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import { migrate as migratePglite } from "drizzle-orm/pglite/migrator";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import * as schema from "./schema";
+import { databaseUrl } from "./url";
 
 export type Database = PgDatabase<PgQueryResultHKT, typeof schema>;
 
@@ -31,14 +32,14 @@ export function getDb(): Promise<Database> {
 }
 
 async function connect(): Promise<Database> {
-  const url = process.env.DATABASE_URL;
+  const url = databaseUrl();
   if (url && /^postgres(ql)?:\/\//.test(url)) {
     return drizzleNeon({ client: new Pool({ connectionString: url }), schema }) as unknown as Database;
   }
   // A hosting platform's disk is read-only and wiped on every deploy: say what's missing
   // instead of failing on a mkdir somewhere in the logs.
   if (process.env.VERCEL) {
-    throw new Error("DATABASE_URL is not set. Add your Neon connection string (postgres://…) in Vercel → Settings → Environment Variables.");
+    throw new Error("Neither DATABASE_URL nor LECTURER_DATABASE_URL is set. Add your Neon connection string (postgres://…) in Vercel → Settings → Environment Variables.");
   }
   const dir = process.env.PGLITE_DIR ?? path.join(process.cwd(), ".data", "pglite");
   mkdirSync(dir, { recursive: true });

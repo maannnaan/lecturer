@@ -14,6 +14,7 @@ import { upsertAdmin } from "@/server/admins";
 import { PASSWORD_MIN } from "@/server/auth/password";
 import type { Database } from "@/server/db";
 import * as schema from "@/server/db/schema";
+import { databaseUrl } from "@/server/db/url";
 
 try {
   process.loadEnvFile(".env.local");
@@ -22,7 +23,7 @@ try {
 }
 
 async function main() {
-  const url = process.env.DATABASE_URL;
+  const url = databaseUrl();
   if (!url || !/^postgres(ql)?:\/\//.test(url)) {
     if (process.env.VERCEL) {
       // Names only, never values: enough to spot a prefixed or misnamed variable.
@@ -32,7 +33,7 @@ async function main() {
       throw new Error(
         url
           ? `DATABASE_URL is set but doesn't start with postgres:// or postgresql:// (it starts with "${url.slice(0, 8)}…"). Paste only the connection string, without quotes or "psql".`
-          : "DATABASE_URL is not set. Add your Neon connection string (postgres://…) in Vercel → Settings → Environment Variables, for this environment.",
+          : "Neither DATABASE_URL nor LECTURER_DATABASE_URL is set. Add your Neon connection string (postgres://…) in Vercel → Settings → Environment Variables, for this environment.",
       );
     }
     console.log("No DATABASE_URL: skipping (the local database migrates itself).");
