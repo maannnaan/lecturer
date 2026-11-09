@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { ImagePlus, Trash2 } from "lucide-react";
+import { shrinkImage } from "@/lib/shrink-image";
 import { removePhotoAction, setPhotoAction } from "./actions";
 
 type Labels = {
@@ -18,27 +19,6 @@ type Labels = {
   uploadOff: string;
 };
 
-const LONGEST_SIDE = 1200;
-
-/** Shrinks a photo in the browser before upload: phones send far less data, the server less to check. */
-async function shrink(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, LONGEST_SIDE / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  const encode = (type: string, quality: number) =>
-    new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
-  // Browsers that can't write WebP hand back PNG instead; JPEG is then the smaller choice.
-  const webp = await encode("image/webp", 0.86);
-  if (webp?.type === "image/webp") return webp;
-  const jpeg = await encode("image/jpeg", 0.88);
-  if (!jpeg) throw new Error("This browser couldn't prepare the image");
-  return jpeg;
-}
-
 export function PhotoUploader({ photoUrl, initial, t }: { photoUrl: string | null; initial: string; t: Labels }) {
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +30,7 @@ export function PhotoUploader({ photoUrl, initial, t }: { photoUrl: string | nul
     setError(null);
     try {
       const body = new FormData();
-      body.set("file", await shrink(file), "photo");
+      body.set("file", await shrinkImage(file), "photo");
       const res = await fetch("/api/media", { method: "POST", body });
       const answer = (await res.json().catch(() => ({}))) as { id?: string; error?: string };
       if (!res.ok || !answer.id) {

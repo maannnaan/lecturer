@@ -115,9 +115,13 @@ export function SelectField({
   options: { value: string; label: string }[];
   error?: string;
 }) {
+  // React ignores a changed `defaultValue` on a <select> that is already mounted, and a form
+  // action's automatic reset then puts the select back on its first default. Keying on the default
+  // remounts it instead, so after a refused submit it shows what was chosen, like text fields do.
+  const remountOn = rest.defaultValue === undefined ? undefined : String(rest.defaultValue);
   return (
     <FieldFrame id={id} label={label} error={error}>
-      <select id={id} name={name} className="input" aria-invalid={error ? true : undefined} {...rest}>
+      <select key={remountOn} id={id} name={name} className="input" aria-invalid={error ? true : undefined} {...rest}>
         {options.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}

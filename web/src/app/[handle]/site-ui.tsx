@@ -57,22 +57,48 @@ export function CourseCard({
   );
 }
 
-/** The chapters of a course as a lesson-plan timeline: done, in progress, coming up. */
-export function Timeline({ chapters, d, locale }: { chapters: Chapter[]; d: Dictionary; locale: Locale }) {
+/**
+ * The chapters of a course as a lesson-plan timeline: done, in progress, coming up. With
+ * `practice`, a chapter that has public questions links to its page and says how many.
+ */
+export function Timeline({
+  chapters,
+  d,
+  locale,
+  practice,
+}: {
+  chapters: Chapter[];
+  d: Dictionary;
+  locale: Locale;
+  practice?: { href: (chapter: Chapter) => string; counts: Map<string, number> };
+}) {
   const statuses = d.dashboard.courses.statuses;
   return (
     <ol className="timeline">
       {chapters.map((chapter, i) => {
         const dates = formatDayRange(chapter.startsOn, chapter.endsOn, locale);
+        const questions = practice?.counts.get(chapter.id) ?? 0;
         return (
           <li key={chapter.id} className="tl" data-status={chapter.status}>
             <span className="tl-dot">{chapter.status === "done" && <Check aria-hidden="true" />}</span>
             <div className="min-w-0">
               <p className="tl-title">
                 <span className="tl-label">{chapterLabel(chapter, i, d, locale)}</span>
-                {chapter.title}
+                {practice && questions > 0 ? (
+                  <Link href={practice.href(chapter)} className="tl-link">
+                    {chapter.title}
+                  </Link>
+                ) : (
+                  chapter.title
+                )}
               </p>
               {dates && <p className="tl-date">{dates}</p>}
+              {practice && questions > 0 && (
+                <Link href={practice.href(chapter)} className="link mt-1 text-[14px]">
+                  {d.site.course.practice(formatNumber(questions, locale))}
+                  <ArrowRight aria-hidden="true" />
+                </Link>
+              )}
             </div>
             <span className="badge tl-state">{statuses[chapter.status]}</span>
           </li>

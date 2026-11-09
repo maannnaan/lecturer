@@ -18,24 +18,22 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+import "katex/dist/katex.min.css";
 import { LangSwitch } from "@/components/lang-switch";
 import { Logo, initialOf } from "@/components/logo";
-import { getDictionary } from "@/i18n";
+import { type Dictionary, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { requireTeacher } from "@/server/auth/current";
 import { logoutAction } from "./actions";
+import { MobileMenu } from "./mobile-menu";
 import { NavLink } from "./nav-link";
 
 // Everything here belongs to the signed-in teacher, so it renders per request.
 export const instant = false;
 
-export default async function DashboardLayout({ children }: { children: ReactNode }) {
-  const teacher = await requireTeacher();
-  const locale = await getLocale();
-  const d = getDictionary(locale);
+/** The dashboard's sections, shared by the sidebar (wide screens) and the menu sheet (phones). */
+function DashNav({ d }: { d: Dictionary }) {
   const t = d.dashboard;
-  const name = locale === "bn" ? teacher.nameBn : teacher.nameEn;
-
   // Sections that arrive in later phases are listed, but not yet links.
   const soon = (Icon: LucideIcon, label: string) => (
     <span className="side-link" aria-disabled="true">
@@ -44,6 +42,49 @@ export default async function DashboardLayout({ children }: { children: ReactNod
       <span className="soon">{d.common.soon}</span>
     </span>
   );
+  return (
+    <>
+      <NavLink href="/dashboard" exact className="side-link">
+        <LayoutDashboard aria-hidden="true" />
+        {t.nav.overview}
+      </NavLink>
+      <p className="side-label">{t.groups.teaching}</p>
+      <NavLink href="/dashboard/courses" className="side-link">
+        <BookOpen aria-hidden="true" />
+        {t.nav.courses}
+      </NavLink>
+      <NavLink href="/dashboard/bank" className="side-link">
+        <Library aria-hidden="true" />
+        {t.nav.bank}
+      </NavLink>
+      <NavLink href="/dashboard/website" className="side-link">
+        <Globe aria-hidden="true" />
+        {t.nav.website}
+      </NavLink>
+      <NavLink href="/dashboard/notices" className="side-link">
+        <Megaphone aria-hidden="true" />
+        {t.nav.notices}
+      </NavLink>
+      <p className="side-label">{t.groups.students}</p>
+      {soon(Users, t.nav.students)}
+      {soon(Layers, t.nav.batches)}
+      {soon(UserPlus, t.nav.requests)}
+      <p className="side-label">{t.groups.exams}</p>
+      {soon(Radio, t.nav.live)}
+      {soon(Printer, t.nav.papers)}
+      <p className="side-label">{t.groups.accounts}</p>
+      {soon(Wallet, t.nav.payments)}
+      {soon(ScanLine, t.nav.scanner)}
+    </>
+  );
+}
+
+export default async function DashboardLayout({ children }: { children: ReactNode }) {
+  const teacher = await requireTeacher();
+  const locale = await getLocale();
+  const d = getDictionary(locale);
+  const t = d.dashboard;
+  const name = locale === "bn" ? teacher.nameBn : teacher.nameEn;
 
   return (
     <div data-style={teacher.theme} className="theme-scope" lang={locale}>
@@ -59,34 +100,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             <ExternalLink className="ml-auto size-4" aria-hidden="true" />
           </Link>
 
-          <NavLink href="/dashboard" exact className="side-link">
-            <LayoutDashboard aria-hidden="true" />
-            {t.nav.overview}
-          </NavLink>
-          <p className="side-label">{t.groups.teaching}</p>
-          <NavLink href="/dashboard/courses" className="side-link">
-            <BookOpen aria-hidden="true" />
-            {t.nav.courses}
-          </NavLink>
-          {soon(Library, t.nav.bank)}
-          <NavLink href="/dashboard/website" className="side-link">
-            <Globe aria-hidden="true" />
-            {t.nav.website}
-          </NavLink>
-          <NavLink href="/dashboard/notices" className="side-link">
-            <Megaphone aria-hidden="true" />
-            {t.nav.notices}
-          </NavLink>
-          <p className="side-label">{t.groups.students}</p>
-          {soon(Users, t.nav.students)}
-          {soon(Layers, t.nav.batches)}
-          {soon(UserPlus, t.nav.requests)}
-          <p className="side-label">{t.groups.exams}</p>
-          {soon(Radio, t.nav.live)}
-          {soon(Printer, t.nav.papers)}
-          <p className="side-label">{t.groups.accounts}</p>
-          {soon(Wallet, t.nav.payments)}
-          {soon(ScanLine, t.nav.scanner)}
+          <DashNav d={d} />
 
           <form action={logoutAction} className="mt-auto pt-3">
             <button type="submit" className="side-link w-full cursor-pointer">
@@ -107,6 +121,15 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             </div>
           </header>
           <header className="dash-mobile-top">
+            <MobileMenu label={d.common.menu}>
+              <Link href={`/${teacher.handle}`} className="side-site">
+                <span className="min-w-0">
+                  <b>{t.mySite}</b>lecturer.bd/{teacher.handle}
+                </span>
+                <ExternalLink className="ml-auto size-4" aria-hidden="true" />
+              </Link>
+              <DashNav d={d} />
+            </MobileMenu>
             <Logo />
             <div className="ml-auto flex items-center gap-2">
               <LangSwitch locale={locale} label={d.common.language} />
@@ -130,6 +153,10 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           <BookOpen aria-hidden="true" />
           {t.nav.courses}
         </NavLink>
+        <NavLink href="/dashboard/bank">
+          <Library aria-hidden="true" />
+          {t.mobileNav.questions}
+        </NavLink>
         <NavLink href="/dashboard/website">
           <Globe aria-hidden="true" />
           {t.nav.website}
@@ -138,10 +165,6 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           <Megaphone aria-hidden="true" />
           {t.nav.notices}
         </NavLink>
-        <span aria-disabled="true">
-          <Users aria-hidden="true" />
-          {t.mobileNav.students}
-        </span>
       </nav>
     </div>
   );

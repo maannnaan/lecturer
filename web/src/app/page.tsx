@@ -10,7 +10,6 @@ import {
   Palette,
   Printer,
   Radio,
-  Smartphone,
   Users,
   Wallet,
 } from "lucide-react";
@@ -26,8 +25,8 @@ import { THEMES } from "@/lib/themes";
 export const instant = false;
 
 // In the same order as landing.ready and landing.soon in the dictionaries.
-const READY_ICONS = [Globe, BookOpen, Megaphone, Palette, Languages, Smartphone];
-const SOON_ICONS = [Library, Radio, Printer, Users, Wallet];
+const READY_ICONS = [Globe, BookOpen, Library, Megaphone, Palette, Languages];
+const SOON_ICONS = [Radio, Printer, Users, Wallet];
 
 export default async function LandingPage() {
   const locale = await getLocale();
@@ -102,7 +101,7 @@ export default async function LandingPage() {
             <h3 className="lp-group-title mt-12">{t.soonTitle}</h3>
             <ul className="lp-features">
               {t.soon.map((f, i) => {
-                const Icon = SOON_ICONS[i] ?? Library;
+                const Icon = SOON_ICONS[i] ?? Radio;
                 return (
                   <li key={f.title} className="lp-feature lp-feature-soon">
                     <span className="flex items-center justify-between gap-3">

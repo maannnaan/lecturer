@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { RESERVED_HANDLES } from "@/lib/handles";
 import { ADMIN_COOKIE, TEACHER_COOKIE } from "@/server/auth/cookies";
-import { courseVisibility } from "@/server/courses";
+import { chapterVisibility, courseVisibility } from "@/server/courses";
 import { getDb } from "@/server/db";
 import { lookupHandle } from "@/server/teachers";
 
@@ -45,6 +45,12 @@ export async function proxy(request: NextRequest) {
     if (!/^\d{1,6}$/.test(rest[1])) return notFound(request);
     const course = await courseVisibility(db, site.teacherId, Number(rest[1]));
     if (!course || (course === "draft" && !signedIn)) return notFound(request);
+  }
+  // lecturer.bd/<handle>/courses/<number>/chapters/<number>
+  if (rest[0] === "courses" && rest.length === 4) {
+    if (rest[2] !== "chapters" || !/^\d{1,6}$/.test(rest[1]) || !/^\d{1,6}$/.test(rest[3])) return notFound(request);
+    const chapter = await chapterVisibility(db, site.teacherId, Number(rest[1]), Number(rest[3]));
+    if (!chapter || (chapter === "draft" && !signedIn)) return notFound(request);
   }
   return NextResponse.next();
 }

@@ -28,7 +28,9 @@ Demo sign-ins (local data only):
 
 `/tanvir` (Ink & Paper) and `/nusrat` (Mist) are live, with courses, lesson plans and notices;
 `/rafi` (Sage) is waiting for approval, so only Rafi sees it (signed in, with a preview banner).
-`/tanvir-ahmed` is an old address that redirects.
+`/tanvir-ahmed` is an old address that redirects. Tanvir's question bank fills
+`/tanvir/courses/1/chapters/3` and `/chapters/4` (every question type, maths, board questions, and one
+private question that must never appear on the site).
 
 ## Checks
 
@@ -45,8 +47,9 @@ npm run test:e2e    # Playwright against the production build, using the install
 | Path | What |
 |---|---|
 | `src/app/` | Routes: `/` (platform), `/register`, `/login`, `/dashboard`, `/admin`, `/[handle]` (a teacher's site) |
-| `src/app/[handle]/` | A teacher's website: home (courses, lesson plan, notices, about, contact), `/courses/<n>`, `/notices` |
-| `src/app/dashboard/` | The teacher's editors: theme, website (profile, photo, figures, contact, class times, address), courses and chapters, notices |
+| `src/app/[handle]/` | A teacher's website: home (courses, lesson plan, notices, about, contact), `/courses/<n>`, `/courses/<n>/chapters/<m>` (practice questions), `/notices` |
+| `src/app/dashboard/` | The teacher's editors: theme, website (profile, photo, figures, contact, class times, address), courses and chapters, question bank, notices |
+| `src/lib/questions.ts`, `src/server/questions.ts` | Question types and validation; the bank's data access. Text holds maths as `$…$`/`$$…$$` (`src/lib/math.ts`), typeset with KaTeX on the server (`src/components/math-text.tsx`) |
 | `src/app/api/media/`, `src/app/media/` | Photo upload (the file type is read from its bytes, not its name) and serving of locally stored uploads |
 | `src/proxy.ts` | Real 404 / 308 / 307 answers decided before rendering; the comment there explains why |
 | `src/server/` | Schema, sessions, data access. Teacher-owned data is always read for the teacher in the session or the address, never an id from the browser |

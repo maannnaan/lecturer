@@ -3,6 +3,7 @@ import type { Database } from "@/server/db";
 import { chapters, courses, teachers } from "@/server/db/schema";
 import type { parseChapter, parseCourse } from "@/lib/courses";
 import { isUuid } from "@/lib/ids";
+import { renumber, swapped } from "./ordering";
 
 // Every function takes the teacher's id from the session and filters on it as well as on the
 // record's own id: a course or chapter id belonging to another teacher simply isn't found.
@@ -73,27 +74,6 @@ export async function deleteCourse(db: Database, teacherId: string, courseId: st
     .where(and(eq(courses.id, courseId), eq(courses.teacherId, teacherId)))
     .returning({ id: courses.id });
   return gone.length > 0;
-}
-
-/** Rewrites positions 0…n-1 in the given order, touching only rows whose position changed. */
-async function renumber<T extends { id: string; position: number }>(
-  db: Database,
-  rows: T[],
-  write: (tx: Parameters<Parameters<Database["transaction"]>[0]>[0], id: string, position: number) => Promise<unknown>,
-) {
-  await db.transaction(async (tx) => {
-    for (const [position, row] of rows.entries()) if (row.position !== position) await write(tx, row.id, position);
-  });
-}
-
-function swapped<T extends { id: string }>(rows: T[], id: string, direction: "up" | "down"): T[] | null {
-  const i = rows.findIndex((r) => r.id === id);
-  if (i < 0) return null;
-  const j = direction === "up" ? i - 1 : i + 1;
-  if (j < 0 || j >= rows.length) return rows;
-  const next = rows.slice();
-  [next[i], next[j]] = [next[j], next[i]];
-  return next;
 }
 
 /** Moves a course one place up or down the teacher's list. False if it isn't this teacher's. */
@@ -239,6 +219,48 @@ export async function chapterCounts(db: Database, teacherId: string): Promise<Ma
     .where(eq(chapters.teacherId, teacherId))
     .groupBy(chapters.courseId);
   return new Map(rows.map((r) => [r.courseId, Number(r.n)]));
+}
+
+/** Every course of the teacher (drafts too) with its chapters, for pickers in the dashboard. */
+export async function listCoursesWithChapters(db: Database, teacherId: string): Promise<CourseWithChapters[]> {
+  const [list, all] = await Promise.all([
+    listCourses(db, teacherId),
+    db.select().from(chapters).where(eq(chapters.teacherId, teacherId)).orderBy(...chapterOrder),
+  ]);
+  return list.map((course) => ({ ...course, chapters: all.filter((ch) => ch.courseId === course.id) }));
+}
+
+/** A chapter of one of the teacher's courses by its stable number. */
+export async function getChapterByNumber(
+  db: Database,
+  teacherId: string,
+  courseId: string,
+  number: number,
+): Promise<Chapter | null> {
+  if (!isUuid(courseId) || !Number.isSafeInteger(number) || number < 1) return null;
+  const [row] = await db
+    .select()
+    .from(chapters)
+    .where(and(eq(chapters.teacherId, teacherId), eq(chapters.courseId, courseId), eq(chapters.number, number)))
+    .limit(1);
+  return row ?? null;
+}
+
+/** Whether lecturer.bd/<handle>/courses/<course>/chapters/<chapter> exists, and if its course is published. */
+export async function chapterVisibility(
+  db: Database,
+  teacherId: string,
+  courseNumber: number,
+  chapterNumber: number,
+): Promise<"published" | "draft" | null> {
+  if (![courseNumber, chapterNumber].every((n) => Number.isSafeInteger(n) && n >= 1)) return null;
+  const [row] = await db
+    .select({ published: courses.published })
+    .from(chapters)
+    .innerJoin(courses, eq(chapters.courseId, courses.id))
+    .where(and(eq(courses.teacherId, teacherId), eq(courses.number, courseNumber), eq(chapters.number, chapterNumber)))
+    .limit(1);
+  return row ? (row.published ? "published" : "draft") : null;
 }
 
 /** One course by its public number, with its chapters; drafts only when `includeDrafts`. */

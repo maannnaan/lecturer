@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { Menu } from "lucide-react";
+import "katex/dist/katex.min.css";
 import { CurrentYear } from "@/components/current-year";
 import { LangSwitch } from "@/components/lang-switch";
 import { Logo, initialOf } from "@/components/logo";

@@ -9,7 +9,8 @@ export type FieldError =
   | "number"
   | "pricePositive"
   | "dateOrder"
-  | "invalid";
+  | "invalid"
+  | "pickAnswer";
 
 export type FieldErrors = Record<string, FieldError>;
 

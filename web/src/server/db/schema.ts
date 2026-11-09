@@ -277,6 +277,75 @@ export const notices = pgTable(
   (t) => [index("notices_teacher_published_idx").on(t.teacherId, t.publishedAt)],
 );
 
+export const questionType = pgEnum("question_type", ["mcq", "mcq_multi", "short", "creative", "problem"]);
+export const questionVisibility = pgEnum("question_visibility", ["public", "private"]);
+
+export type QuestionImage = { mediaId: string; url: string };
+/** One part of a creative question (ক, খ, গ, ঘ) with its marks and, optionally, a worked answer. */
+export type CreativePart = { text: string; marks: number; solution: string };
+
+/**
+ * What a question says. Which fields are used depends on the question's type (validated in
+ * src/lib/questions.ts); text may carry maths as $…$ or $$…$$.
+ *   mcq        stem, options[4], answer, explanation
+ *   mcq_multi  stem, statements[2–4], prompt, options[4], answer, explanation
+ *   short      stem, modelAnswer
+ *   creative   stem (the উদ্দীপক), parts[4]
+ *   problem    stem, solution
+ */
+export type QuestionBody = {
+  stem: string;
+  image?: QuestionImage | null;
+  statements?: string[];
+  prompt?: string;
+  options?: string[];
+  /** Index of the correct option, 0–3. */
+  answer?: number;
+  explanation?: string;
+  modelAnswer?: string;
+  parts?: CreativePart[];
+  solution?: string;
+};
+
+/**
+ * A question in the teacher's bank, filed under a course and (usually) a chapter. Public questions
+ * appear on the chapter's page for practice; private ones are kept for exams and papers.
+ * `board`/`year` mark a board-exam question (board is a key from BOARDS in src/lib/questions.ts).
+ */
+export const questions = pgTable(
+  "questions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => teachers.id, { onDelete: "cascade" }),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    chapterId: uuid("chapter_id").references(() => chapters.id, { onDelete: "set null" }),
+    type: questionType("type").notNull(),
+    visibility: questionVisibility("visibility").notNull().default("public"),
+    body: jsonb("body").$type<QuestionBody>().notNull(),
+    board: text("board").notNull().default(""),
+    year: integer("year"),
+    /** Where else it is from, e.g. "নটর ডেম কলেজ, টেস্ট ২০২৪". */
+    source: text("source").notNull().default(""),
+    /** A YouTube link to a video solution. */
+    videoUrl: text("video_url").notNull().default(""),
+    position: integer("position").notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("questions_teacher_course_chapter_idx").on(t.teacherId, t.courseId, t.chapterId, t.position),
+    index("questions_teacher_type_idx").on(t.teacherId, t.type),
+    index("questions_chapter_visibility_idx").on(t.chapterId, t.visibility),
+  ],
+);
+
 /** An image a teacher uploaded, wherever it is stored. Counted against storage limits later. */
 export const media = pgTable(
   "media",

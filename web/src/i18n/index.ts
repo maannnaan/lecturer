@@ -23,6 +23,11 @@ export function formatNumber(value: number, locale: Locale): string {
   return new Intl.NumberFormat(intlLocale(locale)).format(value);
 }
 
+/** A year without a thousands separator: ২০২৩, not ২,০২৩. */
+export function formatYear(value: number, locale: Locale): string {
+  return new Intl.NumberFormat(intlLocale(locale), { useGrouping: false }).format(value);
+}
+
 const calendarDay = (iso: string) => new Date(`${iso}T00:00:00Z`);
 
 /**
