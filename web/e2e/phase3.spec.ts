@@ -34,15 +34,19 @@ test("a chapter page shows its public questions, typeset, and MCQ practice works
   await page.getByRole("link", { name: "নিউটনিয়ান বলবিদ্যা", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${CHAPTER_4}$`));
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("নিউটনিয়ান বলবিদ্যা");
-  await expect(page.locator(".ch-stats")).toContainText("৬টি প্রশ্ন");
+  await expect(page.locator(".ch-stats")).toContainText("৮টি প্রশ্ন");
+  // The first section with questions opens: the textbook problems.
+  await expect(page.locator(".tabs .tab.on")).toHaveText(/^পাঠ্যবইয়ের সমস্যা/);
   await expect(page.locator(".q-card .katex").first()).toBeVisible();
 
-  const first = page.locator(".q-card").first();
+  await page.getByRole("link", { name: /^MCQ/ }).click();
+  await expect(page).toHaveURL(/tab=mcq/);
+  const first = page.locator(".q-card:visible").first();
   await first.getByRole("button", { name: /খ/ }).click();
   await expect(first.locator(".opt.correct")).toContainText("তোমার উত্তর সঠিক");
   await expect(first.locator(".explain")).toContainText("নিউটনের দ্বিতীয় সূত্র");
 
-  const second = page.locator(".q-card").nth(1);
+  const second = page.locator(".q-card:visible").nth(1);
   await second.getByRole("button", { name: /গ/ }).click();
   await expect(second.locator(".opt.wrong")).toContainText("তোমার উত্তর");
   await expect(second.locator(".opt.correct")).toContainText("সঠিক উত্তর");
@@ -50,22 +54,27 @@ test("a chapter page shows its public questions, typeset, and MCQ practice works
   await expect(second.locator(".opt.wrong")).toHaveCount(0);
   await shot(page, "site-chapter-ink-1280");
 
-  await page.getByRole("link", { name: /সৃজনশীল/ }).click();
-  await expect(page).toHaveURL(/tab=creative/);
+  await page.getByRole("link", { name: /^CQ/ }).click();
+  await expect(page).toHaveURL(/tab=cq/);
   await expect(page.getByText("সুতরাং গতীয় ঘর্ষণ বল")).toBeHidden();
   await page.getByText("সমাধান দেখো").first().click();
   await expect(page.getByText("সুতরাং গতীয় ঘর্ষণ বল")).toBeVisible();
 
-  await page.getByRole("link", { name: /বোর্ড প্রশ্ন/ }).click();
-  await expect(page.locator(".q-card")).toHaveCount(4);
+  // Board questions are a filter in each section now.
+  await page.getByRole("link", { name: /^MCQ/ }).click();
+  await expect(page.locator(".tabs .tab.on")).toHaveText(/^MCQ/);
+  await page.getByLabel("বোর্ড:").selectOption({ label: "সব বোর্ড প্রশ্ন" });
+  await page.getByRole("button", { name: "দেখাও" }).click();
+  await expect(page).toHaveURL(/board=any/);
+  await expect(page.locator(".q-card:visible")).toHaveCount(3);
   await page.getByLabel("সাল:").selectOption({ label: "২০২৪" });
   await page.getByRole("button", { name: "দেখাও" }).click();
-  await expect(page.locator(".q-card")).toHaveCount(1);
-  await expect(page.locator(".q-card .tag.board")).toContainText("চট্টগ্রাম বোর্ড ২০২৪");
+  await expect(page.locator(".q-card:visible")).toHaveCount(1);
+  await expect(page.locator(".q-card:visible .tag.board")).toContainText("চট্টগ্রাম বোর্ড ২০২৪");
 });
 
 test("private questions never reach the website", async ({ request }) => {
-  for (const tab of ["mcq", "short", "creative", "problem", "board"]) {
+  for (const tab of ["textbook", "practice", "mcq", "sq", "cq", "board"]) {
     const html = await (await request.get(`${CHAPTER_4}?tab=${tab}`)).text();
     expect(html, tab).not.toContain(PRIVATE_STEM);
   }
@@ -86,12 +95,11 @@ test("a teacher writes an MCQ with maths, fixes a mistake, and adds the next", a
   await login(page, "01710000001");
   await page.getByRole("link", { name: "প্রশ্নব্যাংক" }).filter({ visible: true }).first().click();
   await expect(page).toHaveURL(/\/dashboard\/bank$/);
-  await expect(page.getByRole("status")).toContainText("টি প্রশ্ন");
-  await page.getByRole("link", { name: "নতুন প্রশ্ন" }).click();
+  await page.getByRole("link", { name: "নতুন প্রশ্ন" }).filter({ visible: true }).click();
   await expect(page.getByRole("heading", { name: "কোন ধরনের প্রশ্ন লিখবেন?" })).toBeVisible();
   // Next keeps the previous page mounted (hidden) for instant Back, so only count what's visible.
-  await expect(page.locator("main ul li:visible")).toHaveCount(5);
-  await page.locator("main ul li:visible").first().getByRole("link").click();
+  await expect(page.locator("main ul li:visible")).toHaveCount(6);
+  await page.locator("main ul li:visible").filter({ hasText: "চারটি অপশন" }).getByRole("link").click();
   await expect(page).toHaveURL(/type=mcq/);
 
   await field(page, "কোর্স").selectOption({ label: "পদার্থবিজ্ঞান ১ম পত্র" });
@@ -142,13 +150,14 @@ test("a private creative question with a diagram stays in the bank", async ({ pa
 
   await field(page, "শুধু আপনি: পরীক্ষা আর প্রশ্নপত্রের জন্য রাখা").check();
   await page.getByRole("button", { name: "প্রশ্ন যোগ করুন" }).click();
-  await expect(page).toHaveURL(/\/dashboard\/bank\?course=/);
+  // Saved: back on its chapter in the bank, on the CQ section.
+  await expect(page).toHaveURL(/\/dashboard\/bank\/course\/[0-9a-f-]{36}\/[0-9a-f-]{36}\?tab=cq$/);
   const item = page.locator("main li:visible").filter({ hasText: "স্প্রিং ধ্রুবক" });
   await expect(item.getByText("শুধু আপনি")).toBeVisible();
   editUrl = (await item.getByRole("link", { name: "সম্পাদনা" }).getAttribute("href")) ?? "";
   expect(editUrl).toMatch(/^\/dashboard\/bank\/[0-9a-f-]{36}$/);
 
-  const site = await (await request.get("/tanvir/courses/1/chapters/1?tab=creative")).text();
+  const site = await (await request.get("/tanvir/courses/1/chapters/1?tab=cq")).text();
   expect(site).not.toContain("স্প্রিং ধ্রুবক");
 });
 
@@ -166,13 +175,13 @@ test("a question is edited, then deleted", async ({ page }) => {
   await expect(page.getByText("মুছে ফেলার আগে নিশ্চিত করার ঘরে টিক দিন")).toBeVisible();
   await field(page, "হ্যাঁ, প্রশ্নটি মুছে ফেলতে চাই").check();
   await page.getByRole("button", { name: "মুছে ফেলুন" }).click();
-  await expect(page).toHaveURL(/\/dashboard\/bank\?course=/);
+  await expect(page).toHaveURL(/\/dashboard\/bank\/course\/[0-9a-f-]{36}\/[0-9a-f-]{36}\?tab=cq$/);
   await expect(page.locator("main:visible").getByText("স্প্রিং ধ্রুবক")).toHaveCount(0);
 });
 
 test("another teacher can't open a question's editor", async ({ page }) => {
   await login(page, "01710000001");
-  await page.goto("/dashboard/bank?course=");
+  await page.goto("/dashboard/bank/all");
   const href = await page.locator("main li:visible").first().getByRole("link", { name: "সম্পাদনা" }).getAttribute("href");
   // /login sends a signed-in teacher to the dashboard, so start the second teacher fresh.
   await page.context().clearCookies();
@@ -193,7 +202,14 @@ test.describe("on a phone", () => {
     await shot(page, "site-chapter-ink-360");
 
     await login(page, "01710000001");
-    for (const path of ["/dashboard/bank", "/dashboard/bank/new", "/dashboard/bank/new?type=creative", "/dashboard/bank/new?type=mcq_multi"]) {
+    for (const path of [
+      "/dashboard/bank",
+      "/dashboard/bank/all",
+      "/dashboard/bank/new",
+      "/dashboard/bank/new?type=creative",
+      "/dashboard/bank/new?type=mcq_multi",
+      "/dashboard/bank/new?type=practice",
+    ]) {
       await page.goto(path);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - 360), path).toBeLessThanOrEqual(0);
       const repeated = await page.evaluate(() => {

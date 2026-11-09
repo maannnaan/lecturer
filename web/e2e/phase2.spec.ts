@@ -75,7 +75,8 @@ test("a teacher creates a paid course with a lesson plan, and students can see i
   await login(page, "01710000001");
   await page.goto("/dashboard/courses/new");
   await page.getByLabel("কোর্সের নাম").fill("জীববিজ্ঞান ১ম পত্র");
-  await page.getByLabel("শ্রেণি বা স্তর").fill("এইচএসসি");
+  await page.getByLabel("শ্রেণি", { exact: true }).selectOption("hsc");
+  await page.getByLabel("বিষয়", { exact: true }).fill("জীববিজ্ঞান ১ম পত্র");
   await page.getByLabel("পেইড: বিকাশে টাকা পাঠিয়ে").check();
   await page.getByLabel("ওয়েবসাইটে দেখান").check();
   await page.getByRole("button", { name: "কোর্স তৈরি করুন" }).click();

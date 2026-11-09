@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { CourseIconGlyph } from "@/components/course-icon";
 import { Paragraphs } from "@/components/paragraphs";
 import { chapterLabel } from "@/lib/chapter-label";
+import { gradeName, gradeOf } from "@/lib/grades";
 import { type Dictionary, type Locale, dayAndMonth, formatDayRange, formatNumber } from "@/i18n";
 import type { Chapter, Course } from "@/server/courses";
 import type { Notice } from "@/server/notices";
@@ -35,7 +36,7 @@ export function CourseCard({
   return (
     <article className="course-card">
       <div className={`course-cover cv-${course.cover}`}>
-        {course.level ? <span className="lvl">{course.level}</span> : <span />}
+        {gradeOf(course) !== "other" ? <span className="lvl">{gradeName(course.grade, d).label}</span> : <span />}
         <CourseIconGlyph name={course.icon} />
       </div>
       <div className="course-body">

@@ -1,14 +1,21 @@
 import "server-only";
 import type { Dictionary, Locale } from "@/i18n";
 import { chapterLabel } from "@/lib/chapter-label";
+import { GRADES, gradeName, gradeOf } from "@/lib/grades";
 import type { CourseWithChapters } from "@/server/courses";
 import type { CourseChoice } from "./question-form";
 
-/** Courses and their chapters as the question editor lists them: "অধ্যায় ৪: নিউটনিয়ান বলবিদ্যা". */
+/**
+ * Courses and their chapters as the question editor lists them, grouped by class:
+ * "এইচএসসি › পদার্থবিজ্ঞান ১ম পত্র", then "অধ্যায় ৪: নিউটনিয়ান বলবিদ্যা".
+ */
 export function courseChoices(courses: CourseWithChapters[], d: Dictionary, locale: Locale): CourseChoice[] {
-  return courses.map((course) => ({
+  // Stable sort: classes in the bank's order, courses in the teacher's order within each.
+  const byClass = [...courses].sort((a, b) => GRADES.indexOf(gradeOf(a)) - GRADES.indexOf(gradeOf(b)));
+  return byClass.map((course) => ({
     id: course.id,
     title: course.title,
+    group: gradeName(course.grade, d).label,
     chapters: course.chapters.map((ch, i) => ({ id: ch.id, label: `${chapterLabel(ch, i, d, locale)}: ${ch.title}` })),
   }));
 }

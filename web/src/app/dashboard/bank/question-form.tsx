@@ -14,6 +14,7 @@ import {
   OPTION_COUNT,
   type QuestionType,
   isMcq,
+  isProblem,
 } from "@/lib/questions";
 import { uploadImage } from "@/lib/shrink-image";
 import type { QuestionBody } from "@/server/db/schema";
@@ -27,7 +28,8 @@ type QuestionText = Pick<
 type Common = Pick<Dictionary["common"], "save" | "saving" | "saved" | "optional">;
 type UploadErrors = { type: string; size: string; unavailable: string };
 
-export type CourseChoice = { id: string; title: string; chapters: { id: string; label: string }[] };
+/** A course the question can be filed under; `group` is its class, for grouping the menu. */
+export type CourseChoice = { id: string; title: string; group: string; chapters: { id: string; label: string }[] };
 export type QuestionData = {
   id: string;
   type: QuestionType;
@@ -56,6 +58,7 @@ function initialFields(question: QuestionData | undefined, defaults: { courseId:
     explanation: body?.explanation ?? "",
     prompt: body?.prompt ?? "",
     modelAnswer: body?.modelAnswer ?? "",
+    finalAnswer: body?.finalAnswer ?? "",
     solution: body?.solution ?? "",
     answer: body?.answer !== undefined ? String(body.answer) : "",
   };
@@ -122,7 +125,7 @@ export function QuestionForm({
             label={t.course}
             defaultValue={v("courseId") || courses[0]?.id || ""}
             onChange={(event) => setCourseId(event.target.value)}
-            options={courses.map((course) => ({ value: course.id, label: course.title }))}
+            options={courses.map((course) => ({ value: course.id, label: course.title, group: course.group }))}
             error={e.courseId}
           />
           <SelectField
@@ -242,8 +245,18 @@ export function QuestionForm({
           </fieldset>
         )}
 
-        {type === "problem" && (
-          <TextAreaField name="solution" label={t.solution} labelNote={c.optional} rows={6} defaultValue={v("solution")} error={e.solution} />
+        {isProblem(type) && (
+          <>
+            <Field
+              name="finalAnswer"
+              label={t.finalAnswer}
+              labelNote={c.optional}
+              hint={t.finalAnswerHint}
+              defaultValue={v("finalAnswer")}
+              error={e.finalAnswer}
+            />
+            <TextAreaField name="solution" label={t.solution} labelNote={c.optional} rows={6} defaultValue={v("solution")} error={e.solution} />
+          </>
         )}
 
         <fieldset className="flex flex-col gap-4 border-t border-line pt-4">
@@ -503,7 +516,13 @@ function QuestionPreview({
         </div>
       )}
 
-      {type === "problem" && text("solution") && (
+      {isProblem(type) && text("finalAnswer") && (
+        <div className="explain">
+          <b>{q.answer}</b> <MathPreviewText text={text("finalAnswer")} katex={katex} />
+        </div>
+      )}
+
+      {isProblem(type) && text("solution") && (
         <div className="explain">
           <b>{q.solution}</b> <MathPreviewText text={text("solution")} katex={katex} />
         </div>

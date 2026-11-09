@@ -3,7 +3,7 @@ import { ChevronDown, Landmark, PlayCircle } from "lucide-react";
 import { MathText } from "@/components/math-text";
 import { type Dictionary, type Locale, formatNumber } from "@/i18n";
 import { boardLabel } from "@/lib/board-label";
-import { isMcq } from "@/lib/questions";
+import { isMcq, isProblem } from "@/lib/questions";
 import type { Question } from "@/server/questions";
 import { McqPractice } from "./mcq-practice";
 
@@ -99,10 +99,19 @@ export function QuestionCard({ question, number, d, locale }: { question: Questi
         </div>
       )}
 
-      {question.type === "problem" && body.solution && (
-        <Reveal label={c.showSolution}>
-          <b>{q.solution}</b> <MathText text={body.solution} />
-        </Reveal>
+      {isProblem(question.type) && (body.finalAnswer || body.solution) && (
+        <div className="q-reveals">
+          {body.finalAnswer && (
+            <Reveal label={c.showAnswer}>
+              <b>{q.answer}</b> <MathText text={body.finalAnswer} />
+            </Reveal>
+          )}
+          {body.solution && (
+            <Reveal label={c.showSolution}>
+              <b>{q.solution}</b> <MathText text={body.solution} />
+            </Reveal>
+          )}
+        </div>
       )}
 
       {question.videoUrl && (

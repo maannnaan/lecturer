@@ -85,7 +85,8 @@ describe("parseCourse", () => {
   it("reads a paid monthly course", () => {
     const { course, errors } = parseCourse({
       title: "পদার্থবিজ্ঞান ১ম পত্র",
-      level: "এইচএসসি",
+      grade: "hsc",
+      subject: " পদার্থবিজ্ঞান ১ম পত্র ",
       access: "paid",
       price: "১,২০০",
       pricePeriod: "monthly",
@@ -94,7 +95,21 @@ describe("parseCourse", () => {
       published: "on",
     });
     expect(errors).toEqual({});
-    expect(course).toMatchObject({ access: "paid", price: 1200, icon: "atom", cover: 2, published: true });
+    expect(course).toMatchObject({
+      grade: "hsc",
+      subject: "পদার্থবিজ্ঞান ১ম পত্র",
+      access: "paid",
+      price: 1200,
+      icon: "atom",
+      cover: 2,
+      published: true,
+    });
+  });
+
+  it("files a course with no known class under other, and keeps its subject short", () => {
+    expect(parseCourse({ title: "x" }).course).toMatchObject({ grade: "other", subject: "" });
+    expect(parseCourse({ title: "x", grade: "HSC" }).course.grade).toBe("other");
+    expect(parseCourse({ title: "x", subject: "ক".repeat(61) }).errors.subject).toBe("tooLong");
   });
 
   it("needs a price for a paid course and drops it for any other", () => {

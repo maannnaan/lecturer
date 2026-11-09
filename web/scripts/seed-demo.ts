@@ -12,6 +12,7 @@ import { getDb } from "@/server/db";
 import { upsertAdmin } from "@/server/admins";
 import { notices as noticesTable, type TeacherSite } from "@/server/db/schema";
 import { databaseUrl } from "@/server/db/url";
+import type { Grade } from "@/lib/grades";
 import { parseQuestion } from "@/lib/questions";
 import type { ThemeName } from "@/lib/themes";
 import { addChapter, createCourse, listCourses } from "@/server/courses";
@@ -32,7 +33,8 @@ type DemoChapter = { title: string; status?: "done" | "ongoing" | "upcoming"; st
 type DemoQuestion = Record<string, string>;
 type DemoCourse = {
   title: string;
-  level: string;
+  grade: Grade;
+  subject: string;
   session?: string;
   description?: string;
   icon: string;
@@ -107,11 +109,23 @@ $$\begin{aligned} f_k &= \mu_k R = 0.2 \times 42.43 \\ &\approx 8.49\ \text{N} \
     modelAnswer: "বস্তু যে অবস্থায় আছে সেই অবস্থায় থাকতে চাওয়ার প্রবণতাকে জড়তা বলে। জড়তা দুই প্রকার: স্থিতি জড়তা ও গতি জড়তা।",
   },
   {
-    type: "problem",
+    type: "textbook",
     source: "মূল বই, অনুশীলনী ৪.৩",
     stem: String.raw`$1000\,\text{kg}$ ভরের একটি গাড়ি $20\,\text{m s}^{-1}$ বেগে চলছে। $5\,\text{s}$-এ গাড়িটি থামাতে কত বল প্রয়োগ করতে হবে?`,
+    finalAnswer: String.raw`$4000\,\text{N}$, গতির বিপরীত দিকে`,
     solution: String.raw`মন্দন $a = \dfrac{0 - 20}{5} = -4\,\text{m s}^{-2}$।
 সুতরাং $F = ma = 1000 \times (-4) = -4000\,\text{N}$; অর্থাৎ গতির বিপরীত দিকে $4000\,\text{N}$ বল লাগবে।`,
+  },
+  {
+    type: "practice",
+    stem: String.raw`$5\,\text{kg}$ ভরের একটি বস্তুর উপর $20\,\text{N}$ বল $4\,\text{s}$ ধরে ক্রিয়া করে। বস্তুটির ভরবেগের পরিবর্তন কত?`,
+    finalAnswer: String.raw`$80\,\text{kg m s}^{-1}$`,
+    solution: String.raw`ভরবেগের পরিবর্তন = বলের ঘাত $= Ft = 20 \times 4 = 80\,\text{kg m s}^{-1}$`,
+  },
+  {
+    type: "practice",
+    stem: String.raw`একটি লিফট $2\,\text{m s}^{-2}$ ত্বরণে উপরে উঠছে। লিফটে দাঁড়ানো $60\,\text{kg}$ ভরের একজন মানুষের আপাত ওজন কত? ($g = 9.8\,\text{m s}^{-2}$)`,
+    finalAnswer: String.raw`$708\,\text{N}$`,
   },
   {
     type: "mcq",
@@ -147,6 +161,27 @@ const KINEMATICS: DemoQuestion[] = [
     option3: String.raw`$90^\circ$`,
     answer: "1",
     explanation: String.raw`$R = \dfrac{u^2 \sin 2\theta}{g}$, যা $\sin 2\theta = 1$ অর্থাৎ $\theta = 45^\circ$ হলে সর্বোচ্চ।`,
+  },
+];
+
+// SSC physics, chapter 2 (গতি): so the website's question bank has a second class.
+const SSC_MOTION: DemoQuestion[] = [
+  {
+    type: "mcq",
+    stem: "সুষম বেগে চলমান কোনো বস্তুর ত্বরণ কত?",
+    option0: "শূন্য",
+    option1: "ধ্রুব, কিন্তু শূন্য নয়",
+    option2: "সময়ের সাথে বাড়ে",
+    option3: "সময়ের সাথে কমে",
+    answer: "0",
+    explanation: "বেগ বদলায় না বলে বেগের পরিবর্তনের হার, অর্থাৎ ত্বরণ, শূন্য।",
+  },
+  {
+    type: "textbook",
+    source: "মূল বই, অনুশীলনী ২.৫",
+    stem: String.raw`একটি গাড়ি $10\,\text{s}$-এ $200\,\text{m}$ পথ অতিক্রম করে। গাড়িটির গড় দ্রুতি কত?`,
+    finalAnswer: String.raw`$20\,\text{m s}^{-1}$`,
+    solution: String.raw`গড় দ্রুতি $= \dfrac{\text{অতিক্রান্ত দূরত্ব}}{\text{সময়}} = \dfrac{200}{10} = 20\,\text{m s}^{-1}$`,
   },
 ];
 
@@ -272,7 +307,8 @@ const DEMO: DemoTeacher[] = [
     courses: [
       {
         title: "পদার্থবিজ্ঞান ১ম পত্র",
-        level: "এইচএসসি",
+        grade: "hsc",
+        subject: "পদার্থবিজ্ঞান ১ম পত্র",
         session: "এইচএসসি ২০২৮ ব্যাচ · সেপ্টেম্বর–ফেব্রুয়ারি",
         description:
           "এইচএসসি পদার্থবিজ্ঞান ১ম পত্রের দশটি অধ্যায়, পাঠ্যবইয়ের ক্রমে। প্রতি সপ্তাহে একটি লাইভ MCQ পরীক্ষা, প্রতি মাসে একটি পূর্ণাঙ্গ মডেল টেস্ট।",
@@ -283,9 +319,36 @@ const DEMO: DemoTeacher[] = [
         chapters: HSC_PHYSICS_1,
         questions: { 2: KINEMATICS, 3: NEWTONIAN_MECHANICS },
       },
-      { title: "পদার্থবিজ্ঞান ২য় পত্র", level: "এইচএসসি", icon: "zap", cover: 2, access: "approval", chapters: HSC_PHYSICS_2 },
-      { title: "পদার্থবিজ্ঞান", level: "এসএসসি", session: "এসএসসি ২০২৭ ব্যাচ", icon: "magnet", cover: 3, access: "free", chapters: SSC_PHYSICS },
-      { title: "উচ্চতর গণিত", level: "এসএসসি", icon: "sigma", cover: 4, access: "paid", price: 1000, chapters: SSC_HIGHER_MATH },
+      {
+        title: "পদার্থবিজ্ঞান ২য় পত্র",
+        grade: "hsc",
+        subject: "পদার্থবিজ্ঞান ২য় পত্র",
+        icon: "zap",
+        cover: 2,
+        access: "approval",
+        chapters: HSC_PHYSICS_2,
+      },
+      {
+        title: "পদার্থবিজ্ঞান",
+        grade: "ssc",
+        subject: "পদার্থবিজ্ঞান",
+        session: "এসএসসি ২০২৭ ব্যাচ",
+        icon: "magnet",
+        cover: 3,
+        access: "free",
+        chapters: SSC_PHYSICS,
+        questions: { 1: SSC_MOTION },
+      },
+      {
+        title: "উচ্চতর গণিত",
+        grade: "ssc",
+        subject: "উচ্চতর গণিত",
+        icon: "sigma",
+        cover: 4,
+        access: "paid",
+        price: 1000,
+        chapters: SSC_HIGHER_MATH,
+      },
     ],
     notices: [
       { title: "এ সপ্তাহে শুক্রবারের ক্লাস রবিবার বিকেল ৪টায় হবে।", pinned: true, daysAgo: 2 },
@@ -322,7 +385,8 @@ const DEMO: DemoTeacher[] = [
     courses: [
       {
         title: "রসায়ন ১ম পত্র",
-        level: "এইচএসসি",
+        grade: "hsc",
+        subject: "রসায়ন ১ম পত্র",
         session: "এইচএসসি ২০২৮ ব্যাচ",
         icon: "flask-conical",
         cover: 1,
@@ -346,8 +410,8 @@ const DEMO: DemoTeacher[] = [
           ],
         },
       },
-      { title: "রসায়ন ২য় পত্র", level: "এইচএসসি", icon: "dna", cover: 2, access: "approval", chapters: [] },
-      { title: "রসায়ন", level: "এসএসসি", icon: "leaf", cover: 3, access: "free", chapters: [] },
+      { title: "রসায়ন ২য় পত্র", grade: "hsc", subject: "রসায়ন ২য় পত্র", icon: "dna", cover: 2, access: "approval", chapters: [] },
+      { title: "রসায়ন", grade: "ssc", subject: "রসায়ন", icon: "leaf", cover: 3, access: "free", chapters: [] },
     ],
     notices: [{ title: "১৫ নভেম্বর থেকে এইচএসসি ২০২৮ নতুন ব্যাচ শুরু।", pinned: true, daysAgo: 1 }],
   },
@@ -361,7 +425,9 @@ const DEMO: DemoTeacher[] = [
     theme: "sage",
     status: "pending",
     site: { designation: "গণিত শিক্ষক", location: "চট্টগ্রাম", tagline: "অঙ্ক ভয়ের নয়, ধাপে ধাপে বোঝার।" },
-    courses: [{ title: "উচ্চতর গণিত", level: "এসএসসি", icon: "sigma", cover: 1, access: "free", chapters: SSC_HIGHER_MATH.slice(0, 5) }],
+    courses: [
+      { title: "উচ্চতর গণিত", grade: "ssc", subject: "উচ্চতর গণিত", icon: "sigma", cover: 1, access: "free", chapters: SSC_HIGHER_MATH.slice(0, 5) },
+    ],
     notices: [],
   },
 ];
@@ -395,7 +461,8 @@ async function main() {
       for (const c of t.courses) {
         const course = await createCourse(db, id, {
           title: c.title,
-          level: c.level,
+          grade: c.grade,
+          subject: c.subject,
           session: c.session ?? "",
           description: c.description ?? "",
           icon: c.icon as never,

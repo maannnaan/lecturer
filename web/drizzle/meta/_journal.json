@@ -22,6 +22,13 @@
       "when": 1794228989829,
       "tag": "0002_question_bank",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794233502853,
+      "tag": "0003_bank_by_class",
+      "breakpoints": true
     }
   ]
 }

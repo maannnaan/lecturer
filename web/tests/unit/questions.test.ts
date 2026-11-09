@@ -79,15 +79,25 @@ describe("parseQuestion", () => {
     expect(errors.marks1).toBe("number");
   });
 
-  it("reads short questions and problems", () => {
+  it("reads short questions, and textbook and practice problems", () => {
     expect(parseQuestion({ type: "short", courseId: course, stem: "জড়তা কী?", modelAnswer: "বস্তুর অবস্থা…" }).question.body).toEqual({
       stem: "জড়তা কী?",
       modelAnswer: "বস্তুর অবস্থা…",
     });
-    expect(parseQuestion({ type: "problem", courseId: course, stem: "সমস্যা", solution: "সমাধান" }).question.body).toEqual({
+    const textbook = parseQuestion({ type: "textbook", courseId: course, stem: "সমস্যা", finalAnswer: "$5\\,\\text{N}$", solution: "সমাধান" });
+    expect(textbook.errors).toEqual({});
+    expect(textbook.question.body).toEqual({ stem: "সমস্যা", finalAnswer: "$5\\,\\text{N}$", solution: "সমাধান" });
+    // A practice problem may have neither an answer nor a solution yet.
+    expect(parseQuestion({ type: "practice", courseId: course, stem: "সমস্যা" }).question.body).toEqual({
       stem: "সমস্যা",
-      solution: "সমাধান",
+      finalAnswer: "",
+      solution: "",
     });
+    expect(parseQuestion({ type: "practice", courseId: course, stem: "সমস্যা", finalAnswer: "x".repeat(301) }).errors.finalAnswer).toBe("tooLong");
+  });
+
+  it("no longer knows the old 'problem' type, which became 'textbook'", () => {
+    expect(parseQuestion({ type: "problem", courseId: course, stem: "সমস্যা" }).errors.type).toBe("invalid");
   });
 
   it("requires a stem, a course and a known type", () => {

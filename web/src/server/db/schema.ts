@@ -200,8 +200,15 @@ export const courses = pgTable(
       .references(() => teachers.id, { onDelete: "cascade" }),
     number: integer("number").notNull(),
     title: text("title").notNull(),
-    /** e.g. "এইচএসসি", "এসএসসি", "Class 8" */
+    /**
+     * The old free-text class ("এইচএসসি", "Class 8"). Unused since `grade` and `subject` replaced
+     * it; kept one release so the previous deployment still runs, dropped in Phase 4's migration.
+     */
     level: text("level").notNull().default(""),
+    /** The class the course is for: a key from GRADES in src/lib/grades.ts. */
+    grade: text("grade").notNull().default("other"),
+    /** The subject in the teacher's words, e.g. "পদার্থবিজ্ঞান ১ম পত্র"; empty means use the title. */
+    subject: text("subject").notNull().default(""),
     /** e.g. "এইচএসসি ২০২৮ ব্যাচ · সেপ্টেম্বর–ফেব্রুয়ারি" */
     session: text("session").notNull().default(""),
     description: text("description").notNull().default(""),
@@ -277,7 +284,8 @@ export const notices = pgTable(
   (t) => [index("notices_teacher_published_idx").on(t.teacherId, t.publishedAt)],
 );
 
-export const questionType = pgEnum("question_type", ["mcq", "mcq_multi", "short", "creative", "problem"]);
+// In the database's own order: "textbook" was "problem" until migration 0003 renamed it.
+export const questionType = pgEnum("question_type", ["mcq", "mcq_multi", "short", "creative", "textbook", "practice"]);
 export const questionVisibility = pgEnum("question_visibility", ["public", "private"]);
 
 export type QuestionImage = { mediaId: string; url: string };
@@ -291,7 +299,8 @@ export type CreativePart = { text: string; marks: number; solution: string };
  *   mcq_multi  stem, statements[2–4], prompt, options[4], answer, explanation
  *   short      stem, modelAnswer
  *   creative   stem (the উদ্দীপক), parts[4]
- *   problem    stem, solution
+ *   textbook   stem, finalAnswer, solution   (a numerical problem from the textbook)
+ *   practice   stem, finalAnswer, solution   (an extra numerical problem to practise)
  */
 export type QuestionBody = {
   stem: string;
@@ -304,6 +313,8 @@ export type QuestionBody = {
   explanation?: string;
   modelAnswer?: string;
   parts?: CreativePart[];
+  /** A problem's result on its own, e.g. "৫ m s⁻²". */
+  finalAnswer?: string;
   solution?: string;
 };
 

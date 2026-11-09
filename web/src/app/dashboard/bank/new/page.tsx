@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
-import { QUESTION_TYPES, type QuestionType } from "@/lib/questions";
+import { QUESTION_TYPES, type QuestionType, tabOf } from "@/lib/questions";
 import { requireTeacher } from "@/server/auth/current";
 import { listCoursesWithChapters } from "@/server/courses";
 import { getDb } from "@/server/db";
 import { courseChoices } from "../choices";
+import { NoCourses } from "../no-courses";
 import { QuestionForm } from "../question-form";
 
 export const instant = false;
@@ -23,9 +24,16 @@ export default async function NewQuestionPage({ searchParams }: { searchParams: 
   const t = d.dashboard.bank;
   const s = await searchParams;
   const courses = await listCoursesWithChapters(await getDb(), teacher.id);
+  const type = (QUESTION_TYPES as readonly string[]).includes(s.type ?? "") ? (s.type as QuestionType) : null;
 
+  // Back to where the teacher came from: the chapter (on this type's section), the subject, or the bank.
+  const asked = courses.find((c) => c.id === s.course);
+  const askedChapter = asked?.chapters.find((ch) => ch.id === s.chapter);
+  const backHref = asked
+    ? `/dashboard/bank/course/${asked.id}${askedChapter ? `/${askedChapter.id}${type ? `?tab=${tabOf(type)}` : ""}` : ""}`
+    : "/dashboard/bank";
   const back = (
-    <Link href="/dashboard/bank" className="link text-[15px]">
+    <Link href={backHref} className="link text-[15px]">
       <ArrowLeft aria-hidden="true" />
       {t.backToBank}
     </Link>
@@ -35,20 +43,13 @@ export default async function NewQuestionPage({ searchParams }: { searchParams: 
     return (
       <main className="dash-content">
         {back}
-        <div className="card flex flex-col items-start gap-3 p-6">
-          <p className="text-ink-2">{t.noCourses}</p>
-          <Link href="/dashboard/courses/new" className="btn btn-primary btn-sm">
-            <Plus aria-hidden="true" />
-            {t.createCourse}
-          </Link>
-        </div>
+        <NoCourses t={t} />
       </main>
     );
   }
 
-  const course = courses.find((c) => c.id === s.course) ?? courses[0];
-  const chapterId = course.chapters.some((ch) => ch.id === s.chapter) ? s.chapter! : "";
-  const type = (QUESTION_TYPES as readonly string[]).includes(s.type ?? "") ? (s.type as QuestionType) : null;
+  const course = asked ?? courses[0];
+  const chapterId = askedChapter?.id ?? "";
   const place = new URLSearchParams({ course: course.id });
   if (chapterId) place.set("chapter", chapterId);
 
@@ -62,6 +63,7 @@ export default async function NewQuestionPage({ searchParams }: { searchParams: 
             <li key={option}>
               <Link href={`/dashboard/bank/new?type=${option}&${place}`} className="card flex h-full items-start gap-3 p-4 hover:border-primary">
                 <span className="min-w-0 flex-1">
+                  <span className="tag mb-2">{d.questions.tabs[tabOf(option)]}</span>
                   <b className="block text-lg text-ink">{d.questions.types[option]}</b>
                   <span className="text-[14.5px] text-ink-2">{d.questions.typeHints[option]}</span>
                 </span>

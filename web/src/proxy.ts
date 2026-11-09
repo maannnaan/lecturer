@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { isGrade } from "@/lib/grades";
 import { RESERVED_HANDLES } from "@/lib/handles";
 import { ADMIN_COOKIE, TEACHER_COOKIE } from "@/server/auth/cookies";
 import { chapterVisibility, courseVisibility } from "@/server/courses";
@@ -40,9 +41,11 @@ export async function proxy(request: NextRequest) {
   const signedIn = request.cookies.has(TEACHER_COOKIE);
   if ((site.status === "pending" || site.status === "rejected") && !signedIn) return notFound(request);
 
-  // lecturer.bd/<handle>/courses/<number>
-  if (rest[0] === "courses" && rest.length === 2) {
-    if (!/^\d{1,6}$/.test(rest[1])) return notFound(request);
+  // lecturer.bd/<handle>/bank and /bank/<class>
+  if (rest[0] === "bank" && (rest.length > 2 || (rest.length === 2 && !isGrade(rest[1])))) return notFound(request);
+  // lecturer.bd/<handle>/courses/<number>, and /chapters (the course's question bank)
+  if (rest[0] === "courses" && (rest.length === 2 || rest.length === 3)) {
+    if (!/^\d{1,6}$/.test(rest[1]) || (rest.length === 3 && rest[2] !== "chapters")) return notFound(request);
     const course = await courseVisibility(db, site.teacherId, Number(rest[1]));
     if (!course || (course === "draft" && !signedIn)) return notFound(request);
   }

@@ -17,6 +17,7 @@ import {
   updateQuestion,
 } from "@/server/questions";
 import { errorTexts, refused } from "../form-state";
+import { bankHref } from "./links";
 
 // Each action re-reads the session and passes the teacher's own id down: the data layer then
 // refuses a course, chapter, image or question that belongs to someone else.
@@ -33,13 +34,6 @@ async function placementRefusal(reason: Exclude<SaveQuestionResult, { ok: true }
   return { errors: { [field]: e.invalid }, values: keep(input) };
 }
 
-/** Where the bank list shows the question's own chapter. */
-function bankHref(courseId: string, chapterId: string | null) {
-  const query = new URLSearchParams({ course: courseId });
-  if (chapterId) query.set("chapter", chapterId);
-  return `/dashboard/bank?${query}`;
-}
-
 export async function createQuestionAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const teacher = await requireTeacher();
   const input = formInput(formData);
@@ -54,7 +48,7 @@ export async function createQuestionAction(_prev: FormState, formData: FormData)
     if (question.chapterId) query.set("chapter", question.chapterId);
     redirect(`/dashboard/bank/new?${query}`);
   }
-  redirect(bankHref(question.courseId, question.chapterId));
+  redirect(bankHref(result.question));
 }
 
 export async function updateQuestionAction(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -76,7 +70,7 @@ export async function deleteQuestionAction(_prev: FormState, formData: FormData)
   const id = String(formData.get("questionId") ?? "");
   const question = await getQuestion(db, teacher.id, id);
   if (question) await deleteQuestion(db, teacher.id, id);
-  redirect(question ? bankHref(question.courseId, question.chapterId) : "/dashboard/bank");
+  redirect(question ? bankHref(question) : "/dashboard/bank");
 }
 
 export async function duplicateQuestionAction(formData: FormData) {

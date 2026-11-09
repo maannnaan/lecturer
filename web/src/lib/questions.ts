@@ -3,12 +3,53 @@ import { asciiDigits } from "./digits";
 import { type FieldErrors, type Input, text, url } from "./form-input";
 
 /** The kinds of question a teacher can write, in the order the editor offers them. */
-export const QUESTION_TYPES = ["mcq", "mcq_multi", "short", "creative", "problem"] as const;
+export const QUESTION_TYPES = ["textbook", "practice", "mcq", "mcq_multi", "short", "creative"] as const;
 export type QuestionType = (typeof QUESTION_TYPES)[number];
 
 /** Types with four options and one right answer: these can go into MCQ exams and OMR papers. */
 export const MCQ_TYPES = ["mcq", "mcq_multi"] as const satisfies readonly QuestionType[];
 export const isMcq = (type: QuestionType) => (MCQ_TYPES as readonly string[]).includes(type);
+
+/** Numerical problems: from the textbook's exercises, or extra ones to practise. Same fields. */
+export const isProblem = (type: QuestionType) => type === "textbook" || type === "practice";
+
+/**
+ * The sections of the question bank, in the order a chapter shows them: textbook problems,
+ * practice problems, MCQ, SQ (short) and CQ (creative). Each is a chapter page's `?tab=` value.
+ */
+export const BANK_TABS = ["textbook", "practice", "mcq", "sq", "cq"] as const;
+export type BankTab = (typeof BANK_TABS)[number];
+
+const TAB_TYPES: Record<BankTab, readonly QuestionType[]> = {
+  textbook: ["textbook"],
+  practice: ["practice"],
+  mcq: MCQ_TYPES,
+  sq: ["short"],
+  cq: ["creative"],
+};
+
+/** The question types a section lists. */
+export const tabTypes = (tab: BankTab): readonly QuestionType[] => TAB_TYPES[tab];
+
+/** The section a question type is listed in. */
+export function tabOf(type: QuestionType): BankTab {
+  return BANK_TABS.find((tab) => TAB_TYPES[tab].includes(type)) ?? "mcq";
+}
+
+/** `?tab=` names from before the sections were renamed; "board" is now a filter in each section. */
+const OLD_TABS = new Map<string, BankTab>([
+  ["problem", "textbook"],
+  ["short", "sq"],
+  ["creative", "cq"],
+  ["board", "mcq"],
+]);
+
+/** A chapter page's `?tab=`, old names included; null for anything else. */
+export function tabFromParam(raw: string | undefined): { tab: BankTab; anyBoard: boolean } | null {
+  if ((BANK_TABS as readonly string[]).includes(raw ?? "")) return { tab: raw as BankTab, anyBoard: false };
+  const old = OLD_TABS.get(raw ?? "");
+  return old ? { tab: old, anyBoard: raw === "board" } : null;
+}
 
 export const VISIBILITIES = ["public", "private"] as const;
 export type Visibility = (typeof VISIBILITIES)[number];
@@ -117,8 +158,13 @@ export function parseQuestion(input: Input) {
         })),
       };
       break;
-    case "problem":
-      body = { stem, solution: text(input, "solution", 8000, errors) };
+    case "textbook":
+    case "practice":
+      body = {
+        stem,
+        finalAnswer: text(input, "finalAnswer", 300, errors),
+        solution: text(input, "solution", 8000, errors),
+      };
       break;
   }
 

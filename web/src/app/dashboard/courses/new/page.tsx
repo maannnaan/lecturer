@@ -21,7 +21,7 @@ export default async function NewCoursePage() {
         {t.backToList}
       </Link>
       <h2 className="text-2xl">{t.newTitle}</h2>
-      <CourseForm t={t.form} c={d.common} />
+      <CourseForm t={t.form} c={d.common} grades={d.grades} />
     </main>
   );
 }

@@ -1,5 +1,6 @@
 import { asciiDigits } from "./digits";
 import { type FieldErrors, type Input, text } from "./form-input";
+import { GRADES } from "./grades";
 
 /** The icons a teacher can put on a course cover (lucide names). */
 export const COURSE_ICONS = [
@@ -45,7 +46,8 @@ export function parseCourse(input: Input) {
   const cover = Number(input.cover);
   const course = {
     title: text(input, "title", 120, errors, true),
-    level: text(input, "level", 40, errors),
+    grade: oneOf(input.grade, GRADES, "other"),
+    subject: text(input, "subject", 60, errors),
     session: text(input, "session", 120, errors),
     description: text(input, "description", 2000, errors),
     icon: oneOf(input.icon, COURSE_ICONS, "book-open"),

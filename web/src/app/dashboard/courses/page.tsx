@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp, Eye, Pencil, Plus } from "lucide-react";
 import { CourseIconGlyph } from "@/components/course-icon";
 import { formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
+import { gradeName } from "@/lib/grades";
 import { requireTeacher } from "@/server/auth/current";
 import { chapterCounts, listCourses } from "@/server/courses";
 import { getDb } from "@/server/db";
@@ -56,7 +57,11 @@ export default async function CoursesPage() {
                   </span>
                 </p>
                 <p className="text-sm text-muted">
-                  {[course.level, t.chaptersCount(formatNumber(counts.get(course.id) ?? 0, locale))]
+                  {[
+                    gradeName(course.grade, d).label,
+                    course.subject !== course.title && course.subject,
+                    t.chaptersCount(formatNumber(counts.get(course.id) ?? 0, locale)),
+                  ]
                     .filter(Boolean)
                     .join(" · ")}
                 </p>

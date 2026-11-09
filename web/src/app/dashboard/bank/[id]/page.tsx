@@ -4,12 +4,14 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Copy, Eye } from "lucide-react";
 import { getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
+import { tabOf } from "@/lib/questions";
 import { requireTeacher } from "@/server/auth/current";
 import { listCoursesWithChapters } from "@/server/courses";
 import { getDb } from "@/server/db";
 import { getQuestion } from "@/server/questions";
 import { duplicateQuestionAction } from "../actions";
 import { courseChoices } from "../choices";
+import { bankHref } from "../links";
 import { DeleteQuestionForm, QuestionForm } from "../question-form";
 
 export const instant = false;
@@ -31,15 +33,13 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ i
   const chapter = course?.chapters.find((ch) => ch.id === question.chapterId);
   const onSite =
     question.visibility === "public" && course?.published && chapter
-      ? `/${teacher.handle}/courses/${course.number}/chapters/${chapter.number}`
+      ? `/${teacher.handle}/courses/${course.number}/chapters/${chapter.number}?tab=${tabOf(question.type)}`
       : null;
-  const back = new URLSearchParams({ course: question.courseId });
-  if (question.chapterId) back.set("chapter", question.chapterId);
 
   return (
     <main className="dash-content">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link href={`/dashboard/bank?${back}`} className="link text-[15px]">
+        <Link href={bankHref(question)} className="link text-[15px]">
           <ArrowLeft aria-hidden="true" />
           {t.backToBank}
         </Link>

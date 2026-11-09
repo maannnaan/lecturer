@@ -3,16 +3,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { cache } from "react";
-import { Calendar, Check, ChevronRight, ListChecks } from "lucide-react";
+import { Calendar, Check, ListChecks } from "lucide-react";
+import { Crumbs } from "@/components/bank-ui";
 import { formatDayRange, formatNumber, formatYear, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
+import { totalOf } from "@/lib/bank-tree";
 import { chapterLabel } from "@/lib/chapter-label";
 import { asciiDigits } from "@/lib/digits";
-import { BOARDS } from "@/lib/questions";
+import { gradeName, gradeOf, subjectOf } from "@/lib/grades";
+import { BANK_TABS, BOARDS, type BankTab, isMcq, tabFromParam } from "@/lib/questions";
 import { getCurrentTeacher } from "@/server/auth/current";
 import { getCourseByNumber } from "@/server/courses";
 import { getDb } from "@/server/db";
-import { CHAPTER_PAGE_SIZE, CHAPTER_TABS, type ChapterTab, listChapterQuestions } from "@/server/questions";
+import { CHAPTER_PAGE_SIZE, listChapterQuestions } from "@/server/questions";
 import { getSite } from "../../../../data";
 import { QuestionCard } from "../../../../question-card";
 
@@ -56,28 +59,31 @@ export default async function ChapterPage({ params, searchParams }: { params: Pa
   const s = await searchParams;
   const db = await getDb();
 
-  const board = (BOARDS as readonly string[]).includes(s.board ?? "") ? s.board : undefined;
+  // Old links (?tab=problem, ?tab=board…) still land on the matching section.
+  const asked = tabFromParam(s.tab);
+  const board = asked?.anyBoard ? "any" : s.board === "any" || (BOARDS as readonly string[]).includes(s.board ?? "") ? s.board : undefined;
   const yearText = asciiDigits(s.year ?? "");
   const year = /^\d{4}$/.test(yearText) ? Number(yearText) : undefined;
   const page = Math.max(1, Number(asciiDigits(s.page ?? "")) || 1);
-  const asked = (CHAPTER_TABS as readonly string[]).includes(s.tab ?? "") ? (s.tab as ChapterTab) : undefined;
 
-  let tab: ChapterTab = asked ?? "mcq";
-  let list = await listChapterQuestions(db, teacher.id, chapter.id, { tab, board, year, page });
-  if (!asked && list.counts.mcq === 0) {
-    // No tab asked for: open the first one that has questions.
-    const first = CHAPTER_TABS.find((t) => list.counts[t] > 0);
+  const place = { courseId: course.id, chapterId: chapter.id };
+  let tab: BankTab = asked?.tab ?? BANK_TABS[0];
+  let list = await listChapterQuestions(db, teacher.id, place, { tab, board, year, page });
+  if (!asked && list.counts[tab] === 0) {
+    // No section asked for: open the first one that has questions.
+    const first = BANK_TABS.find((t) => list.counts[t] > 0);
     if (first) {
       tab = first;
-      list = await listChapterQuestions(db, teacher.id, chapter.id, { tab, board, year, page });
+      list = await listChapterQuestions(db, teacher.id, place, { tab, board, year, page });
     }
   }
-  const total = list.counts.mcq + list.counts.short + list.counts.creative + list.counts.problem;
+  const total = totalOf(list.counts);
   const pages = Math.max(1, Math.ceil(list.total / CHAPTER_PAGE_SIZE));
 
   const home = `/${teacher.handle}`;
   const coursePath = `${home}/courses/${course.number}`;
   const chapterPath = `${coursePath}/chapters/${chapter.number}`;
+  const grade = gradeOf(course);
   const dates = formatDayRange(chapter.startsOn, chapter.endsOn, locale);
   const label = chapterLabel(chapter, index, d, locale);
   const pageHref = (n: number) => {
@@ -96,13 +102,16 @@ export default async function ChapterPage({ params, searchParams }: { params: Pa
         </p>
       )}
       <div className="wrap">
-        <nav className="crumbs" aria-label={d.site.nav.courses}>
-          <Link href={home}>{locale === "bn" ? teacher.nameBn : teacher.nameEn}</Link>
-          <ChevronRight aria-hidden="true" />
-          <Link href={coursePath}>{course.title}</Link>
-          <ChevronRight aria-hidden="true" />
-          <b>{label}</b>
-        </nav>
+        <Crumbs
+          label={d.common.breadcrumb}
+          items={[
+            { label: locale === "bn" ? teacher.nameBn : teacher.nameEn, href: home },
+            { label: d.site.bank.title, href: `${home}/bank` },
+            { label: gradeName(grade, d).label, href: `${home}/bank/${grade}` },
+            { label: subjectOf(course), href: `${coursePath}/chapters` },
+            { label },
+          ]}
+        />
 
         <div className="ch-layout">
           <nav className="card ch-nav" aria-label={c.chapters}>
@@ -124,7 +133,7 @@ export default async function ChapterPage({ params, searchParams }: { params: Pa
           <section className="min-w-0" aria-labelledby="chapter-title">
             <div className="ch-head">
               <p className="ch-course">
-                {course.title} · {label}
+                <Link href={coursePath}>{course.title}</Link> · {label}
               </p>
               <h1 id="chapter-title">{chapter.title}</h1>
               <p className="ch-stats">
@@ -150,28 +159,30 @@ export default async function ChapterPage({ params, searchParams }: { params: Pa
               <p className="card mt-6 p-6 text-ink-2">{c.empty}</p>
             ) : (
               <>
-                <nav className="tabs" aria-label={c.chapters}>
-                  {CHAPTER_TABS.filter((t) => list.counts[t] > 0).map((t) => (
+                <nav className="tabs" aria-label={c.sections}>
+                  {BANK_TABS.filter((t) => list.counts[t] > 0).map((t) => (
                     <Link
                       key={t}
                       href={`${chapterPath}?tab=${t}`}
                       className={t === tab ? "tab on" : "tab"}
                       aria-current={t === tab ? "page" : undefined}
+                      title={d.questions.tabNames[t]}
                       scroll={false}
                     >
-                      {c.tabs[t]}
+                      {d.questions.tabs[t]}
                       <span className="count">{formatNumber(list.counts[t], locale)}</span>
                     </Link>
                   ))}
                 </nav>
 
-                {tab === "board" && (list.boards.length > 1 || list.years.length > 1) && (
-                  <form key={`${board ?? ""}-${year ?? ""}`} method="get" className="filters" aria-label={c.tabs.board}>
-                    <input type="hidden" name="tab" value="board" />
+                {list.boards.length > 0 && (
+                  <form key={`${tab}-${board ?? ""}-${year ?? ""}`} method="get" className="filters" aria-label={c.board}>
+                    <input type="hidden" name="tab" value={tab} />
                     <label className="select">
                       {c.board}:
                       <select name="board" defaultValue={board ?? ""}>
-                        <option value="">{c.allBoards}</option>
+                        <option value="">{c.allQuestions}</option>
+                        <option value="any">{c.boardOnly}</option>
                         {list.boards.map((b) => (
                           <option key={b} value={b}>
                             {d.questions.boards[b as keyof typeof d.questions.boards] ?? b}
@@ -179,26 +190,26 @@ export default async function ChapterPage({ params, searchParams }: { params: Pa
                         ))}
                       </select>
                     </label>
-                    <label className="select">
-                      {c.year}:
-                      <select name="year" defaultValue={year ? String(year) : ""}>
-                        <option value="">{c.allYears}</option>
-                        {list.years.map((y) => (
-                          <option key={y} value={y}>
-                            {formatYear(y, locale)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    {list.years.length > 0 && (
+                      <label className="select">
+                        {c.year}:
+                        <select name="year" defaultValue={year ? String(year) : ""}>
+                          <option value="">{c.allYears}</option>
+                          {list.years.map((y) => (
+                            <option key={y} value={y}>
+                              {formatYear(y, locale)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
                     <button type="submit" className="btn btn-ghost btn-sm">
                       {c.filter}
                     </button>
                   </form>
                 )}
 
-                {(tab === "mcq" || tab === "board") && list.items.some((q) => q.type === "mcq" || q.type === "mcq_multi") && (
-                  <p className="mt-4 text-[14.5px] text-muted">{c.practiceHint}</p>
-                )}
+                {list.items.some((q) => isMcq(q.type)) && <p className="mt-4 text-[14.5px] text-muted">{c.practiceHint}</p>}
 
                 {list.items.length === 0 ? (
                   <p className="card mt-6 p-6 text-ink-2">{c.emptyTab}</p>

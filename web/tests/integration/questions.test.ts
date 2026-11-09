@@ -5,6 +5,7 @@ import { addChapter, chapterVisibility, createCourse, deleteChapter, deleteCours
 import type { Database } from "@/server/db";
 import { media } from "@/server/db/schema";
 import {
+  bankCounts,
   createQuestion,
   deleteQuestion,
   duplicateQuestion,
@@ -56,19 +57,25 @@ beforeAll(async () => {
 });
 
 describe("questions", () => {
-  it("go to the end of their chapter, keep that order, and move up and down", async () => {
+  it("go to the end of their chapter, keep that order, and move within their section", async () => {
     const { course: c, ch1 } = await setup(owner);
     const a = await created(owner, input("mcq", c.id, ch1.id, { stem: "a" }));
-    const b = await created(owner, input("short", c.id, ch1.id, { stem: "b" }));
-    const third = await created(owner, input("creative", c.id, ch1.id, { stem: "c" }));
-    expect([a.position, b.position, third.position]).toEqual([0, 1, 2]);
+    const cq = await created(owner, input("creative", c.id, ch1.id, { stem: "cq" }));
+    const b = await created(owner, input("mcq_multi", c.id, ch1.id, { stem: "b" }));
+    const third = await created(owner, input("mcq", c.id, ch1.id, { stem: "c" }));
+    expect([a.position, cq.position, b.position, third.position]).toEqual([0, 1, 2, 3]);
 
-    const stems = async () => (await listQuestions(db, owner.id, { chapterId: ch1.id })).items.map((q) => q.body.stem);
-    expect(await stems()).toEqual(["a", "b", "c"]);
+    const place = { courseId: c.id, chapterId: ch1.id };
+    const stems = async (tab: "mcq" | "cq") => (await listChapterQuestions(db, owner.id, place, { tab })).items.map((q) => q.body.stem);
+    expect(await stems("mcq")).toEqual(["a", "b", "c"]);
+    // Up from the last MCQ passes the creative question by: it is in another section.
     await moveQuestion(db, owner.id, third.id, "up");
-    expect(await stems()).toEqual(["a", "c", "b"]);
+    expect(await stems("mcq")).toEqual(["a", "c", "b"]);
     await moveQuestion(db, owner.id, a.id, "up"); // already first
-    expect(await stems()).toEqual(["a", "c", "b"]);
+    expect(await stems("mcq")).toEqual(["a", "c", "b"]);
+    expect(await moveQuestion(db, owner.id, cq.id, "down")).toBe(true); // alone in its section
+    expect(await stems("mcq")).toEqual(["a", "c", "b"]);
+    expect(await stems("cq")).toEqual(["cq"]);
   });
 
   it("are never reachable through another teacher", async () => {
@@ -138,28 +145,65 @@ describe("questions", () => {
     expect(await count({ search: "_" })).toBe(0);
   });
 
-  it("show only public questions on the chapter page, with tab counts and filters", async () => {
+  it("list a chapter one section at a time: public only on the website, with counts and board filters", async () => {
     const t = await makeTeacher(db);
     const { course: c, ch1, ch2 } = await setup(t);
     await created(t, input("mcq", c.id, ch1.id, { board: "dhaka", year: "2023" }));
     await created(t, input("mcq_multi", c.id, ch1.id, { board: "sylhet", year: "2024" }));
-    await created(t, input("creative", c.id, ch1.id));
+    await created(t, input("creative", c.id, ch1.id, { board: "rajshahi", year: "2022" }));
     await created(t, input("short", c.id, ch1.id, { visibility: "private" }));
-    await created(t, input("problem", c.id, ch2.id));
+    await created(t, input("textbook", c.id, ch1.id, { solution: "$F = ma$" }));
+    await created(t, input("practice", c.id, ch1.id, { finalAnswer: "৫ N" }));
+    await created(t, input("practice", c.id, ch2.id));
+    const place = { courseId: c.id, chapterId: ch1.id };
 
-    const page = await listChapterQuestions(db, t.id, ch1.id, { tab: "mcq" });
-    expect(page.counts).toEqual({ mcq: 2, short: 0, creative: 1, problem: 0, board: 2 });
-    expect(page.items.map((q) => q.type)).toEqual(["mcq", "mcq_multi"]);
-    expect(page.boards.sort()).toEqual(["dhaka", "sylhet"]);
-    expect(page.years).toEqual([2024, 2023]);
+    const mcq = await listChapterQuestions(db, t.id, place, { tab: "mcq" });
+    expect(mcq.counts).toEqual({ textbook: 1, practice: 1, mcq: 2, sq: 0, cq: 1 });
+    expect(mcq.items.map((q) => q.type)).toEqual(["mcq", "mcq_multi"]);
+    // The filters offer this section's boards and years only: not the creative question's.
+    expect(mcq.boards).toEqual(["dhaka", "sylhet"]);
+    expect(mcq.years).toEqual([2024, 2023]);
+    expect((await listChapterQuestions(db, t.id, place, { tab: "mcq", year: 2024 })).items.map((q) => q.board)).toEqual(["sylhet"]);
+    expect((await listChapterQuestions(db, t.id, place, { tab: "mcq", board: "dhaka" })).total).toBe(1);
+    expect((await listChapterQuestions(db, t.id, place, { tab: "cq", board: "any" })).total).toBe(1);
+    expect((await listChapterQuestions(db, t.id, place, { tab: "textbook", board: "any" })).total).toBe(0);
 
-    const board = await listChapterQuestions(db, t.id, ch1.id, { tab: "board", year: 2024 });
-    expect(board.items.map((q) => q.board)).toEqual(["sylhet"]);
-    expect((await listChapterQuestions(db, t.id, ch1.id, { tab: "short" })).items).toEqual([]);
+    // Textbook and practice problems keep to their own sections.
+    expect((await listChapterQuestions(db, t.id, place, { tab: "textbook" })).items.map((q) => q.body.solution)).toEqual(["$F = ma$"]);
+    expect((await listChapterQuestions(db, t.id, place, { tab: "practice" })).items.map((q) => q.body.finalAnswer)).toEqual(["৫ N"]);
+
+    // The private short question is the teacher's alone.
+    expect((await listChapterQuestions(db, t.id, place, { tab: "sq" })).items).toEqual([]);
+    const own = await listChapterQuestions(db, t.id, place, { tab: "sq", includePrivate: true });
+    expect(own.items.map((q) => q.visibility)).toEqual(["private"]);
+    expect(own.counts.sq).toBe(1);
+    expect((await listChapterQuestions(db, stranger.id, place, { tab: "mcq", includePrivate: true })).total).toBe(0);
 
     const counts = await publicCountsByChapter(db, t.id, c.id);
-    expect(counts.get(ch1.id)).toBe(3);
+    expect(counts.get(ch1.id)).toBe(5);
     expect(counts.get(ch2.id)).toBe(1);
+  });
+
+  it("are counted by course, chapter and type, and listed when filed under no chapter", async () => {
+    const t = await makeTeacher(db);
+    const { course: c, ch1, ch2 } = await setup(t);
+    await created(t, input("mcq", c.id, ch1.id));
+    await created(t, input("mcq_multi", c.id, ch1.id, { visibility: "private" }));
+    await created(t, input("practice", c.id, ch2.id));
+    await created(t, input("short", c.id, null));
+    const sum = (rows: { n: number }[]) => rows.reduce((n, row) => n + row.n, 0);
+
+    expect(sum(await bankCounts(db, t.id))).toBe(4);
+    const shown = await bankCounts(db, t.id, { publicOnly: true });
+    expect(sum(shown)).toBe(3);
+    expect(shown.find((row) => row.chapterId === null)).toEqual({ courseId: c.id, chapterId: null, type: "short", n: 1 });
+    expect(await bankCounts(db, stranger.id)).toEqual([]);
+
+    const unfiled = await listChapterQuestions(db, t.id, { courseId: c.id, chapterId: null }, { tab: "sq" });
+    expect(unfiled.items.map((q) => q.type)).toEqual(["short"]);
+    expect(unfiled.counts).toEqual({ textbook: 0, practice: 0, mcq: 0, sq: 1, cq: 0 });
+    // Ids that aren't ids find nothing rather than failing.
+    expect((await listChapterQuestions(db, t.id, { courseId: "x", chapterId: null }, { tab: "sq" })).total).toBe(0);
   });
 
   it("stay in the course when their chapter is deleted, and go with the course", async () => {

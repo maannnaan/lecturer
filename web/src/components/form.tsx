@@ -102,31 +102,59 @@ export function TextAreaField({
   );
 }
 
+type SelectOption = { value: string; label: string; group?: string };
+
+/** A labelled select. Neighbouring options with the same `group` share an <optgroup>. */
 export function SelectField({
   name,
   label,
   options,
   error,
+  hint,
   id = name,
   ...rest
 }: SelectHTMLAttributes<HTMLSelectElement> & {
   name: string;
   label: string;
-  options: { value: string; label: string }[];
+  options: SelectOption[];
   error?: string;
+  hint?: string;
 }) {
   // React ignores a changed `defaultValue` on a <select> that is already mounted, and a form
   // action's automatic reset then puts the select back on its first default. Keying on the default
   // remounts it instead, so after a refused submit it shows what was chosen, like text fields do.
   const remountOn = rest.defaultValue === undefined ? undefined : String(rest.defaultValue);
+  const runs: { group?: string; options: SelectOption[] }[] = [];
+  for (const option of options) {
+    const last = runs.at(-1);
+    if (last && last.group === option.group) last.options.push(option);
+    else runs.push({ group: option.group, options: [option] });
+  }
+  const render = (o: SelectOption) => (
+    <option key={o.value} value={o.value}>
+      {o.label}
+    </option>
+  );
   return (
-    <FieldFrame id={id} label={label} error={error}>
-      <select key={remountOn} id={id} name={name} className="input" aria-invalid={error ? true : undefined} {...rest}>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
+    <FieldFrame id={id} label={label} hint={hint} error={error}>
+      <select
+        key={remountOn}
+        id={id}
+        name={name}
+        className="input"
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy(id, hint, error)}
+        {...rest}
+      >
+        {runs.map((run, i) =>
+          run.group ? (
+            <optgroup key={`group-${i}`} label={run.group}>
+              {run.options.map(render)}
+            </optgroup>
+          ) : (
+            run.options.map(render)
+          ),
+        )}
       </select>
     </FieldFrame>
   );

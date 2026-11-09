@@ -10,7 +10,7 @@ import { Logo, initialOf } from "@/components/logo";
 import { getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { getCurrentTeacher } from "@/server/auth/current";
-import { getSite, getSiteCourses, getSiteNotices } from "./data";
+import { getSite, getSiteBank, getSiteCourses, getSiteNotices } from "./data";
 
 // The handle has to be resolved before the response starts, so an unknown address can answer 404
 // and an old one 308. That means rendering per request: no static shell, and no loading.tsx here
@@ -68,7 +68,11 @@ export default async function TeacherSiteLayout({ children, params }: Props) {
     );
   }
 
-  const [courses, notices] = await Promise.all([getSiteCourses(teacher.id), getSiteNotices(teacher.id, 5)]);
+  const [courses, notices, bank] = await Promise.all([
+    getSiteCourses(teacher.id),
+    getSiteNotices(teacher.id, 5),
+    getSiteBank(teacher.id),
+  ]);
   const home = `/${teacher.handle}`;
   const s = teacher.site;
   const hasContact = Boolean(
@@ -77,6 +81,7 @@ export default async function TeacherSiteLayout({ children, params }: Props) {
   const links = [
     { href: home, label: d.site.nav.home },
     courses.length > 0 && { href: `${home}#courses`, label: d.site.nav.courses },
+    bank.length > 0 && { href: `${home}/bank`, label: d.site.nav.bank },
     courses.some((c) => c.chapters.length > 0) && { href: `${home}#plan`, label: d.site.nav.plan },
     notices.length > 0 && { href: `${home}/notices`, label: d.site.nav.notices },
     hasContact && { href: `${home}#contact`, label: d.site.nav.contact },

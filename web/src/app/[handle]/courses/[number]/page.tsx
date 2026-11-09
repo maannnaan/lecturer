@@ -3,11 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { cache } from "react";
-import { ChevronRight, Phone } from "lucide-react";
+import { ChevronRight, ListChecks, Phone } from "lucide-react";
 import { CourseIconGlyph } from "@/components/course-icon";
 import { Paragraphs } from "@/components/paragraphs";
 import { getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
+import { gradeName, gradeOf } from "@/lib/grades";
 import { getCurrentTeacher } from "@/server/auth/current";
 import { getCourseByNumber } from "@/server/courses";
 import { getDb } from "@/server/db";
@@ -71,7 +72,7 @@ export default async function CoursePage({ params }: { params: Params }) {
               <CourseIconGlyph name={course.icon} />
             </div>
             <div className="min-w-0">
-              {course.level && <p className="eyebrow">{course.level}</p>}
+              {gradeOf(course) !== "other" && <p className="eyebrow">{gradeName(course.grade, d).label}</p>}
               <h1 className="mt-1 text-[clamp(30px,4.2vw,48px)] leading-tight">{course.title}</h1>
               {course.session && <p className="mt-2 text-lg text-ink-2">{course.session}</p>}
               <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -81,6 +82,12 @@ export default async function CoursePage({ params }: { params: Params }) {
                     <Phone aria-hidden="true" />
                     {d.site.course.join}
                   </a>
+                )}
+                {counts.size > 0 && (
+                  <Link href={`${home}/courses/${course.number}/chapters`} className="btn btn-ghost btn-sm">
+                    <ListChecks aria-hidden="true" />
+                    {d.site.course.practiceAll}
+                  </Link>
                 )}
               </div>
             </div>
