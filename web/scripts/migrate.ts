@@ -25,8 +25,14 @@ async function main() {
   const url = process.env.DATABASE_URL;
   if (!url || !/^postgres(ql)?:\/\//.test(url)) {
     if (process.env.VERCEL) {
+      // Names only, never values: enough to spot a prefixed or misnamed variable.
+      const near = Object.keys(process.env).filter((k) => /DATABASE|POSTGRES|^PG|NEON/i.test(k));
+      console.error(`Database-like variables this build can see: ${near.length ? near.join(", ") : "none"}`);
+      console.error(`Vercel environment: ${process.env.VERCEL_ENV ?? "unknown"}`);
       throw new Error(
-        "DATABASE_URL is not set. Add your Neon connection string (postgres://…) in Vercel → Settings → Environment Variables.",
+        url
+          ? `DATABASE_URL is set but doesn't start with postgres:// or postgresql:// (it starts with "${url.slice(0, 8)}…"). Paste only the connection string, without quotes or "psql".`
+          : "DATABASE_URL is not set. Add your Neon connection string (postgres://…) in Vercel → Settings → Environment Variables, for this environment.",
       );
     }
     console.log("No DATABASE_URL: skipping (the local database migrates itself).");
