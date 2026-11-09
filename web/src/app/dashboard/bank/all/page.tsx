@@ -7,18 +7,18 @@ import { formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { BOARDS, QUESTION_TYPES, VISIBILITIES } from "@/lib/questions";
 import { requireTeacher } from "@/server/auth/current";
-import { listCoursesWithChapters } from "@/server/courses";
+import { listSubjectsWithChapters } from "@/server/bank";
 import { getDb } from "@/server/db";
 import { BANK_PAGE_SIZE, type QuestionFilters, listQuestions } from "@/server/questions";
 import { placeNames } from "../choices";
-import { NoCourses } from "../no-courses";
+import { NoSubjects } from "../no-subjects";
 import { QuestionRow } from "../question-row";
 
 export const instant = false;
 
 export const metadata: Metadata = { title: "সব প্রশ্ন" };
 
-type Search = { course?: string; chapter?: string; type?: string; board?: string; visibility?: string; q?: string; page?: string };
+type Search = { subject?: string; chapter?: string; type?: string; board?: string; visibility?: string; q?: string; page?: string };
 
 function oneOf<T extends string>(value: string | undefined, allowed: readonly T[]): T | undefined {
   return (allowed as readonly string[]).includes(value ?? "") ? (value as T) : undefined;
@@ -32,26 +32,26 @@ export default async function AllQuestionsPage({ searchParams }: { searchParams:
   const t = d.dashboard.bank;
   const s = await searchParams;
   const db = await getDb();
-  const courses = await listCoursesWithChapters(db, teacher.id);
+  const subjects = await listSubjectsWithChapters(db, teacher.id);
   const crumbs = (
     <Crumbs className="crumbs !pt-0" label={d.common.breadcrumb} items={[{ label: t.title, href: "/dashboard/bank" }, { label: t.allQuestions }]} />
   );
 
-  if (courses.length === 0) {
+  if (subjects.length === 0) {
     return (
       <main className="dash-content">
         {crumbs}
         <h2 className="text-2xl">{t.allQuestions}</h2>
-        <NoCourses t={t} />
+        <NoSubjects t={t} />
       </main>
     );
   }
 
-  const course = courses.find((c) => c.id === s.course);
-  // A chapter only counts with its own course chosen; "none" means questions filed under no chapter.
-  const chapterId = course && (s.chapter === "none" || course.chapters.some((ch) => ch.id === s.chapter)) ? s.chapter : undefined;
+  const subject = subjects.find((x) => x.id === s.subject);
+  // A chapter only counts with its own subject chosen; "none" means questions filed under no chapter.
+  const chapterId = subject && (s.chapter === "none" || subject.chapters.some((ch) => ch.id === s.chapter)) ? s.chapter : undefined;
   const filters: QuestionFilters = {
-    courseId: course?.id,
+    subjectId: subject?.id,
     chapterId,
     type: oneOf(s.type, QUESTION_TYPES),
     board: s.board === "any" ? "any" : oneOf(s.board, BOARDS),
@@ -62,19 +62,19 @@ export default async function AllQuestionsPage({ searchParams }: { searchParams:
   const { items, total } = await listQuestions(db, teacher.id, filters);
   const pages = Math.max(1, Math.ceil(total / BANK_PAGE_SIZE));
   const page = Math.min(filters.page ?? 1, pages);
-  const { courseTitle, chapterName } = placeNames(courses, d, locale);
-  const filtered = Boolean(course || filters.type || filters.board || filters.visibility || filters.search);
+  const { subjectName, chapterName } = placeNames(subjects, d, locale);
+  const filtered = Boolean(subject || filters.type || filters.board || filters.visibility || filters.search);
 
   const query = (extra: Record<string, string | undefined>) => {
     const out = new URLSearchParams();
-    const all = { course: course?.id, chapter: chapterId, type: filters.type, board: filters.board, visibility: filters.visibility, q: filters.search, ...extra };
+    const all = { subject: subject?.id, chapter: chapterId, type: filters.type, board: filters.board, visibility: filters.visibility, q: filters.search, ...extra };
     for (const [k, v] of Object.entries(all)) if (v) out.set(k, v);
     const text = out.toString();
     return text ? `?${text}` : "";
   };
   const newPlace = new URLSearchParams();
-  if (course) newPlace.set("course", course.id);
-  if (course && chapterId && chapterId !== "none") newPlace.set("chapter", chapterId);
+  if (subject) newPlace.set("subject", subject.id);
+  if (subject && chapterId && chapterId !== "none") newPlace.set("chapter", chapterId);
   const newHref = `/dashboard/bank/new${newPlace.toString() ? `?${newPlace}` : ""}`;
 
   return (
@@ -98,26 +98,26 @@ export default async function AllQuestionsPage({ searchParams }: { searchParams:
         label={t.filters.apply}
       >
         <label className="field">
-          <span className="field-label">{t.filters.course}</span>
-          <select name="course" defaultValue={course?.id ?? ""} className="input">
+          <span className="field-label">{t.filters.subject}</span>
+          <select name="subject" defaultValue={subject?.id ?? ""} className="input">
             <option value="">{t.filters.all}</option>
-            {courses.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.title}
+            {subjects.map((x) => (
+              <option key={x.id} value={x.id}>
+                {subjectName.get(x.id)}
               </option>
             ))}
           </select>
         </label>
         <label className="field">
           <span className="field-label">{t.filters.chapter}</span>
-          <select name="chapter" defaultValue={chapterId ?? ""} className="input" disabled={!course}>
+          <select name="chapter" defaultValue={chapterId ?? ""} className="input" disabled={!subject}>
             <option value="">{t.filters.all}</option>
-            {course?.chapters.map((ch) => (
+            {subject?.chapters.map((ch) => (
               <option key={ch.id} value={ch.id}>
                 {chapterName.get(ch.id)}
               </option>
             ))}
-            {course && <option value="none">{t.filters.noChapter}</option>}
+            {subject && <option value="none">{t.filters.noChapter}</option>}
           </select>
         </label>
         <label className="field">
@@ -185,7 +185,7 @@ export default async function AllQuestionsPage({ searchParams }: { searchParams:
                 question={question}
                 d={d}
                 locale={locale}
-                place={[courseTitle.get(question.courseId), question.chapterId && chapterName.get(question.chapterId)].filter(Boolean).join(" · ")}
+                place={[subjectName.get(question.subjectId), question.chapterId && chapterName.get(question.chapterId)].filter(Boolean).join(" · ")}
               />
             ))}
           </ul>

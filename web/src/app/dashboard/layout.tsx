@@ -19,6 +19,7 @@ import {
   Wallet,
 } from "lucide-react";
 import "katex/dist/katex.min.css";
+import { PendingButton } from "@/components/form";
 import { LangSwitch } from "@/components/lang-switch";
 import { Logo, initialOf } from "@/components/logo";
 import { type Dictionary, getDictionary } from "@/i18n";
@@ -103,10 +104,10 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           <DashNav d={d} />
 
           <form action={logoutAction} className="mt-auto pt-3">
-            <button type="submit" className="side-link w-full cursor-pointer">
+            <PendingButton className="side-link w-full cursor-pointer">
               <LogOut aria-hidden="true" />
               {d.common.logout}
-            </button>
+            </PendingButton>
           </form>
         </aside>
 
@@ -134,9 +135,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             <div className="ml-auto flex items-center gap-2">
               <LangSwitch locale={locale} label={d.common.language} />
               <form action={logoutAction}>
-                <button type="submit" className="grid size-10 place-items-center" aria-label={d.common.logout}>
+                <PendingButton className="grid size-10 place-items-center" aria-label={d.common.logout}>
                   <LogOut className="size-5" aria-hidden="true" />
-                </button>
+                </PendingButton>
               </form>
             </div>
           </header>

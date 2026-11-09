@@ -2,6 +2,7 @@ import "server-only";
 import { connection } from "next/server";
 import { cache } from "react";
 import { buildBankTree, withQuestions } from "@/lib/bank-tree";
+import { listSubjectsWithChapters } from "@/server/bank";
 import { listPublishedCourses } from "@/server/courses";
 import { getDb } from "@/server/db";
 import { listNotices } from "@/server/notices";
@@ -25,16 +26,14 @@ export const getSiteCourses = cache(async (teacherId: string) => {
 });
 
 /**
- * The website's question bank: the classes › subjects › chapters of published courses that have
- * public questions, with each section's count.
+ * The website's question bank: classes › subjects › chapters, with each section's count of
+ * public questions. Subjects without any public question aren't listed.
  */
 export const getSiteBank = cache(async (teacherId: string) => {
   await connection();
-  const [courses, counts] = await Promise.all([
-    getSiteCourses(teacherId),
-    bankCounts(await getDb(), teacherId, { publicOnly: true }),
-  ]);
-  return withQuestions(buildBankTree(courses, counts));
+  const db = await getDb();
+  const [subjects, counts] = await Promise.all([listSubjectsWithChapters(db, teacherId), bankCounts(db, teacherId, { publicOnly: true })]);
+  return withQuestions(buildBankTree(subjects, counts));
 });
 
 /** The teacher's notices, pinned first then newest; all of them when no limit is given. */

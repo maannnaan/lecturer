@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, Eye, Pencil, Plus } from "lucide-react";
 import { CourseIconGlyph } from "@/components/course-icon";
+import { PendingButton } from "@/components/form";
 import { formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { gradeName } from "@/lib/grades";
@@ -57,11 +58,7 @@ export default async function CoursesPage() {
                   </span>
                 </p>
                 <p className="text-sm text-muted">
-                  {[
-                    gradeName(course.grade, d).label,
-                    course.subject !== course.title && course.subject,
-                    t.chaptersCount(formatNumber(counts.get(course.id) ?? 0, locale)),
-                  ]
+                  {[gradeName(course.grade, d).label, t.chaptersCount(formatNumber(counts.get(course.id) ?? 0, locale))]
                     .filter(Boolean)
                     .join(" · ")}
                 </p>
@@ -71,14 +68,13 @@ export default async function CoursesPage() {
                   <form key={dir} action={moveCourseAction}>
                     <input type="hidden" name="courseId" value={course.id} />
                     <input type="hidden" name="direction" value={dir} />
-                    <button
-                      type="submit"
+                    <PendingButton
                       className="icon-btn"
                       disabled={dir === "up" ? i === 0 : i === courses.length - 1}
                       aria-label={`${dir === "up" ? d.common.moveUp : d.common.moveDown}: ${course.title}`}
                     >
                       {dir === "up" ? <ChevronUp aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
-                    </button>
+                    </PendingButton>
                   </form>
                 ))}
                 <Link href={`/dashboard/courses/${course.id}`} className="btn btn-ghost btn-xs">

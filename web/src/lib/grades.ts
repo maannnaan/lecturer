@@ -17,11 +17,6 @@ export function gradeOf(course: { grade: string }): Grade {
   return isGrade(course.grade) ? course.grade : "other";
 }
 
-/** What the bank calls a course: its subject, or its title when the teacher gave no subject. */
-export function subjectOf(course: { subject: string; title: string }): string {
-  return course.subject || course.title;
-}
-
 /** A class's name and the line under it, e.g. "এইচএসসি" and "একাদশ-দ্বাদশ শ্রেণি". */
 export function gradeName(grade: string, d: Pick<Dictionary, "grades">): { label: string; detail: string } {
   return d.grades[isGrade(grade) ? grade : "other"];

@@ -100,6 +100,8 @@ export const teachers = pgTable(
     site: jsonb("site").$type<TeacherSite>().notNull().default({}),
     /** The last course number handed out; numbers are never reused, so old links never repoint. */
     courseCounter: integer("course_counter").notNull().default(0),
+    /** The same for the question bank's subjects. */
+    subjectCounter: integer("subject_counter").notNull().default(0),
     approvedAt: timestamp("approved_at", { withTimezone: true }),
     trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
     createdAt: createdAt(),
@@ -205,9 +207,9 @@ export const courses = pgTable(
      * it; kept one release so the previous deployment still runs, dropped in Phase 4's migration.
      */
     level: text("level").notNull().default(""),
-    /** The class the course is for: a key from GRADES in src/lib/grades.ts. */
+    /** The class the course is for, shown on its cover: a key from GRADES in src/lib/grades.ts. */
     grade: text("grade").notNull().default("other"),
-    /** The subject in the teacher's words, e.g. "পদার্থবিজ্ঞান ১ম পত্র"; empty means use the title. */
+    /** Unused since the question bank got its own subjects (0004); dropped in Phase 4's migration. */
     subject: text("subject").notNull().default(""),
     /** e.g. "এইচএসসি ২০২৮ ব্যাচ · সেপ্টেম্বর–ফেব্রুয়ারি" */
     session: text("session").notNull().default(""),
@@ -284,6 +286,61 @@ export const notices = pgTable(
   (t) => [index("notices_teacher_published_idx").on(t.teacherId, t.publishedAt)],
 );
 
+/**
+ * A subject in the teacher's question bank, e.g. এইচএসসি পদার্থবিজ্ঞান ১ম পত্র. The bank is browsed
+ * class › subject › chapter › section, on its own: courses are what the website advertises.
+ * `number` (from teachers.subject_counter, never reused) is its public address,
+ * lecturer.bd/<handle>/bank/<class>/<number>.
+ */
+export const bankSubjects = pgTable(
+  "bank_subjects",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => teachers.id, { onDelete: "cascade" }),
+    number: integer("number").notNull(),
+    /** A key from GRADES in src/lib/grades.ts. */
+    grade: text("grade").notNull().default("other"),
+    name: text("name").notNull(),
+    position: integer("position").notNull().default(0),
+    /** The last chapter number handed out in this subject. */
+    chapterCounter: integer("chapter_counter").notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("bank_subjects_teacher_number_key").on(t.teacherId, t.number),
+    index("bank_subjects_teacher_position_idx").on(t.teacherId, t.position),
+  ],
+);
+
+/**
+ * A chapter of a bank subject, in textbook order. `number` is its stable address in the subject;
+ * `label` overrides the shown "অধ্যায় N", which otherwise follows its position.
+ */
+export const bankChapters = pgTable(
+  "bank_chapters",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => teachers.id, { onDelete: "cascade" }),
+    subjectId: uuid("subject_id")
+      .notNull()
+      .references(() => bankSubjects.id, { onDelete: "cascade" }),
+    number: integer("number").notNull(),
+    label: text("label").notNull().default(""),
+    title: text("title").notNull(),
+    position: integer("position").notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("bank_chapters_subject_number_key").on(t.subjectId, t.number),
+    index("bank_chapters_subject_position_idx").on(t.subjectId, t.position),
+    index("bank_chapters_teacher_idx").on(t.teacherId),
+  ],
+);
+
 // In the database's own order: "textbook" was "problem" until migration 0003 renamed it.
 export const questionType = pgEnum("question_type", ["mcq", "mcq_multi", "short", "creative", "textbook", "practice"]);
 export const questionVisibility = pgEnum("question_visibility", ["public", "private"]);
@@ -319,9 +376,9 @@ export type QuestionBody = {
 };
 
 /**
- * A question in the teacher's bank, filed under a course and (usually) a chapter. Public questions
- * appear on the chapter's page for practice; private ones are kept for exams and papers.
- * `board`/`year` mark a board-exam question (board is a key from BOARDS in src/lib/questions.ts).
+ * A question in the teacher's bank, filed under a subject and (usually) one of its chapters.
+ * Public questions appear on the website's chapter pages for practice; private ones are kept for
+ * exams and papers. `board`/`year` mark a board-exam question (a key from BOARDS).
  */
 export const questions = pgTable(
   "questions",
@@ -330,10 +387,12 @@ export const questions = pgTable(
     teacherId: uuid("teacher_id")
       .notNull()
       .references(() => teachers.id, { onDelete: "cascade" }),
-    courseId: uuid("course_id")
+    subjectId: uuid("subject_id")
       .notNull()
-      .references(() => courses.id, { onDelete: "cascade" }),
-    chapterId: uuid("chapter_id").references(() => chapters.id, { onDelete: "set null" }),
+      .references(() => bankSubjects.id, { onDelete: "cascade" }),
+    chapterId: uuid("chapter_id").references(() => bankChapters.id, { onDelete: "set null" }),
+    /** Unused since migration 0004 moved questions from courses to bank subjects; dropped in Phase 4. */
+    courseId: uuid("course_id"),
     type: questionType("type").notNull(),
     visibility: questionVisibility("visibility").notNull().default("public"),
     body: jsonb("body").$type<QuestionBody>().notNull(),
@@ -351,7 +410,7 @@ export const questions = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => [
-    index("questions_teacher_course_chapter_idx").on(t.teacherId, t.courseId, t.chapterId, t.position),
+    index("questions_teacher_subject_chapter_idx").on(t.teacherId, t.subjectId, t.chapterId, t.position),
     index("questions_teacher_type_idx").on(t.teacherId, t.type),
     index("questions_chapter_visibility_idx").on(t.chapterId, t.visibility),
   ],

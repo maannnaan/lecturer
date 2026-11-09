@@ -1,6 +1,6 @@
 "use client";
 
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { useFormStatus } from "react-dom";
 
 /** What a dashboard form action answers: per-field messages, what was typed, or a success flag. */
@@ -212,6 +212,29 @@ export function Field({ name, label, hint, error, labelNote, prefix, id = name, 
         </p>
       )}
     </div>
+  );
+}
+
+/**
+ * A submit button for a form that acts straight away (move, copy, delete, log out): while the form
+ * is being sent it shows a spinner in place of its icon, so a click never looks ignored. With a
+ * name and value (several buttons in one form), only the button that was pressed spins.
+ */
+export function PendingButton({ children, className, disabled, ...rest }: ButtonHTMLAttributes<HTMLButtonElement>) {
+  const { pending, data } = useFormStatus();
+  const mine = rest.name === undefined || data?.get(rest.name) === String(rest.value ?? "");
+  const busy = pending && mine;
+  return (
+    <button
+      {...rest}
+      type="submit"
+      className={className}
+      disabled={disabled || pending}
+      aria-busy={busy || undefined}
+      data-pending={busy || undefined}
+    >
+      {children}
+    </button>
   );
 }
 

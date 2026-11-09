@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
+import { PendingButton } from "@/components/form";
 import { initialOf } from "@/components/logo";
 import { type Dictionary, type Locale, formatDate, formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
@@ -118,9 +119,7 @@ function Decision({
       {note && (
         <input name="note" className="input !h-10 min-w-0 flex-1 text-[15px]" placeholder={note} aria-label={note} />
       )}
-      <button type="submit" className={`btn btn-sm ${primary ? "btn-primary flex-1" : "btn-danger"}`}>
-        {label}
-      </button>
+      <PendingButton className={`btn btn-sm ${primary ? "btn-primary flex-1" : "btn-danger"}`}>{label}</PendingButton>
     </form>
   );
 }

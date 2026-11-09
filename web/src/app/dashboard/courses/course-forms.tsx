@@ -5,7 +5,7 @@ import { CourseIconGlyph } from "@/components/course-icon";
 import { Field, FormMessages, type FormState, SelectField, SubmitButton, TextAreaField, emptyForm } from "@/components/form";
 import type { Dictionary } from "@/i18n";
 import { CHAPTER_STATUSES, COURSE_ACCESS, COURSE_ICONS, PRICE_PERIODS } from "@/lib/courses";
-import { GRADES, gradeLine, isGrade } from "@/lib/grades";
+import { GRADES, gradeLine } from "@/lib/grades";
 import type { Chapter, Course } from "@/server/courses";
 import {
   addChapterAction,
@@ -39,9 +39,6 @@ export function CourseForm({
   const [state, action] = useActionState(course ? updateCourseAction : createCourseAction, emptyForm);
   const v = (name: keyof Course) => valueOf(state, name, course?.[name] as string | number | undefined);
   const [access, setAccess] = useState(v("access") || "approval");
-  // The subject suggestions follow the class picked; the select itself stays uncontrolled.
-  const [grade, setGrade] = useState(v("grade") || "other");
-  const suggestions = isGrade(grade) ? t.subjectSuggestions[grade] : [];
   const icon = v("icon") || "book-open";
   const cover = v("cover") || "1";
   const published = state.values ? state.values.published === "on" : (course?.published ?? false);
@@ -65,28 +62,13 @@ export function CourseForm({
         <SelectField
           name="grade"
           label={t.grade}
+          hint={t.gradeHint}
           defaultValue={v("grade") || "other"}
-          onChange={(event) => setGrade(event.target.value)}
           options={GRADES.map((key) => ({ value: key, label: gradeLine(key, { grades }) }))}
           error={e.grade}
         />
-        <Field
-          name="subject"
-          label={t.subject}
-          placeholder={t.subjectPlaceholder}
-          defaultValue={v("subject")}
-          error={e.subject}
-          hint={t.subjectHint}
-          list="subject-suggestions"
-          autoComplete="off"
-        />
-        <datalist id="subject-suggestions">
-          {suggestions.map((s) => (
-            <option key={s} value={s} />
-          ))}
-        </datalist>
+        <Field name="session" label={t.session} placeholder={t.sessionPlaceholder} defaultValue={v("session")} error={e.session} />
       </div>
-      <Field name="session" label={t.session} placeholder={t.sessionPlaceholder} defaultValue={v("session")} error={e.session} />
       <TextAreaField
         name="description"
         label={t.description}

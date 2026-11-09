@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronDown, ChevronUp, Eye, Trash2 } from "lucide-react";
+import { PendingButton } from "@/components/form";
 import { formatDayRange, formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { requireTeacher } from "@/server/auth/current";
@@ -94,10 +95,10 @@ export default async function EditCoursePage({ params }: { params: Promise<{ id:
                       />
                       <form action={deleteChapterAction}>
                         <input type="hidden" name="chapterId" value={chapter.id} />
-                        <button type="submit" className="btn btn-danger btn-xs">
+                        <PendingButton className="btn btn-danger btn-xs">
                           <Trash2 aria-hidden="true" />
                           {d.common.delete}
-                        </button>
+                        </PendingButton>
                       </form>
                     </div>
                   </details>
@@ -106,14 +107,13 @@ export default async function EditCoursePage({ params }: { params: Promise<{ id:
                       <form key={dir} action={moveChapterAction}>
                         <input type="hidden" name="chapterId" value={chapter.id} />
                         <input type="hidden" name="direction" value={dir} />
-                        <button
-                          type="submit"
+                        <PendingButton
                           className="icon-btn"
                           disabled={dir === "up" ? i === 0 : i === chapters.length - 1}
                           aria-label={`${dir === "up" ? d.common.moveUp : d.common.moveDown}: ${chapter.title}`}
                         >
                           {dir === "up" ? <ChevronUp aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
-                        </button>
+                        </PendingButton>
                       </form>
                     ))}
                   </div>

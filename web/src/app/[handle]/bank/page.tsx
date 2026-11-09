@@ -60,9 +60,9 @@ export default async function SiteBankPage({ params }: { params: Params }) {
                       {name.label}
                       <ArrowRight aria-hidden="true" />
                     </span>
-                    {name.detail && <span className="bank-card-detail">{name.detail}</span>}
+                    <span className="bank-card-detail">{name.detail}</span>
                     <span className="bank-card-meta">
-                      {`${b.subjects(formatNumber(grade.courses.length, locale))} · ${b.questions(formatNumber(grade.total, locale))}`}
+                      {`${b.subjects(formatNumber(grade.subjects.length, locale))} · ${b.questions(formatNumber(grade.total, locale))}`}
                     </span>
                     <SectionChips counts={grade.counts} d={d} locale={locale} />
                   </Link>

@@ -117,7 +117,7 @@ function parseOptions(input: Input, errors: FieldErrors) {
 }
 
 /**
- * Reads the question editor's fields. The course and chapter ids are only checked for shape here;
+ * Reads the question editor's fields. The subject and chapter ids are only checked for shape here;
  * the data layer checks they belong to the teacher.
  */
 export function parseQuestion(input: Input) {
@@ -126,8 +126,8 @@ export function parseQuestion(input: Input) {
   if (!type) errors.type = "invalid";
   const kind: QuestionType = type ?? "mcq";
 
-  const courseId = (input.courseId ?? "").trim();
-  if (!courseId) errors.courseId = "required";
+  const subjectId = (input.subjectId ?? "").trim();
+  if (!subjectId) errors.subjectId = "required";
   const chapterId = (input.chapterId ?? "").trim() || null;
 
   const stem = text(input, "stem", 4000, errors, true);
@@ -171,7 +171,7 @@ export function parseQuestion(input: Input) {
   const board = oneOf(input.board, BOARDS) ?? "";
   const question = {
     type: kind,
-    courseId,
+    subjectId,
     chapterId,
     visibility: oneOf(input.visibility, VISIBILITIES) ?? "public",
     body,

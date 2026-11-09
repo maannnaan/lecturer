@@ -2,7 +2,7 @@
 
 import { type FormEvent, useActionState, useDeferredValue, useRef, useState, useTransition } from "react";
 import { ImagePlus, Trash2 } from "lucide-react";
-import { Field, FormMessages, SelectField, SubmitButton, TextAreaField, emptyForm } from "@/components/form";
+import { Field, FormMessages, PendingButton, SelectField, SubmitButton, TextAreaField, emptyForm } from "@/components/form";
 import { MathPreviewText, useKatex } from "@/components/math-preview";
 import type { Dictionary } from "@/i18n";
 import {
@@ -28,12 +28,12 @@ type QuestionText = Pick<
 type Common = Pick<Dictionary["common"], "save" | "saving" | "saved" | "optional">;
 type UploadErrors = { type: string; size: string; unavailable: string };
 
-/** A course the question can be filed under; `group` is its class, for grouping the menu. */
-export type CourseChoice = { id: string; title: string; group: string; chapters: { id: string; label: string }[] };
+/** A bank subject the question can be filed under; `group` is its class, for grouping the menu. */
+export type SubjectChoice = { id: string; name: string; group: string; chapters: { id: string; label: string }[] };
 export type QuestionData = {
   id: string;
   type: QuestionType;
-  courseId: string;
+  subjectId: string;
   chapterId: string | null;
   visibility: "public" | "private";
   body: QuestionBody;
@@ -44,10 +44,10 @@ export type QuestionData = {
 };
 
 /** The form's fields as strings, from a saved question (or the defaults for a new one). */
-function initialFields(question: QuestionData | undefined, defaults: { courseId: string; chapterId: string }) {
+function initialFields(question: QuestionData | undefined, defaults: { subjectId: string; chapterId: string }) {
   const body = question?.body;
   const f: Record<string, string> = {
-    courseId: question?.courseId ?? defaults.courseId,
+    subjectId: question?.subjectId ?? defaults.subjectId,
     chapterId: question ? (question.chapterId ?? "") : defaults.chapterId,
     stem: body?.stem ?? "",
     visibility: question?.visibility ?? "public",
@@ -75,7 +75,7 @@ function initialFields(question: QuestionData | undefined, defaults: { courseId:
 export function QuestionForm({
   question,
   type,
-  courses,
+  subjects,
   defaults,
   t,
   q,
@@ -84,8 +84,8 @@ export function QuestionForm({
 }: {
   question?: QuestionData;
   type: QuestionType;
-  courses: CourseChoice[];
-  defaults: { courseId: string; chapterId: string };
+  subjects: SubjectChoice[];
+  defaults: { subjectId: string; chapterId: string };
   t: FormText;
   q: QuestionText;
   c: Common;
@@ -96,8 +96,8 @@ export function QuestionForm({
   const v = (name: string) => state.values?.[name] ?? initial[name] ?? "";
   const e = state.errors;
 
-  const [courseId, setCourseId] = useState(v("courseId") || courses[0]?.id || "");
-  const chapters = courses.find((course) => course.id === courseId)?.chapters ?? [];
+  const [subjectId, setSubjectId] = useState(v("subjectId") || subjects[0]?.id || "");
+  const chapters = subjects.find((subject) => subject.id === subjectId)?.chapters ?? [];
   const [image, setImage] = useState(question?.body.image ? { id: question.body.image.mediaId, url: question.body.image.url } : null);
 
   // What the preview shows: the form's current values, read on every edit.
@@ -121,18 +121,18 @@ export function QuestionForm({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <SelectField
-            name="courseId"
-            label={t.course}
-            defaultValue={v("courseId") || courses[0]?.id || ""}
-            onChange={(event) => setCourseId(event.target.value)}
-            options={courses.map((course) => ({ value: course.id, label: course.title, group: course.group }))}
-            error={e.courseId}
+            name="subjectId"
+            label={t.subject}
+            defaultValue={v("subjectId") || subjects[0]?.id || ""}
+            onChange={(event) => setSubjectId(event.target.value)}
+            options={subjects.map((subject) => ({ value: subject.id, label: subject.name, group: subject.group }))}
+            error={e.subjectId}
           />
           <SelectField
-            key={courseId}
+            key={subjectId}
             name="chapterId"
             label={t.chapter}
-            defaultValue={courseId === v("courseId") ? v("chapterId") : ""}
+            defaultValue={subjectId === v("subjectId") ? v("chapterId") : ""}
             options={[{ value: "", label: t.noChapter }, ...chapters.map((ch) => ({ value: ch.id, label: ch.label }))]}
             error={e.chapterId}
           />
@@ -297,9 +297,9 @@ export function QuestionForm({
             {question ? c.save : t.create}
           </SubmitButton>
           {!question && (
-            <button type="submit" name="next" value="another" className="btn btn-ghost">
+            <PendingButton name="next" value="another" className="btn btn-ghost">
               {t.saveAndNext}
-            </button>
+            </PendingButton>
           )}
           <FormMessages state={state} saved={c.saved} />
         </div>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { NavigationProgress } from "@/components/navigation-progress";
 import { bn } from "@/i18n/bn";
 import { fontVariables } from "./fonts";
 import "./globals.css";
@@ -15,7 +16,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="bn" className={fontVariables}>
-      <body data-style="ink">{children}</body>
+      <body data-style="ink">
+        <NavigationProgress />
+        {children}
+      </body>
     </html>
   );
 }

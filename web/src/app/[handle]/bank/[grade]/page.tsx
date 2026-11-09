@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BookOpen } from "lucide-react";
 import { Crumbs, SectionChips } from "@/components/bank-ui";
-import { CourseIconGlyph } from "@/components/course-icon";
 import { formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
-import { gradeName, isGrade, subjectOf } from "@/lib/grades";
+import { gradeName, isGrade } from "@/lib/grades";
 import { getSite, getSiteBank } from "../../data";
 
 export const instant = false;
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   };
 }
 
-/** The website's question bank, second level: one class's subjects, each a course with questions. */
+/** The website's question bank, second level: one class's subjects that have questions. */
 export default async function SiteBankClassPage({ params }: { params: Params }) {
   const { handle, grade } = await params;
   const site = await getSite(handle.toLowerCase());
@@ -53,34 +53,29 @@ export default async function SiteBankClassPage({ params }: { params: Params }) 
         <div className="ch-head mt-5">
           <p className="ch-course">{b.title}</p>
           <h1>{name.label}</h1>
-          {name.detail && <p className="mt-2 text-[16.5px] text-ink-2">{name.detail}</p>}
+          <p className="mt-2 text-[16.5px] text-ink-2">{name.detail}</p>
         </div>
 
         {!node ? (
           <p className="card mt-6 p-6 text-ink-2">{b.emptyGrade}</p>
         ) : (
           <ul className="bank-grid mt-6">
-            {node.courses.map(({ course, chapters, counts, total }) => {
-              const subject = subjectOf(course);
-              const subtitle = [subject !== course.title && course.title, course.session].filter(Boolean).join(" · ");
-              return (
-                <li key={course.id}>
-                  <Link href={`${home}/courses/${course.number}/chapters`} className="bank-card bank-subject">
-                    <span className={`course-cover cv-${course.cover} bank-cover`} aria-hidden="true">
-                      <CourseIconGlyph name={course.icon} />
+            {node.subjects.map(({ subject, chapters, counts, total }) => (
+              <li key={subject.id}>
+                <Link href={`${home}/bank/${grade}/${subject.number}`} className="bank-card bank-subject">
+                  <span className="bank-icon" aria-hidden="true">
+                    <BookOpen />
+                  </span>
+                  <span className="flex min-w-0 flex-col gap-1">
+                    <span className="bank-card-title">{subject.name}</span>
+                    <span className="bank-card-meta">
+                      {`${b.chapters(formatNumber(chapters.length, locale))} · ${b.questions(formatNumber(total, locale))}`}
                     </span>
-                    <span className="flex min-w-0 flex-col gap-1">
-                      <span className="bank-card-title">{subject}</span>
-                      {subtitle && <span className="bank-card-detail">{subtitle}</span>}
-                      <span className="bank-card-meta">
-                        {`${b.chapters(formatNumber(chapters.length, locale))} · ${b.questions(formatNumber(total, locale))}`}
-                      </span>
-                      <SectionChips counts={counts} d={d} locale={locale} />
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
+                    <SectionChips counts={counts} d={d} locale={locale} />
+                  </span>
+                </Link>
+              </li>
+            ))}
           </ul>
         )}
       </div>

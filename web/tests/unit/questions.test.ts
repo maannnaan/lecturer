@@ -5,7 +5,7 @@ const course = "6f1c2b3a-1d2e-4f50-8a9b-0c1d2e3f4a5b";
 
 const mcq = (extra: Record<string, string> = {}) => ({
   type: "mcq",
-  courseId: course,
+  subjectId: course,
   stem: "$2\\,\\text{kg}$ ভরের বস্তুতে $10\\,\\text{N}$ বল প্রয়োগ করলে ত্বরণ কত?",
   option0: "$2$",
   option1: "$5$",
@@ -57,7 +57,7 @@ describe("parseQuestion", () => {
   it("reads a creative question with default and custom marks", () => {
     const input = {
       type: "creative",
-      courseId: course,
+      subjectId: course,
       stem: "৫ kg ভরের একটি বাক্স আনত তলে…",
       part0: "নিউটনের প্রথম সূত্রটি লিখ।",
       part1: "ঘর্ষণ বল কেন গতির বিপরীতে?",
@@ -74,36 +74,36 @@ describe("parseQuestion", () => {
   });
 
   it("refuses a creative question with a missing part or bad marks", () => {
-    const { errors } = parseQuestion({ type: "creative", courseId: course, stem: "উদ্দীপক", part0: "ক", part1: "খ", part2: "গ", marks1: "দুই" });
+    const { errors } = parseQuestion({ type: "creative", subjectId: course, stem: "উদ্দীপক", part0: "ক", part1: "খ", part2: "গ", marks1: "দুই" });
     expect(errors.part3).toBe("required");
     expect(errors.marks1).toBe("number");
   });
 
   it("reads short questions, and textbook and practice problems", () => {
-    expect(parseQuestion({ type: "short", courseId: course, stem: "জড়তা কী?", modelAnswer: "বস্তুর অবস্থা…" }).question.body).toEqual({
+    expect(parseQuestion({ type: "short", subjectId: course, stem: "জড়তা কী?", modelAnswer: "বস্তুর অবস্থা…" }).question.body).toEqual({
       stem: "জড়তা কী?",
       modelAnswer: "বস্তুর অবস্থা…",
     });
-    const textbook = parseQuestion({ type: "textbook", courseId: course, stem: "সমস্যা", finalAnswer: "$5\\,\\text{N}$", solution: "সমাধান" });
+    const textbook = parseQuestion({ type: "textbook", subjectId: course, stem: "সমস্যা", finalAnswer: "$5\\,\\text{N}$", solution: "সমাধান" });
     expect(textbook.errors).toEqual({});
     expect(textbook.question.body).toEqual({ stem: "সমস্যা", finalAnswer: "$5\\,\\text{N}$", solution: "সমাধান" });
     // A practice problem may have neither an answer nor a solution yet.
-    expect(parseQuestion({ type: "practice", courseId: course, stem: "সমস্যা" }).question.body).toEqual({
+    expect(parseQuestion({ type: "practice", subjectId: course, stem: "সমস্যা" }).question.body).toEqual({
       stem: "সমস্যা",
       finalAnswer: "",
       solution: "",
     });
-    expect(parseQuestion({ type: "practice", courseId: course, stem: "সমস্যা", finalAnswer: "x".repeat(301) }).errors.finalAnswer).toBe("tooLong");
+    expect(parseQuestion({ type: "practice", subjectId: course, stem: "সমস্যা", finalAnswer: "x".repeat(301) }).errors.finalAnswer).toBe("tooLong");
   });
 
   it("no longer knows the old 'problem' type, which became 'textbook'", () => {
-    expect(parseQuestion({ type: "problem", courseId: course, stem: "সমস্যা" }).errors.type).toBe("invalid");
+    expect(parseQuestion({ type: "problem", subjectId: course, stem: "সমস্যা" }).errors.type).toBe("invalid");
   });
 
-  it("requires a stem, a course and a known type", () => {
+  it("requires a stem, a subject and a known type", () => {
     const { errors } = parseQuestion({ type: "essay", stem: "" });
     expect(errors.type).toBe("invalid");
-    expect(errors.courseId).toBe("required");
+    expect(errors.subjectId).toBe("required");
     expect(errors.stem).toBe("required");
   });
 

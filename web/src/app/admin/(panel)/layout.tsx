@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { PendingButton } from "@/components/form";
 import { LangSwitch } from "@/components/lang-switch";
 import { Logo } from "@/components/logo";
 import { getDictionary } from "@/i18n";
@@ -28,9 +29,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <span className="text-sm text-muted max-md:hidden">{d.admin.signedInAs(admin.name)}</span>
             <LangSwitch locale={locale} label={d.common.language} />
             <form action={adminLogoutAction}>
-              <button type="submit" className="btn btn-ghost btn-sm">
-                {d.common.logout}
-              </button>
+              <PendingButton className="btn btn-ghost btn-sm">{d.common.logout}</PendingButton>
             </form>
           </div>
         </div>

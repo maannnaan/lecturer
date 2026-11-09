@@ -47,7 +47,6 @@ export function parseCourse(input: Input) {
   const course = {
     title: text(input, "title", 120, errors, true),
     grade: oneOf(input.grade, GRADES, "other"),
-    subject: text(input, "subject", 60, errors),
     session: text(input, "session", 120, errors),
     description: text(input, "description", 2000, errors),
     icon: oneOf(input.icon, COURSE_ICONS, "book-open"),

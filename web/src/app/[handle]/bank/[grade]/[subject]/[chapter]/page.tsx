@@ -1,58 +1,50 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
-import { cache } from "react";
-import { Calendar, Check, ListChecks } from "lucide-react";
+import { ListChecks } from "lucide-react";
 import { Crumbs } from "@/components/bank-ui";
-import { formatDayRange, formatNumber, formatYear, getDictionary } from "@/i18n";
+import { formatNumber, formatYear, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { totalOf } from "@/lib/bank-tree";
 import { chapterLabel } from "@/lib/chapter-label";
 import { asciiDigits } from "@/lib/digits";
-import { gradeName, gradeOf, subjectOf } from "@/lib/grades";
+import { gradeName } from "@/lib/grades";
 import { BANK_TABS, BOARDS, type BankTab, isMcq, tabFromParam } from "@/lib/questions";
-import { getCurrentTeacher } from "@/server/auth/current";
-import { getCourseByNumber } from "@/server/courses";
 import { getDb } from "@/server/db";
 import { CHAPTER_PAGE_SIZE, listChapterQuestions } from "@/server/questions";
-import { getSite } from "../../../../data";
 import { QuestionCard } from "../../../../question-card";
+import { getPageSubject } from "../data";
 
 export const instant = false;
 
-type Params = Promise<{ handle: string; number: string; chapter: string }>;
+type Params = Promise<{ handle: string; grade: string; subject: string; chapter: string }>;
 type Search = Promise<{ tab?: string; board?: string; year?: string; page?: string }>;
 
-/** The chapter behind this address; its owner also sees it while the course is a draft. */
-const getPageChapter = cache(async (handle: string, number: string, chapterNumber: string) => {
-  await connection();
-  const site = await getSite(handle.toLowerCase());
-  if (!site || !/^\d{1,6}$/.test(number) || !/^\d{1,6}$/.test(chapterNumber)) return null;
-  const isOwner = (await getCurrentTeacher())?.id === site.teacher.id;
-  const course = await getCourseByNumber(await getDb(), site.teacher.id, Number(number), isOwner);
-  if (!course) return null;
-  const index = course.chapters.findIndex((ch) => ch.number === Number(chapterNumber));
-  if (index < 0) return null;
-  return { teacher: site.teacher, course, chapter: course.chapters[index], index };
-});
+async function getPageChapter(handle: string, grade: string, subject: string, chapterNumber: string) {
+  const found = await getPageSubject(handle, grade, subject);
+  if (!found || !/^\d{1,6}$/.test(chapterNumber)) return null;
+  const index = found.node.subject.chapters.findIndex((ch) => ch.number === Number(chapterNumber));
+  return index < 0 ? null : { ...found, chapter: found.node.subject.chapters[index], index };
+}
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
-  const { handle, number, chapter } = await params;
-  const found = await getPageChapter(handle, number, chapter);
-  if (!found || !found.course.published) return { robots: { index: false } };
-  const { teacher, course } = found;
+  const { handle, grade, subject, chapter } = await params;
+  const found = await getPageChapter(handle, grade, subject, chapter);
+  if (!found || found.teacher.status !== "approved") return { robots: { index: false } };
+  const s = found.node.subject;
   return {
-    title: { absolute: `${found.chapter.title} — ${course.title} · ${teacher.nameBn}` },
-    alternates: { canonical: `/${teacher.handle}/courses/${course.number}/chapters/${found.chapter.number}` },
+    title: { absolute: `${found.chapter.title} — ${s.name} · ${found.teacher.nameBn}` },
+    alternates: { canonical: `/${found.teacher.handle}/bank/${grade}/${s.number}/${found.chapter.number}` },
   };
 }
 
-export default async function ChapterPage({ params, searchParams }: { params: Params; searchParams: Search }) {
-  const { handle, number, chapter: chapterNumber } = await params;
-  const found = await getPageChapter(handle, number, chapterNumber);
+/** One chapter of a bank subject on the website: its public questions, a section at a time. */
+export default async function SiteBankChapterPage({ params, searchParams }: { params: Params; searchParams: Search }) {
+  const { handle, grade, subject: subjectNumber, chapter: chapterNumber } = await params;
+  const found = await getPageChapter(handle, grade, subjectNumber, chapterNumber);
   if (!found) notFound();
-  const { teacher, course, chapter, index } = found;
+  const { teacher, node, chapter, index } = found;
+  const { subject } = node;
   const locale = await getLocale(teacher.locale);
   const d = getDictionary(locale);
   const c = d.site.chapter;
@@ -66,7 +58,7 @@ export default async function ChapterPage({ params, searchParams }: { params: Pa
   const year = /^\d{4}$/.test(yearText) ? Number(yearText) : undefined;
   const page = Math.max(1, Number(asciiDigits(s.page ?? "")) || 1);
 
-  const place = { courseId: course.id, chapterId: chapter.id };
+  const place = { subjectId: subject.id, chapterId: chapter.id };
   let tab: BankTab = asked?.tab ?? BANK_TABS[0];
   let list = await listChapterQuestions(db, teacher.id, place, { tab, board, year, page });
   if (!asked && list.counts[tab] === 0) {
@@ -81,10 +73,8 @@ export default async function ChapterPage({ params, searchParams }: { params: Pa
   const pages = Math.max(1, Math.ceil(list.total / CHAPTER_PAGE_SIZE));
 
   const home = `/${teacher.handle}`;
-  const coursePath = `${home}/courses/${course.number}`;
-  const chapterPath = `${coursePath}/chapters/${chapter.number}`;
-  const grade = gradeOf(course);
-  const dates = formatDayRange(chapter.startsOn, chapter.endsOn, locale);
+  const subjectPath = `${home}/bank/${grade}/${subject.number}`;
+  const chapterPath = `${subjectPath}/${chapter.number}`;
   const label = chapterLabel(chapter, index, d, locale);
   const pageHref = (n: number) => {
     const query = new URLSearchParams({ tab });
@@ -96,11 +86,6 @@ export default async function ChapterPage({ params, searchParams }: { params: Pa
 
   return (
     <main>
-      {!course.published && (
-        <p className="bg-accent-soft px-4 py-2 text-center text-sm font-semibold text-accent-ink" role="status">
-          {d.site.course.draftBanner}
-        </p>
-      )}
       <div className="wrap">
         <Crumbs
           label={d.common.breadcrumb}
@@ -108,7 +93,7 @@ export default async function ChapterPage({ params, searchParams }: { params: Pa
             { label: locale === "bn" ? teacher.nameBn : teacher.nameEn, href: home },
             { label: d.site.bank.title, href: `${home}/bank` },
             { label: gradeName(grade, d).label, href: `${home}/bank/${grade}` },
-            { label: subjectOf(course), href: `${coursePath}/chapters` },
+            { label: subject.name, href: subjectPath },
             { label },
           ]}
         />
@@ -116,16 +101,16 @@ export default async function ChapterPage({ params, searchParams }: { params: Pa
         <div className="ch-layout">
           <nav className="card ch-nav" aria-label={c.chapters}>
             <p className="ch-nav-title">{c.chapters}</p>
-            {course.chapters.map((ch, i) => (
+            {subject.chapters.map((ch, i) => (
               <Link
                 key={ch.id}
-                href={`${coursePath}/chapters/${ch.number}`}
+                href={`${subjectPath}/${ch.number}`}
                 className={ch.id === chapter.id ? "on" : undefined}
                 aria-current={ch.id === chapter.id ? "page" : undefined}
               >
                 <span className="n">{formatNumber(i + 1, locale)}</span>
                 <span>{ch.title}</span>
-                <span className="tick">{ch.status === "done" && <Check aria-label={d.dashboard.courses.statuses.done} />}</span>
+                <span className="tick" />
               </Link>
             ))}
           </nav>
@@ -133,26 +118,17 @@ export default async function ChapterPage({ params, searchParams }: { params: Pa
           <section className="min-w-0" aria-labelledby="chapter-title">
             <div className="ch-head">
               <p className="ch-course">
-                <Link href={coursePath}>{course.title}</Link> · {label}
+                <Link href={subjectPath}>{subject.name}</Link> · {label}
               </p>
               <h1 id="chapter-title">{chapter.title}</h1>
-              <p className="ch-stats">
-                {total > 0 && (
+              {total > 0 && (
+                <p className="ch-stats">
                   <span>
                     <ListChecks aria-hidden="true" />
                     {c.questions(formatNumber(total, locale))}
                   </span>
-                )}
-                {dates && (
-                  <span>
-                    <Calendar aria-hidden="true" />
-                    {c.classDates(dates)}
-                  </span>
-                )}
-                <span className={chapter.status === "done" ? "badge badge-ok" : chapter.status === "ongoing" ? "badge badge-warn" : "badge"}>
-                  {d.dashboard.courses.statuses[chapter.status]}
-                </span>
-              </p>
+                </p>
+              )}
             </div>
 
             {total === 0 ? (

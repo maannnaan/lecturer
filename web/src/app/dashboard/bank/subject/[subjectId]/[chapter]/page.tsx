@@ -8,10 +8,10 @@ import { getLocale } from "@/i18n/server";
 import { totalOf } from "@/lib/bank-tree";
 import { chapterLabel } from "@/lib/chapter-label";
 import { asciiDigits } from "@/lib/digits";
-import { gradeName, gradeOf, subjectOf } from "@/lib/grades";
+import { gradeName, gradeOf } from "@/lib/grades";
 import { BANK_TABS, BOARDS, type BankTab, tabFromParam, tabTypes } from "@/lib/questions";
 import { requireTeacher } from "@/server/auth/current";
-import { listCoursesWithChapters } from "@/server/courses";
+import { getSubject } from "@/server/bank";
 import { getDb } from "@/server/db";
 import { BANK_PAGE_SIZE, listChapterQuestions } from "@/server/questions";
 import { QuestionRow } from "../../../question-row";
@@ -20,23 +20,23 @@ export const instant = false;
 
 export const metadata: Metadata = { title: "প্রশ্নব্যাংক" };
 
-type Params = Promise<{ courseId: string; chapter: string }>;
+type Params = Promise<{ subjectId: string; chapter: string }>;
 type Search = Promise<{ tab?: string; board?: string; year?: string; page?: string }>;
 
 /**
  * The bank's last level: one chapter's questions, a section at a time (textbook problems, practice
  * problems, MCQ, SQ, CQ), private ones included. `chapter` is a chapter id, or "unfiled" for the
- * course's questions that sit in no chapter.
+ * subject's questions that sit in no chapter.
  */
 export default async function BankChapterPage({ params, searchParams }: { params: Params; searchParams: Search }) {
   const teacher = await requireTeacher();
-  const { courseId, chapter: chapterParam } = await params;
+  const { subjectId, chapter: chapterParam } = await params;
   const db = await getDb();
-  const course = (await listCoursesWithChapters(db, teacher.id)).find((c) => c.id === courseId);
-  if (!course) notFound();
-  const index = course.chapters.findIndex((ch) => ch.id === chapterParam);
+  const subject = await getSubject(db, teacher.id, subjectId);
+  if (!subject) notFound();
+  const index = subject.chapters.findIndex((ch) => ch.id === chapterParam);
   if (index < 0 && chapterParam !== "unfiled") notFound();
-  const chapter = index >= 0 ? course.chapters[index] : null;
+  const chapter = index >= 0 ? subject.chapters[index] : null;
 
   const locale = await getLocale();
   const d = getDictionary(locale);
@@ -48,7 +48,7 @@ export default async function BankChapterPage({ params, searchParams }: { params
   const year = /^\d{4}$/.test(yearText) ? Number(yearText) : undefined;
   const page = Math.max(1, Number(asciiDigits(s.page ?? "")) || 1);
 
-  const place = { courseId: course.id, chapterId: chapter?.id ?? null };
+  const place = { subjectId: subject.id, chapterId: chapter?.id ?? null };
   const options = { board, year, page, pageSize: BANK_PAGE_SIZE, includePrivate: true };
   let tab: BankTab = asked?.tab ?? BANK_TABS[0];
   let list = await listChapterQuestions(db, teacher.id, place, { ...options, tab });
@@ -63,10 +63,9 @@ export default async function BankChapterPage({ params, searchParams }: { params
   const pages = Math.max(1, Math.ceil(list.total / BANK_PAGE_SIZE));
   const filtered = Boolean(board || year);
 
-  const grade = gradeOf(course);
-  const subject = subjectOf(course);
+  const grade = gradeOf(subject);
   const label = chapter ? chapterLabel(chapter, index, d, locale) : t.unfiled;
-  const path = `/dashboard/bank/course/${course.id}/${chapter?.id ?? "unfiled"}`;
+  const path = `/dashboard/bank/subject/${subject.id}/${chapter?.id ?? "unfiled"}`;
   const href = (extra: { tab?: BankTab; page?: number }) => {
     const query = new URLSearchParams({ tab: extra.tab ?? tab });
     if (!extra.tab) {
@@ -77,11 +76,11 @@ export default async function BankChapterPage({ params, searchParams }: { params
     return `${path}?${query}`;
   };
   const newHref = (type: string) => {
-    const query = new URLSearchParams({ type, course: course.id });
+    const query = new URLSearchParams({ type, subject: subject.id });
     if (chapter) query.set("chapter", chapter.id);
     return `/dashboard/bank/new?${query}`;
   };
-  const onSite = course.published && chapter ? `/${teacher.handle}/courses/${course.number}/chapters/${chapter.number}?tab=${tab}` : null;
+  const onSite = chapter && list.counts[tab] > 0 ? `/${teacher.handle}/bank/${grade}/${subject.number}/${chapter.number}?tab=${tab}` : null;
 
   return (
     <main className="dash-content">
@@ -91,13 +90,13 @@ export default async function BankChapterPage({ params, searchParams }: { params
         items={[
           { label: t.title, href: "/dashboard/bank" },
           { label: gradeName(grade, d).label, href: `/dashboard/bank/class/${grade}` },
-          { label: subject, href: `/dashboard/bank/course/${course.id}` },
+          { label: subject.name, href: `/dashboard/bank/subject/${subject.id}` },
           { label },
         ]}
       />
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          {chapter && <p className="text-[14px] font-semibold text-muted">{`${subject} · ${label}`}</p>}
+          {chapter && <p className="text-[14px] font-semibold text-muted">{`${subject.name} · ${label}`}</p>}
           <h2 className="text-2xl">{chapter?.title ?? t.unfiled}</h2>
           <p className="mt-1 text-[15px] text-ink-2">{t.total(formatNumber(totalOf(list.counts), locale))}</p>
         </div>

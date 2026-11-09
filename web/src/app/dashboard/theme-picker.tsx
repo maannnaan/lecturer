@@ -1,3 +1,4 @@
+import { PendingButton } from "@/components/form";
 import { initialOf } from "@/components/logo";
 import type { Dictionary } from "@/i18n";
 import { THEMES, THEME_SWATCHES, type ThemeName } from "@/lib/themes";
@@ -61,9 +62,7 @@ function ThemeOption({ theme, teacher, t }: { theme: ThemeName; teacher: Teacher
         ) : (
           <form action={setThemeAction}>
             <input type="hidden" name="theme" value={theme} />
-            <button type="submit" className="btn btn-ghost btn-xs">
-              {t.use}
-            </button>
+            <PendingButton className="btn btn-ghost btn-xs">{t.use}</PendingButton>
           </form>
         )}
       </div>

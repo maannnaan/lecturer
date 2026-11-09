@@ -2,15 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Copy, Eye } from "lucide-react";
+import { PendingButton } from "@/components/form";
 import { getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
+import { gradeOf } from "@/lib/grades";
 import { tabOf } from "@/lib/questions";
 import { requireTeacher } from "@/server/auth/current";
-import { listCoursesWithChapters } from "@/server/courses";
+import { listSubjectsWithChapters } from "@/server/bank";
 import { getDb } from "@/server/db";
 import { getQuestion } from "@/server/questions";
 import { duplicateQuestionAction } from "../actions";
-import { courseChoices } from "../choices";
+import { subjectChoices } from "../choices";
 import { bankHref } from "../links";
 import { DeleteQuestionForm, QuestionForm } from "../question-form";
 
@@ -24,16 +26,16 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ i
   const db = await getDb();
   const question = await getQuestion(db, teacher.id, id);
   if (!question) notFound();
-  const courses = await listCoursesWithChapters(db, teacher.id);
+  const subjects = await listSubjectsWithChapters(db, teacher.id);
   const locale = await getLocale();
   const d = getDictionary(locale);
   const t = d.dashboard.bank;
 
-  const course = courses.find((c) => c.id === question.courseId);
-  const chapter = course?.chapters.find((ch) => ch.id === question.chapterId);
+  const subject = subjects.find((x) => x.id === question.subjectId);
+  const chapter = subject?.chapters.find((ch) => ch.id === question.chapterId);
   const onSite =
-    question.visibility === "public" && course?.published && chapter
-      ? `/${teacher.handle}/courses/${course.number}/chapters/${chapter.number}?tab=${tabOf(question.type)}`
+    question.visibility === "public" && subject && chapter
+      ? `/${teacher.handle}/bank/${gradeOf(subject)}/${subject.number}/${chapter.number}?tab=${tabOf(question.type)}`
       : null;
 
   return (
@@ -46,10 +48,10 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ i
         <div className="row-actions">
           <form action={duplicateQuestionAction}>
             <input type="hidden" name="questionId" value={question.id} />
-            <button type="submit" className="btn btn-ghost btn-sm">
+            <PendingButton className="btn btn-ghost btn-sm">
               <Copy aria-hidden="true" />
               {t.duplicate}
-            </button>
+            </PendingButton>
           </form>
           {onSite && (
             <Link href={onSite} className="btn btn-ghost btn-sm">
@@ -67,7 +69,7 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ i
         question={{
           id: question.id,
           type: question.type,
-          courseId: question.courseId,
+          subjectId: question.subjectId,
           chapterId: question.chapterId,
           visibility: question.visibility,
           body: question.body,
@@ -77,8 +79,8 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ i
           videoUrl: question.videoUrl,
         }}
         type={question.type}
-        courses={courseChoices(courses, d, locale)}
-        defaults={{ courseId: question.courseId, chapterId: question.chapterId ?? "" }}
+        subjects={subjectChoices(subjects, d, locale)}
+        defaults={{ subjectId: question.subjectId, chapterId: question.chapterId ?? "" }}
         t={t.form}
         q={d.questions}
         c={d.common}

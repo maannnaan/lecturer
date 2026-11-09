@@ -1,6 +1,6 @@
 import { type SQL, and, asc, count, desc, eq, ilike, inArray, isNull, ne, sql } from "drizzle-orm";
 import type { Database } from "@/server/db";
-import { chapters, courses, questions } from "@/server/db/schema";
+import { bankChapters, bankSubjects, questions } from "@/server/db/schema";
 import { type CountRow, type TabCounts, emptyCounts } from "@/lib/bank-tree";
 import { isUuid } from "@/lib/ids";
 import { BOARDS, type BankTab, type QuestionInput, type QuestionType, isMcq, tabOf, tabTypes } from "@/lib/questions";
@@ -8,12 +8,12 @@ import { getMedia } from "./media";
 import { renumber, swapped } from "./ordering";
 
 // Like courses, every function takes the teacher's id from the session and filters on it: another
-// teacher's question, course, chapter or image id simply isn't found.
+// teacher's question, subject, chapter or image id simply isn't found.
 
 export type Question = typeof questions.$inferSelect;
 
 export type QuestionFilters = {
-  courseId?: string;
+  subjectId?: string;
   /** A chapter id, or "none" for questions filed under no chapter. */
   chapterId?: string;
   type?: QuestionType;
@@ -30,41 +30,41 @@ export const CHAPTER_PAGE_SIZE = 20;
 
 export type SaveQuestionResult =
   | { ok: true; question: Question }
-  | { ok: false; reason: "missing" | "course" | "chapter" | "image" };
+  | { ok: false; reason: "missing" | "subject" | "chapter" | "image" };
 
 /** A LIKE pattern that matches `term` literally. */
 function contains(term: string): string {
   return `%${term.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 }
 
-function sameGroup(teacherId: string, courseId: string, chapterId: string | null): SQL {
+function sameGroup(teacherId: string, subjectId: string, chapterId: string | null): SQL {
   return and(
     eq(questions.teacherId, teacherId),
-    eq(questions.courseId, courseId),
+    eq(questions.subjectId, subjectId),
     chapterId ? eq(questions.chapterId, chapterId) : isNull(questions.chapterId),
   )!;
 }
 
-/** Whether the course, and the chapter if given, are this teacher's and belong together. */
+/** Whether the subject, and the chapter if given, are this teacher's and belong together. */
 async function placementProblem(
   db: Database,
   teacherId: string,
-  courseId: string,
+  subjectId: string,
   chapterId: string | null,
-): Promise<"course" | "chapter" | null> {
-  if (!isUuid(courseId)) return "course";
-  const [course] = await db
-    .select({ id: courses.id })
-    .from(courses)
-    .where(and(eq(courses.id, courseId), eq(courses.teacherId, teacherId)))
+): Promise<"subject" | "chapter" | null> {
+  if (!isUuid(subjectId)) return "subject";
+  const [subject] = await db
+    .select({ id: bankSubjects.id })
+    .from(bankSubjects)
+    .where(and(eq(bankSubjects.id, subjectId), eq(bankSubjects.teacherId, teacherId)))
     .limit(1);
-  if (!course) return "course";
+  if (!subject) return "subject";
   if (chapterId === null) return null;
   if (!isUuid(chapterId)) return "chapter";
   const [chapter] = await db
-    .select({ id: chapters.id })
-    .from(chapters)
-    .where(and(eq(chapters.id, chapterId), eq(chapters.courseId, courseId), eq(chapters.teacherId, teacherId)))
+    .select({ id: bankChapters.id })
+    .from(bankChapters)
+    .where(and(eq(bankChapters.id, chapterId), eq(bankChapters.subjectId, subjectId), eq(bankChapters.teacherId, teacherId)))
     .limit(1);
   return chapter ? null : "chapter";
 }
@@ -78,7 +78,7 @@ async function resolveImage(db: Database, teacherId: string, imageId: string | n
 
 function columns(input: QuestionInput) {
   return {
-    courseId: input.courseId,
+    subjectId: input.subjectId,
     chapterId: input.chapterId,
     type: input.type,
     visibility: input.visibility,
@@ -99,9 +99,9 @@ export async function getQuestion(db: Database, teacherId: string, questionId: s
   return row ?? null;
 }
 
-/** Adds a question at the end of its chapter (or of the course's unfiled questions). */
+/** Adds a question at the end of its chapter (or of the subject's unfiled questions). */
 export async function createQuestion(db: Database, teacherId: string, input: QuestionInput): Promise<SaveQuestionResult> {
-  const problem = await placementProblem(db, teacherId, input.courseId, input.chapterId);
+  const problem = await placementProblem(db, teacherId, input.subjectId, input.chapterId);
   if (problem) return { ok: false, reason: problem };
   const image = await resolveImage(db, teacherId, input.imageId);
   if (image === false) return { ok: false, reason: "image" };
@@ -109,7 +109,7 @@ export async function createQuestion(db: Database, teacherId: string, input: Que
     const [{ last }] = await tx
       .select({ last: sql<number>`coalesce(max(${questions.position}), -1)` })
       .from(questions)
-      .where(sameGroup(teacherId, input.courseId, input.chapterId));
+      .where(sameGroup(teacherId, input.subjectId, input.chapterId));
     const [question] = await tx
       .insert(questions)
       .values({ ...columns(input), teacherId, body: { ...input.body, image }, position: Number(last) + 1 })
@@ -127,7 +127,7 @@ export async function updateQuestion(
 ): Promise<SaveQuestionResult> {
   const current = await getQuestion(db, teacherId, questionId);
   if (!current) return { ok: false, reason: "missing" };
-  const problem = await placementProblem(db, teacherId, input.courseId, input.chapterId);
+  const problem = await placementProblem(db, teacherId, input.subjectId, input.chapterId);
   if (problem) return { ok: false, reason: problem };
   const image =
     input.imageId && input.imageId === current.body.image?.mediaId
@@ -137,11 +137,11 @@ export async function updateQuestion(
 
   return db.transaction(async (tx) => {
     let position = current.position;
-    if (current.courseId !== input.courseId || current.chapterId !== input.chapterId) {
+    if (current.subjectId !== input.subjectId || current.chapterId !== input.chapterId) {
       const [{ last }] = await tx
         .select({ last: sql<number>`coalesce(max(${questions.position}), -1)` })
         .from(questions)
-        .where(sameGroup(teacherId, input.courseId, input.chapterId));
+        .where(sameGroup(teacherId, input.subjectId, input.chapterId));
       position = Number(last) + 1;
     }
     const [question] = await tx
@@ -170,12 +170,12 @@ export async function duplicateQuestion(db: Database, teacherId: string, questio
     const [{ last }] = await tx
       .select({ last: sql<number>`coalesce(max(${questions.position}), -1)` })
       .from(questions)
-      .where(sameGroup(teacherId, source.courseId, source.chapterId));
+      .where(sameGroup(teacherId, source.subjectId, source.chapterId));
     const [copy] = await tx
       .insert(questions)
       .values({
         teacherId,
-        courseId: source.courseId,
+        subjectId: source.subjectId,
         chapterId: source.chapterId,
         type: source.type,
         visibility: source.visibility,
@@ -208,7 +208,7 @@ export async function moveQuestion(
     .from(questions)
     .where(
       and(
-        sameGroup(teacherId, question.courseId, question.chapterId),
+        sameGroup(teacherId, question.subjectId, question.chapterId),
         inArray(questions.type, [...tabTypes(tabOf(question.type))]),
       ),
     )
@@ -228,7 +228,7 @@ export async function listQuestions(
   filters: QuestionFilters = {},
 ): Promise<{ items: Question[]; total: number }> {
   const conditions: SQL[] = [eq(questions.teacherId, teacherId)];
-  if (filters.courseId && isUuid(filters.courseId)) conditions.push(eq(questions.courseId, filters.courseId));
+  if (filters.subjectId && isUuid(filters.subjectId)) conditions.push(eq(questions.subjectId, filters.subjectId));
   if (filters.chapterId === "none") conditions.push(isNull(questions.chapterId));
   else if (filters.chapterId && isUuid(filters.chapterId)) conditions.push(eq(questions.chapterId, filters.chapterId));
   if (filters.type) conditions.push(eq(questions.type, filters.type));
@@ -265,28 +265,18 @@ export async function countByType(db: Database, teacherId: string): Promise<Part
   return Object.fromEntries(rows.map((r) => [r.type, Number(r.n)]));
 }
 
-/** Public questions per chapter of a course, so the website can link chapters that have some. */
-export async function publicCountsByChapter(db: Database, teacherId: string, courseId: string): Promise<Map<string, number>> {
-  const rows = await db
-    .select({ chapterId: questions.chapterId, n: count() })
-    .from(questions)
-    .where(and(eq(questions.teacherId, teacherId), eq(questions.courseId, courseId), eq(questions.visibility, "public")))
-    .groupBy(questions.chapterId);
-  return new Map(rows.filter((r) => r.chapterId).map((r) => [r.chapterId!, Number(r.n)]));
-}
-
 /**
- * How many questions each course and chapter has of each type, for the bank's class, subject and
+ * How many questions each subject and chapter has of each type, for the bank's class, subject and
  * chapter pages (see buildBankTree). The website counts public questions only.
  */
 export async function bankCounts(db: Database, teacherId: string, options: { publicOnly?: boolean } = {}): Promise<CountRow[]> {
   const conditions: SQL[] = [eq(questions.teacherId, teacherId)];
   if (options.publicOnly) conditions.push(eq(questions.visibility, "public"));
   const rows = await db
-    .select({ courseId: questions.courseId, chapterId: questions.chapterId, type: questions.type, n: count() })
+    .select({ subjectId: questions.subjectId, chapterId: questions.chapterId, type: questions.type, n: count() })
     .from(questions)
     .where(and(...conditions))
-    .groupBy(questions.courseId, questions.chapterId, questions.type);
+    .groupBy(questions.subjectId, questions.chapterId, questions.type);
   return rows.map((row) => ({ ...row, n: Number(row.n) }));
 }
 
@@ -303,23 +293,19 @@ export type SectionQuestions = {
 /**
  * One section of a chapter (its textbook problems, its MCQs…), a page at a time, in the teacher's
  * order. The website sees public questions only; the teacher's bank passes `includePrivate`.
- * `chapterId: null` means the course's questions filed under no chapter. `board` is a board key,
+ * `chapterId: null` means the subject's questions filed under no chapter. `board` is a board key,
  * or "any" for every board question.
  */
 export async function listChapterQuestions(
   db: Database,
   teacherId: string,
-  place: { courseId: string; chapterId: string | null },
+  place: { subjectId: string; chapterId: string | null },
   options: { tab: BankTab; board?: string; year?: number; page?: number; pageSize?: number; includePrivate?: boolean },
 ): Promise<SectionQuestions> {
-  if (!isUuid(place.courseId) || (place.chapterId !== null && !isUuid(place.chapterId))) {
+  if (!isUuid(place.subjectId) || (place.chapterId !== null && !isUuid(place.chapterId))) {
     return { items: [], total: 0, counts: emptyCounts(), boards: [], years: [] };
   }
-  const inChapter: SQL[] = [
-    eq(questions.teacherId, teacherId),
-    eq(questions.courseId, place.courseId),
-    place.chapterId ? eq(questions.chapterId, place.chapterId) : isNull(questions.chapterId),
-  ];
+  const inChapter: SQL[] = [sameGroup(teacherId, place.subjectId, place.chapterId)];
   if (!options.includePrivate) inChapter.push(eq(questions.visibility, "public"));
   const chapter = and(...inChapter)!;
   const section = and(chapter, inArray(questions.type, [...tabTypes(options.tab)]))!;

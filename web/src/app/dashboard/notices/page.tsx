@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Pin, Trash2 } from "lucide-react";
+import { PendingButton } from "@/components/form";
 import { formatDate, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { requireTeacher } from "@/server/auth/current";
@@ -54,10 +55,10 @@ export default async function NoticesPage() {
                       <EditNoticeForm notice={notice} t={t} c={d.common} />
                       <form action={deleteNoticeAction}>
                         <input type="hidden" name="noticeId" value={notice.id} />
-                        <button type="submit" className="btn btn-danger btn-xs">
+                        <PendingButton className="btn btn-danger btn-xs">
                           <Trash2 aria-hidden="true" />
                           {d.common.delete}
-                        </button>
+                        </PendingButton>
                       </form>
                     </div>
                   </details>

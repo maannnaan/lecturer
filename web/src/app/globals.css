@@ -665,9 +665,9 @@
   .bank-card-title svg { width: 18px; height: 18px; flex: none; color: var(--lb-primary-text); }
   .bank-card-detail { font-size: 14px; color: var(--lb-muted); }
   .bank-card-meta { padding-top: 4px; font-size: 14px; color: var(--lb-ink-2); }
-  .bank-subject { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: start; gap: 14px; }
-  .bank-cover { width: 52px; height: 52px; align-items: center; justify-content: center; padding: 0; border-radius: var(--lb-r-md); }
-  .bank-cover svg { width: 26px; height: 26px; }
+  .bank-subject { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: start; gap: 14px; }
+  .bank-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: var(--lb-r-md); background: var(--lb-primary-soft); color: var(--lb-primary-text); }
+  .bank-icon svg { width: 24px; height: 24px; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
   a.tag:hover { background: var(--lb-primary-soft); color: var(--lb-primary-text); }
   .ch-rows { display: flex; flex-direction: column; padding: 4px 0; }
@@ -686,6 +686,22 @@
   @media (max-width: 640px) {
     .ch-row { grid-template-columns: minmax(0, 1fr); padding: 14px 16px; }
     .ch-row-side, .ch-row-side .chips { justify-content: flex-start; }
+  }
+
+  /* ── Loading: the bar across the top, page placeholders, and buttons whose form is being sent ── */
+  .nav-progress { position: fixed; inset: 0 0 auto 0; z-index: 100; height: 3px; pointer-events: none; background: var(--lb-primary); transform-origin: left center; transform: scaleX(0); opacity: 0; }
+  .nav-progress[data-phase="busy"] { opacity: 1; animation: lb-progress 10s cubic-bezier(0.08, 0.7, 0.2, 1) forwards; }
+  .nav-progress[data-phase="done"] { opacity: 0; transform: scaleX(1); transition: transform 0.15s ease-out, opacity 0.3s ease 0.15s; }
+  .skeleton { border-radius: var(--lb-r-md); background: linear-gradient(90deg, var(--lb-surface-2) 25%, var(--lb-line) 37%, var(--lb-surface-2) 63%); background-size: 400% 100%; animation: lb-shimmer 1.4s ease infinite; }
+  button[data-pending] { cursor: progress; }
+  button[data-pending] > svg { display: none; }
+  button[data-pending]::before { content: ""; flex: none; display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: lb-spin 0.7s linear infinite; }
+  @keyframes lb-progress { from { transform: scaleX(0.04); } to { transform: scaleX(0.92); } }
+  @keyframes lb-shimmer { from { background-position: 100% 50%; } to { background-position: 0 50%; } }
+  @keyframes lb-spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .nav-progress[data-phase="busy"] { animation: none; transform: scaleX(0.6); }
+    .skeleton, button[data-pending]::before { animation-duration: 3s; }
   }
 
   /* the phone dashboard's menu sheet */

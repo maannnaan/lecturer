@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronDown, ChevronUp, Copy, Landmark, Pencil } from "lucide-react";
+import { PendingButton } from "@/components/form";
 import { MathText } from "@/components/math-text";
 import type { Dictionary, Locale } from "@/i18n";
 import { boardLabel } from "@/lib/board-label";
@@ -46,14 +47,13 @@ export function QuestionRow({
             <form key={dir} action={moveQuestionAction}>
               <input type="hidden" name="questionId" value={question.id} />
               <input type="hidden" name="direction" value={dir} />
-              <button
-                type="submit"
+              <PendingButton
                 className="icon-btn"
                 disabled={dir === "up" ? move.first : move.last}
                 aria-label={dir === "up" ? d.common.moveUp : d.common.moveDown}
               >
                 {dir === "up" ? <ChevronUp aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
-              </button>
+              </PendingButton>
             </form>
           ))}
         <Link href={`/dashboard/bank/${question.id}`} className="btn btn-ghost btn-xs">
@@ -62,10 +62,10 @@ export function QuestionRow({
         </Link>
         <form action={duplicateQuestionAction}>
           <input type="hidden" name="questionId" value={question.id} />
-          <button type="submit" className="btn btn-ghost btn-xs">
+          <PendingButton className="btn btn-ghost btn-xs">
             <Copy aria-hidden="true" />
             {t.duplicate}
-          </button>
+          </PendingButton>
         </form>
       </div>
     </li>

@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { ImagePlus, Trash2 } from "lucide-react";
+import { PendingButton } from "@/components/form";
 import { shrinkImage } from "@/lib/shrink-image";
 import { removePhotoAction, setPhotoAction } from "./actions";
 
@@ -84,10 +85,10 @@ export function PhotoUploader({ photoUrl, initial, t }: { photoUrl: string | nul
           </label>
           {photoUrl && !busy && (
             <form action={removePhotoAction}>
-              <button type="submit" className="btn btn-danger btn-xs">
+              <PendingButton className="btn btn-danger btn-xs">
                 <Trash2 aria-hidden="true" />
                 {t.remove}
-              </button>
+              </PendingButton>
             </form>
           )}
         </div>

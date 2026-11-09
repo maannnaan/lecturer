@@ -7,24 +7,24 @@ import { getLocale } from "@/i18n/server";
 import { buildBankTree } from "@/lib/bank-tree";
 import { gradeName } from "@/lib/grades";
 import { requireTeacher } from "@/server/auth/current";
-import { listCoursesWithChapters } from "@/server/courses";
+import { listSubjectsWithChapters } from "@/server/bank";
 import { getDb } from "@/server/db";
 import { bankCounts } from "@/server/questions";
-import { NoCourses } from "./no-courses";
+import { NoSubjects } from "./no-subjects";
 
 export const instant = false;
 
 export const metadata: Metadata = { title: "প্রশ্নব্যাংক" };
 
-/** The bank's first level: the classes the teacher's courses are for. */
+/** The bank's first level: the classes the teacher's subjects are for. */
 export default async function BankPage() {
   const teacher = await requireTeacher();
   const locale = await getLocale();
   const d = getDictionary(locale);
   const t = d.dashboard.bank;
   const db = await getDb();
-  const [courses, counts] = await Promise.all([listCoursesWithChapters(db, teacher.id), bankCounts(db, teacher.id)]);
-  const tree = buildBankTree(courses, counts);
+  const [subjects, counts] = await Promise.all([listSubjectsWithChapters(db, teacher.id), bankCounts(db, teacher.id)]);
+  const tree = buildBankTree(subjects, counts);
 
   return (
     <main className="dash-content">
@@ -33,22 +33,28 @@ export default async function BankPage() {
           <h2 className="text-2xl">{t.title}</h2>
           <p className="mt-1 max-w-[52em] text-ink-2">{t.lead}</p>
         </div>
-        {courses.length > 0 && (
-          <div className="row-actions">
-            <Link href="/dashboard/bank/all" className="btn btn-ghost btn-sm">
-              <ListChecks aria-hidden="true" />
-              {t.allQuestions}
-            </Link>
-            <Link href="/dashboard/bank/new" className="btn btn-primary btn-sm">
-              <Plus aria-hidden="true" />
-              {t.new}
-            </Link>
-          </div>
-        )}
+        <div className="row-actions">
+          {subjects.length > 0 && (
+            <>
+              <Link href="/dashboard/bank/all" className="btn btn-ghost btn-sm">
+                <ListChecks aria-hidden="true" />
+                {t.allQuestions}
+              </Link>
+              <Link href="/dashboard/bank/subject/new" className="btn btn-ghost btn-sm">
+                <Plus aria-hidden="true" />
+                {t.newSubject}
+              </Link>
+              <Link href="/dashboard/bank/new" className="btn btn-primary btn-sm">
+                <Plus aria-hidden="true" />
+                {t.new}
+              </Link>
+            </>
+          )}
+        </div>
       </header>
 
-      {courses.length === 0 ? (
-        <NoCourses t={t} />
+      {subjects.length === 0 ? (
+        <NoSubjects t={t} />
       ) : (
         <>
           <form action="/dashboard/bank/all" method="get" role="search" className="flex flex-wrap items-end gap-2">
@@ -72,9 +78,9 @@ export default async function BankPage() {
                       {name.label}
                       <ArrowRight aria-hidden="true" />
                     </span>
-                    {name.detail && <span className="bank-card-detail">{name.detail}</span>}
+                    <span className="bank-card-detail">{name.detail}</span>
                     <span className="bank-card-meta">
-                      {`${t.subjects(formatNumber(grade.courses.length, locale))} · ${t.total(formatNumber(grade.total, locale))}`}
+                      {`${t.subjects(formatNumber(grade.subjects.length, locale))} · ${t.total(formatNumber(grade.total, locale))}`}
                     </span>
                     <SectionChips counts={grade.counts} d={d} locale={locale} />
                   </Link>
@@ -82,13 +88,6 @@ export default async function BankPage() {
               );
             })}
           </ul>
-
-          <p className="text-[14.5px] text-muted">
-            {t.gradeHint}{" "}
-            <Link href="/dashboard/courses" className="link">
-              {t.coursesLink}
-            </Link>
-          </p>
         </>
       )}
     </main>

@@ -15,6 +15,7 @@ import { databaseUrl } from "@/server/db/url";
 import type { Grade } from "@/lib/grades";
 import { parseQuestion } from "@/lib/questions";
 import type { ThemeName } from "@/lib/themes";
+import { createSubject, getSubject } from "@/server/bank";
 import { addChapter, createCourse, listCourses } from "@/server/courses";
 import { createNotice } from "@/server/notices";
 import { createQuestion } from "@/server/questions";
@@ -34,7 +35,6 @@ type DemoQuestion = Record<string, string>;
 type DemoCourse = {
   title: string;
   grade: Grade;
-  subject: string;
   session?: string;
   description?: string;
   icon: string;
@@ -42,9 +42,17 @@ type DemoCourse = {
   access: "free" | "approval" | "paid";
   price?: number;
   chapters: (string | DemoChapter)[];
+};
+/** A subject of the question bank, which is separate from the courses. */
+type DemoSubject = {
+  grade: Grade;
+  name: string;
+  chapters: string[];
   /** Questions by chapter index (0 = the first chapter). */
   questions?: Record<number, DemoQuestion[]>;
 };
+
+const titles = (chapters: (string | DemoChapter)[]) => chapters.map((ch) => (typeof ch === "string" ? ch : ch.title));
 
 // The questions from the Phase 0 chapter mockup, plus a few more of each kind.
 const NEWTONIAN_MECHANICS: DemoQuestion[] = [
@@ -198,6 +206,7 @@ type DemoTeacher = {
   status: TeacherStatus;
   site: TeacherSite;
   courses: DemoCourse[];
+  bank?: DemoSubject[];
   notices: { title: string; body?: string; pinned?: boolean; daysAgo: number }[];
 };
 
@@ -308,7 +317,6 @@ const DEMO: DemoTeacher[] = [
       {
         title: "পদার্থবিজ্ঞান ১ম পত্র",
         grade: "hsc",
-        subject: "পদার্থবিজ্ঞান ১ম পত্র",
         session: "এইচএসসি ২০২৮ ব্যাচ · সেপ্টেম্বর–ফেব্রুয়ারি",
         description:
           "এইচএসসি পদার্থবিজ্ঞান ১ম পত্রের দশটি অধ্যায়, পাঠ্যবইয়ের ক্রমে। প্রতি সপ্তাহে একটি লাইভ MCQ পরীক্ষা, প্রতি মাসে একটি পূর্ণাঙ্গ মডেল টেস্ট।",
@@ -317,38 +325,19 @@ const DEMO: DemoTeacher[] = [
         access: "paid",
         price: 1200,
         chapters: HSC_PHYSICS_1,
+      },
+      { title: "পদার্থবিজ্ঞান ২য় পত্র", grade: "hsc", icon: "zap", cover: 2, access: "approval", chapters: HSC_PHYSICS_2 },
+      { title: "পদার্থবিজ্ঞান", grade: "ssc", session: "এসএসসি ২০২৭ ব্যাচ", icon: "magnet", cover: 3, access: "free", chapters: SSC_PHYSICS },
+      { title: "উচ্চতর গণিত", grade: "ssc", icon: "sigma", cover: 4, access: "paid", price: 1000, chapters: SSC_HIGHER_MATH },
+    ],
+    bank: [
+      {
+        grade: "hsc",
+        name: "পদার্থবিজ্ঞান ১ম পত্র",
+        chapters: titles(HSC_PHYSICS_1),
         questions: { 2: KINEMATICS, 3: NEWTONIAN_MECHANICS },
       },
-      {
-        title: "পদার্থবিজ্ঞান ২য় পত্র",
-        grade: "hsc",
-        subject: "পদার্থবিজ্ঞান ২য় পত্র",
-        icon: "zap",
-        cover: 2,
-        access: "approval",
-        chapters: HSC_PHYSICS_2,
-      },
-      {
-        title: "পদার্থবিজ্ঞান",
-        grade: "ssc",
-        subject: "পদার্থবিজ্ঞান",
-        session: "এসএসসি ২০২৭ ব্যাচ",
-        icon: "magnet",
-        cover: 3,
-        access: "free",
-        chapters: SSC_PHYSICS,
-        questions: { 1: SSC_MOTION },
-      },
-      {
-        title: "উচ্চতর গণিত",
-        grade: "ssc",
-        subject: "উচ্চতর গণিত",
-        icon: "sigma",
-        cover: 4,
-        access: "paid",
-        price: 1000,
-        chapters: SSC_HIGHER_MATH,
-      },
+      { grade: "ssc", name: "পদার্থবিজ্ঞান", chapters: titles(SSC_PHYSICS), questions: { 1: SSC_MOTION } },
     ],
     notices: [
       { title: "এ সপ্তাহে শুক্রবারের ক্লাস রবিবার বিকেল ৪টায় হবে।", pinned: true, daysAgo: 2 },
@@ -386,13 +375,21 @@ const DEMO: DemoTeacher[] = [
       {
         title: "রসায়ন ১ম পত্র",
         grade: "hsc",
-        subject: "রসায়ন ১ম পত্র",
         session: "এইচএসসি ২০২৮ ব্যাচ",
         icon: "flask-conical",
         cover: 1,
         access: "paid",
         price: 1000,
         chapters: HSC_CHEMISTRY_1,
+      },
+      { title: "রসায়ন ২য় পত্র", grade: "hsc", icon: "dna", cover: 2, access: "approval", chapters: [] },
+      { title: "রসায়ন", grade: "ssc", icon: "leaf", cover: 3, access: "free", chapters: [] },
+    ],
+    bank: [
+      {
+        grade: "hsc",
+        name: "রসায়ন ১ম পত্র",
+        chapters: titles(HSC_CHEMISTRY_1),
         questions: {
           1: [
             {
@@ -410,8 +407,6 @@ const DEMO: DemoTeacher[] = [
           ],
         },
       },
-      { title: "রসায়ন ২য় পত্র", grade: "hsc", subject: "রসায়ন ২য় পত্র", icon: "dna", cover: 2, access: "approval", chapters: [] },
-      { title: "রসায়ন", grade: "ssc", subject: "রসায়ন", icon: "leaf", cover: 3, access: "free", chapters: [] },
     ],
     notices: [{ title: "১৫ নভেম্বর থেকে এইচএসসি ২০২৮ নতুন ব্যাচ শুরু।", pinned: true, daysAgo: 1 }],
   },
@@ -426,7 +421,7 @@ const DEMO: DemoTeacher[] = [
     status: "pending",
     site: { designation: "গণিত শিক্ষক", location: "চট্টগ্রাম", tagline: "অঙ্ক ভয়ের নয়, ধাপে ধাপে বোঝার।" },
     courses: [
-      { title: "উচ্চতর গণিত", grade: "ssc", subject: "উচ্চতর গণিত", icon: "sigma", cover: 1, access: "free", chapters: SSC_HIGHER_MATH.slice(0, 5) },
+      { title: "উচ্চতর গণিত", grade: "ssc", icon: "sigma", cover: 1, access: "free", chapters: SSC_HIGHER_MATH.slice(0, 5) },
     ],
     notices: [],
   },
@@ -462,7 +457,6 @@ async function main() {
         const course = await createCourse(db, id, {
           title: c.title,
           grade: c.grade,
-          subject: c.subject,
           session: c.session ?? "",
           description: c.description ?? "",
           icon: c.icon as never,
@@ -472,21 +466,23 @@ async function main() {
           pricePeriod: "monthly",
           published: true,
         });
-        const chapterIds: string[] = [];
         for (const ch of c.chapters) {
           const chapter = typeof ch === "string" ? { title: ch } : ch;
-          const added = await addChapter(db, id, course.id, {
+          await addChapter(db, id, course.id, {
             label: "",
             title: chapter.title,
             status: chapter.status ?? "upcoming",
             startsOn: chapter.startsOn ?? null,
             endsOn: chapter.endsOn ?? null,
           });
-          chapterIds.push(added!.id);
         }
-        for (const [index, list] of Object.entries(c.questions ?? {})) {
+      }
+      for (const b of t.bank ?? []) {
+        const created = await createSubject(db, id, { grade: b.grade, name: b.name }, b.chapters);
+        const subject = (await getSubject(db, id, created.id))!;
+        for (const [index, list] of Object.entries(b.questions ?? {})) {
           for (const fields of list) {
-            const { question, errors } = parseQuestion({ ...fields, courseId: course.id, chapterId: chapterIds[Number(index)] });
+            const { question, errors } = parseQuestion({ ...fields, subjectId: subject.id, chapterId: subject.chapters[Number(index)].id });
             if (Object.keys(errors).length > 0) throw new Error(`Demo question refused: ${JSON.stringify(errors)}`);
             const result = await createQuestion(db, id, question);
             if (!result.ok) throw new Error(`Demo question not saved: ${result.reason}`);

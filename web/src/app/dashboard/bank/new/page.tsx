@@ -5,17 +5,17 @@ import { getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { QUESTION_TYPES, type QuestionType, tabOf } from "@/lib/questions";
 import { requireTeacher } from "@/server/auth/current";
-import { listCoursesWithChapters } from "@/server/courses";
+import { listSubjectsWithChapters } from "@/server/bank";
 import { getDb } from "@/server/db";
-import { courseChoices } from "../choices";
-import { NoCourses } from "../no-courses";
+import { subjectChoices } from "../choices";
+import { NoSubjects } from "../no-subjects";
 import { QuestionForm } from "../question-form";
 
 export const instant = false;
 
 export const metadata: Metadata = { title: "নতুন প্রশ্ন" };
 
-type Search = { type?: string; course?: string; chapter?: string; added?: string };
+type Search = { type?: string; subject?: string; chapter?: string; added?: string };
 
 export default async function NewQuestionPage({ searchParams }: { searchParams: Promise<Search> }) {
   const teacher = await requireTeacher();
@@ -23,14 +23,14 @@ export default async function NewQuestionPage({ searchParams }: { searchParams: 
   const d = getDictionary(locale);
   const t = d.dashboard.bank;
   const s = await searchParams;
-  const courses = await listCoursesWithChapters(await getDb(), teacher.id);
+  const subjects = await listSubjectsWithChapters(await getDb(), teacher.id);
   const type = (QUESTION_TYPES as readonly string[]).includes(s.type ?? "") ? (s.type as QuestionType) : null;
 
   // Back to where the teacher came from: the chapter (on this type's section), the subject, or the bank.
-  const asked = courses.find((c) => c.id === s.course);
+  const asked = subjects.find((x) => x.id === s.subject);
   const askedChapter = asked?.chapters.find((ch) => ch.id === s.chapter);
   const backHref = asked
-    ? `/dashboard/bank/course/${asked.id}${askedChapter ? `/${askedChapter.id}${type ? `?tab=${tabOf(type)}` : ""}` : ""}`
+    ? `/dashboard/bank/subject/${asked.id}${askedChapter ? `/${askedChapter.id}${type ? `?tab=${tabOf(type)}` : ""}` : ""}`
     : "/dashboard/bank";
   const back = (
     <Link href={backHref} className="link text-[15px]">
@@ -39,18 +39,18 @@ export default async function NewQuestionPage({ searchParams }: { searchParams: 
     </Link>
   );
 
-  if (courses.length === 0) {
+  if (subjects.length === 0) {
     return (
       <main className="dash-content">
         {back}
-        <NoCourses t={t} />
+        <NoSubjects t={t} />
       </main>
     );
   }
 
-  const course = asked ?? courses[0];
+  const subject = asked ?? subjects[0];
   const chapterId = askedChapter?.id ?? "";
-  const place = new URLSearchParams({ course: course.id });
+  const place = new URLSearchParams({ subject: subject.id });
   if (chapterId) place.set("chapter", chapterId);
 
   if (!type) {
@@ -96,8 +96,8 @@ export default async function NewQuestionPage({ searchParams }: { searchParams: 
         // A fresh, empty form after each "add and write the next".
         key={s.added ?? "new"}
         type={type}
-        courses={courseChoices(courses, d, locale)}
-        defaults={{ courseId: course.id, chapterId }}
+        subjects={subjectChoices(subjects, d, locale)}
+        defaults={{ subjectId: subject.id, chapterId }}
         t={t.form}
         q={d.questions}
         c={d.common}

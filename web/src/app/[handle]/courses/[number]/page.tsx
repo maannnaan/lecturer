@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { cache } from "react";
-import { ChevronRight, ListChecks, Phone } from "lucide-react";
+import { ChevronRight, Phone } from "lucide-react";
 import { CourseIconGlyph } from "@/components/course-icon";
 import { Paragraphs } from "@/components/paragraphs";
 import { getDictionary } from "@/i18n";
@@ -12,7 +12,6 @@ import { gradeName, gradeOf } from "@/lib/grades";
 import { getCurrentTeacher } from "@/server/auth/current";
 import { getCourseByNumber } from "@/server/courses";
 import { getDb } from "@/server/db";
-import { publicCountsByChapter } from "@/server/questions";
 import { getSite } from "../../data";
 import { AccessBadge, SectionHead, Timeline } from "../../site-ui";
 
@@ -51,7 +50,6 @@ export default async function CoursePage({ params }: { params: Params }) {
   const d = getDictionary(locale);
   const home = `/${teacher.handle}`;
   const hasContact = Object.values(teacher.site.contact ?? {}).some(Boolean);
-  const counts = await publicCountsByChapter(await getDb(), teacher.id, course.id);
 
   return (
     <main>
@@ -83,12 +81,6 @@ export default async function CoursePage({ params }: { params: Params }) {
                     {d.site.course.join}
                   </a>
                 )}
-                {counts.size > 0 && (
-                  <Link href={`${home}/courses/${course.number}/chapters`} className="btn btn-ghost btn-sm">
-                    <ListChecks aria-hidden="true" />
-                    {d.site.course.practiceAll}
-                  </Link>
-                )}
               </div>
             </div>
           </div>
@@ -103,12 +95,7 @@ export default async function CoursePage({ params }: { params: Params }) {
           <SectionHead id="outline-title" eyebrow={d.site.planEyebrow} title={d.site.course.outline} />
           {course.chapters.length > 0 ? (
             <div className="card">
-              <Timeline
-                chapters={course.chapters}
-                d={d}
-                locale={locale}
-                practice={{ counts, href: (ch) => `${home}/courses/${course.number}/chapters/${ch.number}` }}
-              />
+              <Timeline chapters={course.chapters} d={d} locale={locale} />
             </div>
           ) : (
             <p className="card p-6 text-ink-2">{d.site.course.noChapters}</p>

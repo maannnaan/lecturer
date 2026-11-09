@@ -1,3 +1,6 @@
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
@@ -10,6 +13,27 @@ export async function freshDb(): Promise<Database> {
   const db = drizzle({ client: new PGlite(), schema });
   await migrate(db, { migrationsFolder: "drizzle" });
   return db as unknown as Database;
+}
+
+/**
+ * A brand-new in-memory Postgres with only the migrations before number `next` applied, to put
+ * data in the old shape (with raw SQL: the schema in code is already the new one) and then test
+ * migration `next` on it. `finish()` applies the rest.
+ */
+export async function dbBeforeMigration(next: number) {
+  const journal = JSON.parse(readFileSync("drizzle/meta/_journal.json", "utf8")) as { entries: { idx: number; tag: string }[] };
+  const entries = journal.entries.filter((entry) => entry.idx < next);
+  const dir = mkdtempSync(join(tmpdir(), "lecturer-migrations-"));
+  mkdirSync(join(dir, "meta"));
+  for (const entry of entries) copyFileSync(join("drizzle", `${entry.tag}.sql`), join(dir, `${entry.tag}.sql`));
+  writeFileSync(join(dir, "meta", "_journal.json"), JSON.stringify({ ...journal, entries }));
+  const db = drizzle({ client: new PGlite(), schema });
+  try {
+    await migrate(db, { migrationsFolder: dir });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  return { db: db as unknown as Database, finish: () => migrate(db, { migrationsFolder: "drizzle" }) };
 }
 
 let n = 0;

@@ -1,8 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { isGrade } from "@/lib/grades";
+import { gradeOf, isGrade } from "@/lib/grades";
 import { RESERVED_HANDLES } from "@/lib/handles";
 import { ADMIN_COOKIE, TEACHER_COOKIE } from "@/server/auth/cookies";
-import { chapterVisibility, courseVisibility } from "@/server/courses";
+import { bankAddress } from "@/server/bank";
+import { courseVisibility } from "@/server/courses";
 import { getDb } from "@/server/db";
 import { lookupHandle } from "@/server/teachers";
 
@@ -41,19 +42,25 @@ export async function proxy(request: NextRequest) {
   const signedIn = request.cookies.has(TEACHER_COOKIE);
   if ((site.status === "pending" || site.status === "rejected") && !signedIn) return notFound(request);
 
-  // lecturer.bd/<handle>/bank and /bank/<class>
-  if (rest[0] === "bank" && (rest.length > 2 || (rest.length === 2 && !isGrade(rest[1])))) return notFound(request);
-  // lecturer.bd/<handle>/courses/<number>, and /chapters (the course's question bank)
-  if (rest[0] === "courses" && (rest.length === 2 || rest.length === 3)) {
-    if (!/^\d{1,6}$/.test(rest[1]) || (rest.length === 3 && rest[2] !== "chapters")) return notFound(request);
+  // lecturer.bd/<handle>/bank[/<class>[/<subject number>[/<chapter number>]]]
+  if (rest[0] === "bank" && rest.length > 1) {
+    const [, grade, subject, chapter] = rest;
+    if (rest.length > 4 || !isGrade(grade)) return notFound(request);
+    if (subject !== undefined) {
+      const number = /^\d{1,6}$/;
+      if (!number.test(subject) || (chapter !== undefined && !number.test(chapter))) return notFound(request);
+      const found = await bankAddress(db, site.teacherId, Number(subject), chapter === undefined ? undefined : Number(chapter));
+      if (!found) return notFound(request);
+      // A subject moved to another class: old links follow it.
+      const actual = gradeOf(found);
+      if (actual !== grade) return redirect(request, `/${handle}/bank/${actual}/${rest.slice(2).join("/")}${search}`, 308);
+    }
+  }
+  // lecturer.bd/<handle>/courses/<number>
+  if (rest[0] === "courses" && rest.length > 1) {
+    if (rest.length > 2 || !/^\d{1,6}$/.test(rest[1])) return notFound(request);
     const course = await courseVisibility(db, site.teacherId, Number(rest[1]));
     if (!course || (course === "draft" && !signedIn)) return notFound(request);
-  }
-  // lecturer.bd/<handle>/courses/<number>/chapters/<number>
-  if (rest[0] === "courses" && rest.length === 4) {
-    if (rest[2] !== "chapters" || !/^\d{1,6}$/.test(rest[1]) || !/^\d{1,6}$/.test(rest[3])) return notFound(request);
-    const chapter = await chapterVisibility(db, site.teacherId, Number(rest[1]), Number(rest[3]));
-    if (!chapter || (chapter === "draft" && !signedIn)) return notFound(request);
   }
   return NextResponse.next();
 }

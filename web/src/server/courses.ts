@@ -230,39 +230,6 @@ export async function listCoursesWithChapters(db: Database, teacherId: string): 
   return list.map((course) => ({ ...course, chapters: all.filter((ch) => ch.courseId === course.id) }));
 }
 
-/** A chapter of one of the teacher's courses by its stable number. */
-export async function getChapterByNumber(
-  db: Database,
-  teacherId: string,
-  courseId: string,
-  number: number,
-): Promise<Chapter | null> {
-  if (!isUuid(courseId) || !Number.isSafeInteger(number) || number < 1) return null;
-  const [row] = await db
-    .select()
-    .from(chapters)
-    .where(and(eq(chapters.teacherId, teacherId), eq(chapters.courseId, courseId), eq(chapters.number, number)))
-    .limit(1);
-  return row ?? null;
-}
-
-/** Whether lecturer.bd/<handle>/courses/<course>/chapters/<chapter> exists, and if its course is published. */
-export async function chapterVisibility(
-  db: Database,
-  teacherId: string,
-  courseNumber: number,
-  chapterNumber: number,
-): Promise<"published" | "draft" | null> {
-  if (![courseNumber, chapterNumber].every((n) => Number.isSafeInteger(n) && n >= 1)) return null;
-  const [row] = await db
-    .select({ published: courses.published })
-    .from(chapters)
-    .innerJoin(courses, eq(chapters.courseId, courses.id))
-    .where(and(eq(courses.teacherId, teacherId), eq(courses.number, courseNumber), eq(chapters.number, chapterNumber)))
-    .limit(1);
-  return row ? (row.published ? "published" : "draft") : null;
-}
-
 /** One course by its public number, with its chapters; drafts only when `includeDrafts`. */
 export async function getCourseByNumber(
   db: Database,

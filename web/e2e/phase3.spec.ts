@@ -1,7 +1,8 @@
 import { type Page, expect, test } from "@playwright/test";
 
-// Phase 3: the question bank and chapter pages. Runs after phase1/phase2 on the same demo
-// database: tanvir's course 1 (পদার্থবিজ্ঞান ১ম পত্র) has questions in chapters 3 and 4.
+// Phase 3: questions and their chapter pages. Runs after phase1/phase2 on the same demo database:
+// tanvir's question bank has the subject HSC পদার্থবিজ্ঞান ১ম পত্র (number 1) with questions in
+// chapters 3 and 4, at /tanvir/bank/hsc/1/<chapter>.
 
 const SHOTS = process.env.SHOTS_DIR;
 async function shot(page: Page, name: string) {
@@ -22,7 +23,8 @@ async function login(page: Page, phone: string) {
  */
 const field = (page: Page, label: string) => page.getByLabel(label, { exact: true }).filter({ visible: true });
 
-const CHAPTER_4 = "/tanvir/courses/1/chapters/4";
+const SUBJECT = "/tanvir/bank/hsc/1";
+const CHAPTER_4 = `${SUBJECT}/4`;
 const PRIVATE_STEM = "কোনটি নিউটনের তৃতীয় সূত্রের উদাহরণ?";
 
 test.describe.configure({ mode: "serial" });
@@ -30,7 +32,7 @@ test.describe.configure({ mode: "serial" });
 let editUrl = "";
 
 test("a chapter page shows its public questions, typeset, and MCQ practice works", async ({ page }) => {
-  await page.goto("/tanvir/courses/1");
+  await page.goto(SUBJECT);
   await page.getByRole("link", { name: "নিউটনিয়ান বলবিদ্যা", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${CHAPTER_4}$`));
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("নিউটনিয়ান বলবিদ্যা");
@@ -60,7 +62,7 @@ test("a chapter page shows its public questions, typeset, and MCQ practice works
   await page.getByText("সমাধান দেখো").first().click();
   await expect(page.getByText("সুতরাং গতীয় ঘর্ষণ বল")).toBeVisible();
 
-  // Board questions are a filter in each section now.
+  // Board questions are a filter in each section.
   await page.getByRole("link", { name: /^MCQ/ }).click();
   await expect(page.locator(".tabs .tab.on")).toHaveText(/^MCQ/);
   await page.getByLabel("বোর্ড:").selectOption({ label: "সব বোর্ড প্রশ্ন" });
@@ -81,14 +83,15 @@ test("private questions never reach the website", async ({ request }) => {
 });
 
 test("chapter addresses that don't exist are real 404s", async ({ request }) => {
-  const missing = await request.get("/tanvir/courses/1/chapters/99");
+  const missing = await request.get(`${SUBJECT}/99`);
   expect(missing.status()).toBe(404);
   // The app's own page, not a bare error: same look, a way back.
   expect(await missing.text()).toContain("পাতাটি পাওয়া যায়নি");
   expect((await request.get("/no-such-teacher-xyz")).status()).toBe(404);
-  expect((await request.get("/tanvir/courses/1/chapters/abc")).status()).toBe(404);
-  expect((await request.get("/tanvir/courses/999/chapters/1")).status()).toBe(404);
-  expect((await request.get("/tanvir/courses/1/lessons/1")).status()).toBe(404);
+  expect((await request.get(`${SUBJECT}/abc`)).status()).toBe(404);
+  expect((await request.get("/tanvir/bank/hsc/999/1")).status()).toBe(404);
+  // Chapters no longer live under courses: courses are what the website advertises.
+  expect((await request.get("/tanvir/courses/1/chapters/4")).status()).toBe(404);
 });
 
 test("a teacher writes an MCQ with maths, fixes a mistake, and adds the next", async ({ page, request }) => {
@@ -102,7 +105,7 @@ test("a teacher writes an MCQ with maths, fixes a mistake, and adds the next", a
   await page.locator("main ul li:visible").filter({ hasText: "চারটি অপশন" }).getByRole("link").click();
   await expect(page).toHaveURL(/type=mcq/);
 
-  await field(page, "কোর্স").selectOption({ label: "পদার্থবিজ্ঞান ১ম পত্র" });
+  await field(page, "বিষয়").selectOption({ label: "পদার্থবিজ্ঞান ১ম পত্র" });
   await field(page, "অধ্যায়").selectOption({ label: "অধ্যায় ৫: কাজ, শক্তি ও ক্ষমতা" });
   await field(page, "প্রশ্ন").fill("$W = Fs\\cos\\theta$ সূত্রে $\\theta = 90^\\circ$ হলে কাজ কত?");
   await expect(page.locator(".q-card:visible .katex").first()).toBeVisible();
@@ -119,11 +122,11 @@ test("a teacher writes an MCQ with maths, fixes a mistake, and adds the next", a
   await shot(page, "dashboard-question-new-ink-1280");
   await page.getByRole("button", { name: "যোগ করে পরেরটি লিখুন" }).click();
   await expect(page).toHaveURL(/\/dashboard\/bank\/new\?.*added=/);
-  await expect(page.getByRole("status").first()).toHaveText("প্রশ্নটি যোগ হয়েছে। এবার পরেরটি লিখুন।");
+  await expect(page.getByRole("status").filter({ hasText: "প্রশ্নটি যোগ হয়েছে" })).toHaveText("প্রশ্নটি যোগ হয়েছে। এবার পরেরটি লিখুন।");
   await expect(field(page, "প্রশ্ন")).toHaveValue("");
   await expect(field(page, "অধ্যায়")).toHaveValue(/.+/);
 
-  const chapter5 = await (await request.get("/tanvir/courses/1/chapters/5")).text();
+  const chapter5 = await (await request.get(`${SUBJECT}/5`)).text();
   expect(chapter5).toContain("হলে কাজ কত?");
   expect(chapter5).toContain("বরিশাল বোর্ড ২০২৫");
 });
@@ -131,7 +134,7 @@ test("a teacher writes an MCQ with maths, fixes a mistake, and adds the next", a
 test("a private creative question with a diagram stays in the bank", async ({ page, request }) => {
   await login(page, "01710000001");
   await page.goto("/dashboard/bank/new?type=creative");
-  await field(page, "কোর্স").selectOption({ label: "পদার্থবিজ্ঞান ১ম পত্র" });
+  await field(page, "বিষয়").selectOption({ label: "পদার্থবিজ্ঞান ১ম পত্র" });
   await field(page, "অধ্যায়").selectOption({ label: "অধ্যায় ১: ভৌতজগৎ ও পরিমাপ" });
   await field(page, "উদ্দীপক").fill("একটি স্প্রিংয়ের স্প্রিং ধ্রুবক $k = 200\\,\\text{N m}^{-1}$।");
   for (const [key, text] of [["ক", "হুকের সূত্রটি লিখ।"], ["খ", "স্প্রিং কেন আদি অবস্থায় ফেরে?"], ["গ", "সঞ্চিত শক্তি নির্ণয় কর।"], ["ঘ", "দোলনকাল বিশ্লেষণ কর।"]]) {
@@ -151,13 +154,13 @@ test("a private creative question with a diagram stays in the bank", async ({ pa
   await field(page, "শুধু আপনি: পরীক্ষা আর প্রশ্নপত্রের জন্য রাখা").check();
   await page.getByRole("button", { name: "প্রশ্ন যোগ করুন" }).click();
   // Saved: back on its chapter in the bank, on the CQ section.
-  await expect(page).toHaveURL(/\/dashboard\/bank\/course\/[0-9a-f-]{36}\/[0-9a-f-]{36}\?tab=cq$/);
+  await expect(page).toHaveURL(/\/dashboard\/bank\/subject\/[0-9a-f-]{36}\/[0-9a-f-]{36}\?tab=cq$/);
   const item = page.locator("main li:visible").filter({ hasText: "স্প্রিং ধ্রুবক" });
   await expect(item.getByText("শুধু আপনি")).toBeVisible();
   editUrl = (await item.getByRole("link", { name: "সম্পাদনা" }).getAttribute("href")) ?? "";
   expect(editUrl).toMatch(/^\/dashboard\/bank\/[0-9a-f-]{36}$/);
 
-  const site = await (await request.get("/tanvir/courses/1/chapters/1?tab=cq")).text();
+  const site = await (await request.get(`${SUBJECT}/1?tab=cq`)).text();
   expect(site).not.toContain("স্প্রিং ধ্রুবক");
 });
 
@@ -175,7 +178,7 @@ test("a question is edited, then deleted", async ({ page }) => {
   await expect(page.getByText("মুছে ফেলার আগে নিশ্চিত করার ঘরে টিক দিন")).toBeVisible();
   await field(page, "হ্যাঁ, প্রশ্নটি মুছে ফেলতে চাই").check();
   await page.getByRole("button", { name: "মুছে ফেলুন" }).click();
-  await expect(page).toHaveURL(/\/dashboard\/bank\/course\/[0-9a-f-]{36}\/[0-9a-f-]{36}\?tab=cq$/);
+  await expect(page).toHaveURL(/\/dashboard\/bank\/subject\/[0-9a-f-]{36}\/[0-9a-f-]{36}\?tab=cq$/);
   await expect(page.locator("main:visible").getByText("স্প্রিং ধ্রুবক")).toHaveCount(0);
 });
 
@@ -194,7 +197,7 @@ test.describe("on a phone", () => {
   test.use({ viewport: { width: 360, height: 780 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 
   test("chapter pages and the bank fit a 360px screen, and the menu reaches every section", async ({ page }) => {
-    for (const path of [CHAPTER_4, `${CHAPTER_4}?tab=creative`, "/tanvir/courses/1/chapters/3"]) {
+    for (const path of [CHAPTER_4, `${CHAPTER_4}?tab=cq`, `${SUBJECT}/3`]) {
       await page.goto(path);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - 360), path).toBeLessThanOrEqual(0);
     }
@@ -209,6 +212,7 @@ test.describe("on a phone", () => {
       "/dashboard/bank/new?type=creative",
       "/dashboard/bank/new?type=mcq_multi",
       "/dashboard/bank/new?type=practice",
+      "/dashboard/bank/subject/new",
     ]) {
       await page.goto(path);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - 360), path).toBeLessThanOrEqual(0);
