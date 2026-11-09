@@ -72,7 +72,11 @@ test("private questions never reach the website", async ({ request }) => {
 });
 
 test("chapter addresses that don't exist are real 404s", async ({ request }) => {
-  expect((await request.get("/tanvir/courses/1/chapters/99")).status()).toBe(404);
+  const missing = await request.get("/tanvir/courses/1/chapters/99");
+  expect(missing.status()).toBe(404);
+  // The app's own page, not a bare error: same look, a way back.
+  expect(await missing.text()).toContain("পাতাটি পাওয়া যায়নি");
+  expect((await request.get("/no-such-teacher-xyz")).status()).toBe(404);
   expect((await request.get("/tanvir/courses/1/chapters/abc")).status()).toBe(404);
   expect((await request.get("/tanvir/courses/999/chapters/1")).status()).toBe(404);
   expect((await request.get("/tanvir/courses/1/lessons/1")).status()).toBe(404);

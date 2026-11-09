@@ -59,9 +59,33 @@ function redirect(request: NextRequest, to: string, status: 307 | 308) {
   return NextResponse.redirect(new URL(to, request.url), status);
 }
 
-/** The app's own 404 page, with a real 404 status. */
-function notFound(request: NextRequest) {
-  return NextResponse.rewrite(new URL("/_not-found", request.url));
+/** The app's own "page not found" page, fetched once per server instance. */
+let notFoundHtml: string | null = null;
+
+/**
+ * The app's own 404 page, with a real 404 status. A rewrite to /_not-found alone isn't enough:
+ * `next start` sends it as a 404, but on Vercel the prerendered page is served as a static file
+ * with 200, so search engines would index dead addresses. So the page is answered here directly.
+ */
+async function notFound(request: NextRequest) {
+  if (!notFoundHtml) {
+    try {
+      const res = await fetch(new URL("/_not-found", request.url), { cache: "no-store" });
+      const html = await res.text();
+      // A protected preview answers 401 with a sign-in page: never keep that as our 404 page.
+      if ((res.ok || res.status === 404) && html.includes("<html")) notFoundHtml = html;
+    } catch {
+      // fall back to the rewrite below
+    }
+  }
+  if (notFoundHtml) {
+    return new NextResponse(notFoundHtml, {
+      status: 404,
+      // A free address may be taken tomorrow, so the 404 mustn't be cached.
+      headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+    });
+  }
+  return NextResponse.rewrite(new URL("/_not-found", request.url), { status: 404 });
 }
 
 export const config = {
