@@ -35,6 +35,11 @@ async function connect(): Promise<Database> {
   if (url && /^postgres(ql)?:\/\//.test(url)) {
     return drizzleNeon({ client: new Pool({ connectionString: url }), schema }) as unknown as Database;
   }
+  // A hosting platform's disk is read-only and wiped on every deploy: say what's missing
+  // instead of failing on a mkdir somewhere in the logs.
+  if (process.env.VERCEL) {
+    throw new Error("DATABASE_URL is not set. Add your Neon connection string (postgres://…) in Vercel → Settings → Environment Variables.");
+  }
   const dir = process.env.PGLITE_DIR ?? path.join(process.cwd(), ".data", "pglite");
   mkdirSync(dir, { recursive: true });
   const db = drizzlePglite({ client: new PGlite(dir), schema });
