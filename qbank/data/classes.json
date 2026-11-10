@@ -1,0 +1,21 @@
+[
+  { "id": "6", "name": "Class 6", "groups": ["Common"], "tagline": "Junior", "tone": "orange" },
+  { "id": "7", "name": "Class 7", "groups": ["Common"], "tagline": "Junior", "tone": "orange" },
+  { "id": "8", "name": "Class 8", "groups": ["Common"], "tagline": "Junior", "tone": "orange" },
+  {
+    "id": "9-10",
+    "name": "SSC",
+    "groups": ["Common", "Science", "Business Studies", "Humanities"],
+    "defaultGroup": "Science",
+    "tagline": "Science · Business · Humanities",
+    "tone": "green"
+  },
+  {
+    "id": "11-12",
+    "name": "HSC",
+    "groups": ["Common", "Science", "Business Studies", "Humanities"],
+    "defaultGroup": "Science",
+    "tagline": "Science · Business · Humanities",
+    "tone": "blue"
+  }
+]

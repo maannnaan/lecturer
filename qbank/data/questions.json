@@ -1,0 +1,512 @@
+[
+  {
+    "id": "9-10-physics-1-cq1",
+    "chapterId": "9-10/physics/1",
+    "type": "CQ",
+    "difficulty": "medium",
+    "boards": [{ "board": "Dhaka", "year": 2023 }],
+    "stem": "Nila measured the length of a pencil with a slide calipers. The main scale reading was 8.0 cm, the vernier division that coincided was 6, and the vernier constant was 0.01 cm. The instrument had a zero error of −0.02 cm.",
+    "parts": [
+      { "key": "a", "text": "What is a fundamental quantity?", "marks": 1, "level": "Knowledge", "answer": "A quantity that does not depend on any other quantity — length, mass, time, temperature, electric current, luminous intensity and amount of substance." },
+      { "key": "b", "text": "Why is the metre called a fundamental unit?", "marks": 2, "level": "Comprehension", "answer": "The metre is defined on its own and is not built from any other unit. Units such as m s⁻¹ or m² are derived from it, so it is a fundamental unit." },
+      { "key": "c", "text": "Find the correct length of the pencil.", "marks": 3, "level": "Application", "answer": "Reading = M + V × VC = 8.0 + 6 × 0.01 = 8.06 cm. Correcting the zero error: 8.06 − (−0.02) = 8.08 cm." },
+      { "key": "d", "text": "If Nila had ignored the zero error, how large would her percentage error be? Analyse.", "marks": 4, "level": "Higher ability", "answer": "She would record 8.06 cm instead of 8.08 cm. The error is 0.02 cm, so the percentage error = (0.02 / 8.08) × 100 ≈ 0.25 %. It is small, but it is systematic — it repeats in every reading — so it must be corrected." }
+    ]
+  },
+  {
+    "id": "9-10-physics-1-mcq1",
+    "chapterId": "9-10/physics/1",
+    "type": "MCQ",
+    "difficulty": "easy",
+    "boards": [{ "board": "Rajshahi", "year": 2024 }],
+    "text": "Which of the following is a fundamental quantity?",
+    "options": ["Velocity", "Force", "Electric current", "Work"],
+    "correctIndex": 2,
+    "explanation": "Electric current is one of the seven SI base quantities; velocity, force and work are derived from them."
+  },
+  {
+    "id": "9-10-physics-1-mcq2",
+    "chapterId": "9-10/physics/1",
+    "type": "MCQ",
+    "difficulty": "medium",
+    "boards": [{ "board": "Jashore", "year": 2023 }],
+    "text": "What is the dimension of force?",
+    "options": ["MLT⁻¹", "MLT⁻²", "ML²T⁻²", "ML⁻¹T⁻²"],
+    "correctIndex": 1,
+    "explanation": "Force = mass × acceleration, so [F] = M × LT⁻² = MLT⁻²."
+  },
+  {
+    "id": "9-10-physics-1-mcq3",
+    "chapterId": "9-10/physics/1",
+    "type": "MCQ",
+    "difficulty": "easy",
+    "boards": [],
+    "source": "Model test",
+    "text": "The vernier constant of a slide calipers is 0.1 mm. What is it in metres?",
+    "options": ["10⁻³ m", "10⁻⁴ m", "10⁻⁵ m", "10⁻² m"],
+    "correctIndex": 1,
+    "explanation": "0.1 mm = 0.1 × 10⁻³ m = 10⁻⁴ m."
+  },
+  {
+    "id": "9-10-physics-1-sq1",
+    "chapterId": "9-10/physics/1",
+    "type": "SQ",
+    "difficulty": "easy",
+    "boards": [],
+    "source": "Model test",
+    "level": "Knowledge",
+    "text": "What is a derived quantity?",
+    "answer": "A quantity that depends on one or more fundamental quantities, such as velocity, force or work."
+  },
+  {
+    "id": "9-10-physics-1-sq2",
+    "chapterId": "9-10/physics/1",
+    "type": "SQ",
+    "difficulty": "medium",
+    "boards": [{ "board": "Barishal", "year": 2023 }],
+    "level": "Comprehension",
+    "text": "Why is a screw gauge more precise than a slide calipers?",
+    "answer": "A screw gauge's least count is usually 0.01 mm, while a slide calipers' vernier constant is usually 0.1 mm. The smaller least count lets a screw gauge tell apart smaller differences in length."
+  },
+
+  {
+    "id": "9-10-physics-2-cq1",
+    "chapterId": "9-10/physics/2",
+    "type": "CQ",
+    "difficulty": "medium",
+    "boards": [{ "board": "Dhaka", "year": 2024 }],
+    "stem": "A car starts from rest and accelerates uniformly to 20 m/s in 10 s. It then moves at that velocity for 30 s, and finally comes to rest uniformly in 5 s.",
+    "parts": [
+      { "key": "a", "text": "What is displacement?", "marks": 1, "level": "Knowledge", "answer": "The shortest distance from the initial to the final position of a body in a specific direction." },
+      { "key": "b", "text": "Explain why uniform circular motion is an accelerated motion.", "marks": 2, "level": "Comprehension", "answer": "Speed stays constant but the direction keeps changing, so velocity changes — a change in velocity means acceleration." },
+      { "key": "c", "text": "Calculate the acceleration of the car in the first 10 s.", "marks": 3, "level": "Application", "answer": "a = (v − u) / t = (20 − 0) / 10 = 2 m s⁻²" },
+      { "key": "d", "text": "Will the total distance travelled be more than 700 m? Give your reasoning with calculation.", "marks": 4, "level": "Higher ability", "answer": "s₁ = ½·2·10² = 100 m; s₂ = 20 × 30 = 600 m; s₃ = ½(20 + 0)·5 = 50 m. Total = 750 m, so yes — it exceeds 700 m." }
+    ]
+  },
+  {
+    "id": "9-10-physics-2-cq2",
+    "chapterId": "9-10/physics/2",
+    "type": "CQ",
+    "difficulty": "medium",
+    "boards": [{ "board": "Rajshahi", "year": 2023 }],
+    "stem": "Rafi drops a stone from the roof of a 45 m tall building. Take g = 9.8 m s⁻² and ignore air resistance.",
+    "parts": [
+      { "key": "a", "text": "What is a freely falling body?", "marks": 1, "level": "Knowledge", "answer": "A body falling under gravity alone, with no other force acting on it." },
+      { "key": "b", "text": "Why does the stone accelerate even though it was released from rest?", "marks": 2, "level": "Comprehension", "answer": "Gravity acts on it continuously, so its velocity increases by about 9.8 m/s every second." },
+      { "key": "c", "text": "Find the time the stone takes to reach the ground.", "marks": 3, "level": "Application", "answer": "t = √(2h/g) = √(90 / 9.8) ≈ 3.03 s" },
+      { "key": "d", "text": "If the stone were thrown downward at 5 m/s, would it land 1 s sooner? Analyse.", "marks": 4, "level": "Higher ability", "answer": "45 = 5t + 4.9t² → t ≈ 2.56 s. It lands only ≈ 0.47 s sooner, so no." }
+    ]
+  },
+  {
+    "id": "9-10-physics-2-cq3",
+    "chapterId": "9-10/physics/2",
+    "type": "CQ",
+    "difficulty": "hard",
+    "boards": [],
+    "stem": "A bus starts from rest and accelerates uniformly at 1.5 m s⁻² for 12 s. At the moment it starts, a cyclist riding at a steady 6 m s⁻¹ passes it.",
+    "parts": [
+      { "key": "a", "text": "What is uniform acceleration?", "marks": 1, "level": "Knowledge", "answer": "If the velocity of a body changes by equal amounts in equal intervals of time, its acceleration is uniform." },
+      { "key": "b", "text": "How can a moving body have zero acceleration? Explain.", "marks": 2, "level": "Comprehension", "answer": "Acceleration is the rate of change of velocity. A body moving with constant velocity has a velocity that does not change, so its acceleration is zero." },
+      { "key": "c", "text": "Find the velocity of the bus at the end of 12 s.", "marks": 3, "level": "Application", "answer": "v = u + at = 0 + 1.5 × 12 = 18 m s⁻¹" },
+      { "key": "d", "text": "Will the bus catch up with the cyclist within these 12 s? Analyse with calculation.", "marks": 4, "level": "Higher ability", "answer": "Bus: s = ½at² = 0.75t². Cyclist: s = 6t. They meet when 0.75t² = 6t, so t = 8 s, 48 m from the start. 8 s is within 12 s, so yes — the bus catches the cyclist after 8 s." }
+    ]
+  },
+  {
+    "id": "9-10-physics-2-mcq1",
+    "chapterId": "9-10/physics/2",
+    "type": "MCQ",
+    "difficulty": "easy",
+    "boards": [{ "board": "Dhaka", "year": 2024 }],
+    "text": "What is the SI unit of acceleration?",
+    "options": ["m s⁻¹", "m s⁻²", "m² s⁻¹", "N s"],
+    "correctIndex": 1,
+    "explanation": "Acceleration is change in velocity (m s⁻¹) per second, giving m s⁻²."
+  },
+  {
+    "id": "9-10-physics-2-mcq2",
+    "chapterId": "9-10/physics/2",
+    "type": "MCQ",
+    "difficulty": "medium",
+    "boards": [{ "board": "Cumilla", "year": 2023 }],
+    "text": "A body starts from rest with an acceleration of 2 m s⁻². How far does it travel in 5 s?",
+    "options": ["10 m", "25 m", "50 m", "5 m"],
+    "correctIndex": 1,
+    "explanation": "s = ½at² = ½ × 2 × 5² = 25 m."
+  },
+  {
+    "id": "9-10-physics-2-mcq3",
+    "chapterId": "9-10/physics/2",
+    "type": "MCQ",
+    "difficulty": "easy",
+    "boards": [],
+    "source": "Model test",
+    "text": "Which of these is a vector quantity?",
+    "options": ["Speed", "Distance", "Velocity", "Time"],
+    "correctIndex": 2,
+    "explanation": "Velocity has both magnitude and direction."
+  },
+  {
+    "id": "9-10-physics-2-mcq4",
+    "chapterId": "9-10/physics/2",
+    "type": "MCQ",
+    "difficulty": "medium",
+    "boards": [{ "board": "Sylhet", "year": 2022 }],
+    "text": "Consider the following:\ni. The slope of a velocity–time graph gives acceleration\nii. The area under a velocity–time graph gives displacement\niii. The slope of a distance–time graph gives acceleration\nWhich of the following is correct?",
+    "options": ["i and ii", "i and iii", "ii and iii", "i, ii and iii"],
+    "correctIndex": 0,
+    "explanation": "The slope of a distance–time graph gives speed, not acceleration, so iii is wrong."
+  },
+  {
+    "id": "9-10-physics-2-mcq5",
+    "chapterId": "9-10/physics/2",
+    "type": "MCQ",
+    "difficulty": "easy",
+    "boards": [{ "board": "Dhaka", "year": 2025 }],
+    "text": "A car's velocity rises from 10 m s⁻¹ to 25 m s⁻¹ in 5 s. What is its acceleration?",
+    "options": ["2 m s⁻²", "3 m s⁻²", "5 m s⁻²", "7 m s⁻²"],
+    "correctIndex": 1,
+    "explanation": "a = (v − u) / t = (25 − 10) / 5 = 3 m s⁻²."
+  },
+  {
+    "id": "9-10-physics-2-mcq6",
+    "chapterId": "9-10/physics/2",
+    "type": "MCQ",
+    "difficulty": "hard",
+    "boards": [],
+    "text": "A stone is thrown straight up at 19.6 m s⁻¹. Take g = 9.8 m s⁻².\nHow long does it take to reach its highest point?",
+    "options": ["1 s", "2 s", "4 s", "19.6 s"],
+    "correctIndex": 1,
+    "explanation": "At the highest point v = 0, so t = u / g = 19.6 / 9.8 = 2 s."
+  },
+  {
+    "id": "9-10-physics-2-sq1",
+    "chapterId": "9-10/physics/2",
+    "type": "SQ",
+    "difficulty": "easy",
+    "boards": [],
+    "source": "Model test",
+    "level": "Knowledge",
+    "text": "What is rest?",
+    "answer": "If a body does not change its position with respect to its surroundings over time, it is said to be at rest."
+  },
+  {
+    "id": "9-10-physics-2-sq2",
+    "chapterId": "9-10/physics/2",
+    "type": "SQ",
+    "difficulty": "easy",
+    "boards": [],
+    "source": "Pre-test 2024",
+    "level": "Knowledge",
+    "text": "What is uniform velocity?",
+    "answer": "If a body covers equal displacements in the same direction in equal intervals of time, its velocity is uniform."
+  },
+  {
+    "id": "9-10-physics-2-sq3",
+    "chapterId": "9-10/physics/2",
+    "type": "SQ",
+    "difficulty": "medium",
+    "boards": [{ "board": "Jashore", "year": 2022 }],
+    "level": "Comprehension",
+    "text": "Why are all rest and motion relative?",
+    "answer": "Rest or motion is judged against a reference. Since no reference in the universe is truly at rest, every rest and motion is relative."
+  },
+  {
+    "id": "9-10-physics-2-sq4",
+    "chapterId": "9-10/physics/2",
+    "type": "SQ",
+    "difficulty": "medium",
+    "boards": [],
+    "source": "Model test",
+    "level": "Comprehension",
+    "text": "Why is velocity a vector quantity?",
+    "answer": "Velocity needs both magnitude and direction to be fully described, so it is a vector."
+  },
+  {
+    "id": "9-10-physics-2-sq5",
+    "chapterId": "9-10/physics/2",
+    "type": "SQ",
+    "difficulty": "easy",
+    "boards": [{ "board": "Dhaka", "year": 2025 }],
+    "level": "Knowledge",
+    "text": "What is average speed?",
+    "answer": "The total distance travelled divided by the total time taken."
+  },
+  {
+    "id": "9-10-physics-2-sq6",
+    "chapterId": "9-10/physics/2",
+    "type": "SQ",
+    "difficulty": "medium",
+    "boards": [],
+    "level": "Comprehension",
+    "text": "Why does a ball thrown upward come back down?",
+    "answer": "Gravity pulls the ball towards the Earth throughout its flight. It slows the ball on the way up until its velocity becomes zero, then speeds it up on the way down."
+  },
+
+  {
+    "id": "9-10-physics-3-cq1",
+    "chapterId": "9-10/physics/3",
+    "type": "CQ",
+    "difficulty": "medium",
+    "boards": [{ "board": "Chattogram", "year": 2024 }],
+    "stem": "A 1200 kg car moving at 20 m s⁻¹ is brought to rest in 4 s by its brakes. A 60 kg passenger sits inside without a seat belt.",
+    "parts": [
+      { "key": "a", "text": "What is inertia?", "marks": 1, "level": "Knowledge", "answer": "The tendency of a body to stay at rest, or to keep moving uniformly in a straight line, is called inertia." },
+      { "key": "b", "text": "Why does a passenger lurch forward when a moving car stops suddenly?", "marks": 2, "level": "Comprehension", "answer": "The car stops, but the passenger's body tends to keep moving because of inertia of motion, so the upper body is thrown forward." },
+      { "key": "c", "text": "Find the braking force on the car.", "marks": 3, "level": "Application", "answer": "a = (0 − 20) / 4 = −5 m s⁻². F = ma = 1200 × (−5) = −6000 N, i.e. 6000 N against the motion." },
+      { "key": "d", "text": "Using the passenger's momentum, analyse why a seat belt protects the passenger.", "marks": 4, "level": "Higher ability", "answer": "The passenger's momentum is 60 × 20 = 1200 kg m s⁻¹. A seat belt stops the passenger over the 4 s the car takes to stop, so the force is 1200 / 4 = 300 N. Without it, the passenger hits the dashboard and stops in about 0.1 s, so the force is 1200 / 0.1 = 12 000 N. Spreading the change in momentum over a longer time makes the force much smaller." }
+    ]
+  },
+  {
+    "id": "9-10-physics-3-mcq1",
+    "chapterId": "9-10/physics/3",
+    "type": "MCQ",
+    "difficulty": "easy",
+    "boards": [{ "board": "Dhaka", "year": 2023 }],
+    "text": "Which of Newton's laws gives the definition of force?",
+    "options": ["The first law", "The second law", "The third law", "The law of gravitation"],
+    "correctIndex": 0,
+    "explanation": "The first law says a body changes its state of rest or motion only when a force acts on it, which defines force. The second law then gives a way to measure it."
+  },
+  {
+    "id": "9-10-physics-3-mcq2",
+    "chapterId": "9-10/physics/3",
+    "type": "MCQ",
+    "difficulty": "medium",
+    "boards": [{ "board": "Rajshahi", "year": 2024 }],
+    "text": "A force of 10 N acts on a 2 kg body. What is its acceleration?",
+    "options": ["0.2 m s⁻²", "5 m s⁻²", "12 m s⁻²", "20 m s⁻²"],
+    "correctIndex": 1,
+    "explanation": "a = F / m = 10 / 2 = 5 m s⁻²."
+  },
+  {
+    "id": "9-10-physics-3-mcq3",
+    "chapterId": "9-10/physics/3",
+    "type": "MCQ",
+    "difficulty": "medium",
+    "boards": [],
+    "source": "Model test",
+    "text": "Consider the following:\ni. Friction opposes relative motion between surfaces in contact\nii. Rolling friction is less than sliding friction\niii. Lubricants reduce friction\nWhich of the following is correct?",
+    "options": ["i and ii", "i and iii", "ii and iii", "i, ii and iii"],
+    "correctIndex": 3,
+    "explanation": "All three statements are true, so the answer is i, ii and iii."
+  },
+  {
+    "id": "9-10-physics-3-sq1",
+    "chapterId": "9-10/physics/3",
+    "type": "SQ",
+    "difficulty": "easy",
+    "boards": [{ "board": "Cumilla", "year": 2024 }],
+    "level": "Knowledge",
+    "text": "What is momentum?",
+    "answer": "The product of a body's mass and velocity is its momentum (p = mv). Its SI unit is kg m s⁻¹."
+  },
+  {
+    "id": "9-10-physics-3-sq2",
+    "chapterId": "9-10/physics/3",
+    "type": "SQ",
+    "difficulty": "medium",
+    "boards": [],
+    "source": "Model test",
+    "level": "Comprehension",
+    "text": "Why is it easier to pull a roller than to push it?",
+    "answer": "When you pull at an angle, part of the force acts upward and reduces the roller's effective weight, so friction is smaller. When you push, part of the force acts downward and increases friction."
+  },
+
+  {
+    "id": "9-10-physics-4-cq1",
+    "chapterId": "9-10/physics/4",
+    "type": "CQ",
+    "difficulty": "easy",
+    "boards": [{ "board": "Sylhet", "year": 2024 }],
+    "stem": "A 50 kg student climbs a 6 m high staircase in 12 s. Another student of the same mass climbs it in 15 s. Take g = 9.8 m s⁻².",
+    "parts": [
+      { "key": "a", "text": "What is power?", "marks": 1, "level": "Knowledge", "answer": "The rate of doing work is called power. Its SI unit is the watt (W)." },
+      { "key": "b", "text": "Why is no work done when you push against a fixed wall?", "marks": 2, "level": "Comprehension", "answer": "Work is done only when the point where a force acts moves along the force. The wall does not move, so the displacement is zero and no work is done." },
+      { "key": "c", "text": "Find the work done by the first student.", "marks": 3, "level": "Application", "answer": "W = mgh = 50 × 9.8 × 6 = 2940 J" },
+      { "key": "d", "text": "Compare the power of the two students and comment.", "marks": 4, "level": "Higher ability", "answer": "P₁ = 2940 / 12 = 245 W and P₂ = 2940 / 15 = 196 W. Both do the same work, but the first student does it faster, so the first student is more powerful." }
+    ]
+  },
+  {
+    "id": "9-10-physics-4-mcq1",
+    "chapterId": "9-10/physics/4",
+    "type": "MCQ",
+    "difficulty": "easy",
+    "boards": [{ "board": "Mymensingh", "year": 2024 }],
+    "text": "What is the SI unit of work?",
+    "options": ["Watt", "Joule", "Newton", "Pascal"],
+    "correctIndex": 1,
+    "explanation": "Work = force × displacement, so its unit is the newton-metre, called the joule (J)."
+  },
+  {
+    "id": "9-10-physics-4-mcq2",
+    "chapterId": "9-10/physics/4",
+    "type": "MCQ",
+    "difficulty": "medium",
+    "boards": [],
+    "text": "A 2 kg ball moves at 3 m s⁻¹. What is its kinetic energy?",
+    "options": ["3 J", "6 J", "9 J", "18 J"],
+    "correctIndex": 2,
+    "explanation": "Eₖ = ½mv² = ½ × 2 × 3² = 9 J."
+  },
+  {
+    "id": "9-10-physics-4-sq1",
+    "chapterId": "9-10/physics/4",
+    "type": "SQ",
+    "difficulty": "easy",
+    "boards": [{ "board": "Dinajpur", "year": 2023 }],
+    "level": "Knowledge",
+    "text": "What is energy?",
+    "answer": "The capacity to do work is called energy. Its SI unit is the joule (J)."
+  },
+  {
+    "id": "9-10-physics-4-sq2",
+    "chapterId": "9-10/physics/4",
+    "type": "SQ",
+    "difficulty": "medium",
+    "boards": [],
+    "source": "Model test",
+    "level": "Comprehension",
+    "text": "Why is the efficiency of a machine always less than 100 %?",
+    "answer": "Some of the input energy is always lost as heat and sound, mainly because of friction, so the useful output is always less than the input."
+  },
+
+  {
+    "id": "9-10-chemistry-3-mcq1",
+    "chapterId": "9-10/chemistry/3",
+    "type": "MCQ",
+    "difficulty": "easy",
+    "boards": [{ "board": "Dhaka", "year": 2024 }],
+    "text": "How many neutrons are there in an atom of ²³Na? (Atomic number of Na = 11)",
+    "options": ["11", "12", "23", "34"],
+    "correctIndex": 1,
+    "explanation": "Neutrons = mass number − atomic number = 23 − 11 = 12."
+  },
+  {
+    "id": "9-10-chemistry-3-mcq2",
+    "chapterId": "9-10/chemistry/3",
+    "type": "MCQ",
+    "difficulty": "medium",
+    "boards": [{ "board": "Sylhet", "year": 2019 }],
+    "text": "What is the electron configuration of chlorine (atomic number 17)?",
+    "options": ["1s² 2s² 2p⁶ 3s² 3p⁵", "1s² 2s² 2p⁶ 3s² 3p⁶", "1s² 2s² 2p⁵ 3s² 3p⁶", "1s² 2s² 2p⁶ 3s¹ 3p⁶"],
+    "correctIndex": 0,
+    "explanation": "Chlorine's 17 electrons fill 1s, 2s, 2p, 3s and then 3p: 1s² 2s² 2p⁶ 3s² 3p⁵."
+  },
+  {
+    "id": "9-10-chemistry-3-sq1",
+    "chapterId": "9-10/chemistry/3",
+    "type": "SQ",
+    "difficulty": "medium",
+    "boards": [],
+    "source": "Model test",
+    "level": "Comprehension",
+    "text": "Why is the relative atomic mass of chlorine not a whole number?",
+    "answer": "Chlorine is a mixture of two isotopes, ³⁵Cl (about 75 %) and ³⁷Cl (about 25 %). Its relative atomic mass is their weighted average, about 35.5."
+  },
+
+  {
+    "id": "9-10-higher-math-1-cq1",
+    "chapterId": "9-10/higher-math/1",
+    "type": "CQ",
+    "difficulty": "hard",
+    "boards": [{ "board": "Rajshahi", "year": 2023 }],
+    "stem": "U = {1, 2, 3, 4, 5, 6}, A = {1, 2, 3} and B = {2, 4, 6}. Also f(x) = (2x + 1) / (x − 3), where x ≠ 3.",
+    "parts": [
+      { "key": "a", "text": "Find A ∩ B and P(A ∩ B).", "marks": 2, "level": "Knowledge", "answer": "A ∩ B = {2}, so P(A ∩ B) = {∅, {2}}." },
+      { "key": "b", "text": "Show that (A ∪ B)′ = A′ ∩ B′.", "marks": 4, "level": "Application", "answer": "A ∪ B = {1, 2, 3, 4, 6}, so (A ∪ B)′ = {5}. A′ = {4, 5, 6} and B′ = {1, 3, 5}, so A′ ∩ B′ = {5}. Both sides equal {5}." },
+      { "key": "c", "text": "Find f⁻¹(x) and show that f⁻¹(f(x)) = x.", "marks": 4, "level": "Higher ability", "answer": "Let y = (2x + 1)/(x − 3). Then xy − 3y = 2x + 1, so x(y − 2) = 3y + 1 and x = (3y + 1)/(y − 2). Hence f⁻¹(x) = (3x + 1)/(x − 2), x ≠ 2. Then f⁻¹(f(x)) = [7x/(x − 3)] ÷ [7/(x − 3)] = x." }
+    ]
+  },
+  {
+    "id": "9-10-higher-math-1-mcq1",
+    "chapterId": "9-10/higher-math/1",
+    "type": "MCQ",
+    "difficulty": "easy",
+    "boards": [{ "board": "Dhaka", "year": 2024 }],
+    "text": "If A = {1, 2, 3}, how many subsets does A have?",
+    "options": ["3", "6", "8", "9"],
+    "correctIndex": 2,
+    "explanation": "A set with n elements has 2ⁿ subsets, and 2³ = 8."
+  },
+  {
+    "id": "9-10-higher-math-1-mcq2",
+    "chapterId": "9-10/higher-math/1",
+    "type": "MCQ",
+    "difficulty": "medium",
+    "boards": [{ "board": "Chattogram", "year": 2023 }],
+    "text": "If f(x) = 2x − 3, what is f⁻¹(5)?",
+    "options": ["4", "7", "13", "1"],
+    "correctIndex": 0,
+    "explanation": "f(x) = 5 gives 2x − 3 = 5, so x = 4. Hence f⁻¹(5) = 4."
+  },
+  {
+    "id": "9-10-higher-math-1-mcq3",
+    "chapterId": "9-10/higher-math/1",
+    "type": "MCQ",
+    "difficulty": "medium",
+    "boards": [],
+    "source": "Model test",
+    "text": "Consider the following:\ni. The power set of ∅ has one element\nii. Every set is a subset of itself\niii. ∅ is a proper subset of every set\nWhich of the following is correct?",
+    "options": ["i and ii", "i and iii", "ii and iii", "i, ii and iii"],
+    "correctIndex": 0,
+    "explanation": "P(∅) = {∅} has one element, and every set is a subset of itself. But ∅ is not a proper subset of ∅, so iii is false."
+  },
+  {
+    "id": "9-10-higher-math-1-sq1",
+    "chapterId": "9-10/higher-math/1",
+    "type": "SQ",
+    "difficulty": "easy",
+    "boards": [{ "board": "Jashore", "year": 2021 }],
+    "level": "Knowledge",
+    "text": "What is a one-one function?",
+    "answer": "A function is one-one if different elements of its domain always have different images: f(x₁) = f(x₂) only when x₁ = x₂."
+  },
+
+  {
+    "id": "11-12-physics-1-2-cq1",
+    "chapterId": "11-12/physics-1/2",
+    "type": "CQ",
+    "difficulty": "hard",
+    "boards": [{ "board": "Dhaka", "year": 2023 }],
+    "stem": "A boatman can row at 5 km h⁻¹ in still water. He wants to cross a river 0.5 km wide in which the current flows at 3 km h⁻¹.",
+    "parts": [
+      { "key": "a", "text": "What is a unit vector?", "marks": 1, "level": "Knowledge", "answer": "A vector whose magnitude is one unit. It only shows a direction." },
+      { "key": "b", "text": "Why can't the resultant of two unequal vectors be zero?", "marks": 2, "level": "Comprehension", "answer": "The resultant is smallest when the two vectors act in opposite directions, and then it equals the difference of their magnitudes. For unequal vectors that difference is never zero." },
+      { "key": "c", "text": "In which direction must he row to land at the point directly opposite?", "marks": 3, "level": "Application", "answer": "The part of his velocity along the river must cancel the current: 5 cos α = −3, so cos α = −0.6 and α ≈ 126.9° to the current — about 36.9° upstream of straight across." },
+      { "key": "d", "text": "Would he cross faster by rowing straight across instead? Analyse with calculation.", "marks": 4, "level": "Higher ability", "answer": "Rowing straight across: t = 0.5 / 5 = 0.1 h = 6 min, but he lands 3 × 0.1 = 0.3 km downstream. Rowing to the opposite point: his speed across is √(5² − 3²) = 4 km h⁻¹, so t = 0.5 / 4 = 0.125 h = 7.5 min. Straight across is faster, but he does not land opposite." }
+    ]
+  },
+  {
+    "id": "11-12-physics-1-2-mcq1",
+    "chapterId": "11-12/physics-1/2",
+    "type": "MCQ",
+    "difficulty": "easy",
+    "boards": [{ "board": "Rajshahi", "year": 2023 }],
+    "text": "Two forces of 3 N and 4 N act at right angles to each other. What is the magnitude of their resultant?",
+    "options": ["1 N", "5 N", "7 N", "12 N"],
+    "correctIndex": 1,
+    "explanation": "R = √(3² + 4²) = √25 = 5 N."
+  },
+  {
+    "id": "11-12-physics-1-2-mcq2",
+    "chapterId": "11-12/physics-1/2",
+    "type": "MCQ",
+    "difficulty": "medium",
+    "boards": [{ "board": "Dhaka", "year": 2024 }],
+    "text": "For the vectors A = 2î + 3ĵ and B = î − ĵ, what is A · B?",
+    "options": ["−1", "1", "5", "−5"],
+    "correctIndex": 0,
+    "explanation": "A · B = (2)(1) + (3)(−1) = 2 − 3 = −1."
+  },
+  {
+    "id": "11-12-physics-1-2-sq1",
+    "chapterId": "11-12/physics-1/2",
+    "type": "SQ",
+    "difficulty": "medium",
+    "boards": [],
+    "source": "Pre-test 2024",
+    "level": "Comprehension",
+    "text": "Why is the dot product of two perpendicular vectors zero?",
+    "answer": "A · B = AB cos θ. For perpendicular vectors θ = 90° and cos 90° = 0, so the dot product is zero."
+  }
+]

@@ -1,0 +1,180 @@
+@import "tailwindcss";
+
+/* Design tokens from qbank-handoff/HANDOFF.md. Only these colours exist, so a stray
+   `bg-blue-500` fails to style anything instead of drifting from the design. */
+@theme {
+  --color-*: initial;
+  --color-white: #ffffff;
+
+  --color-page: #f6f5f1; /* bg */
+  --color-surface: #ffffff; /* cards, header */
+  --color-surface-alt: #fafaf7; /* table/card header strips */
+  --color-ink: #17191c; /* text, dark buttons, footer */
+  --color-ink-soft: #2a2d33;
+  --color-muted: #4e535b; /* secondary text */
+  --color-subtle: #5b6068; /* secondary text, small */
+  --color-faint: #8a8f97;
+  --color-line: #e3e1da; /* borders */
+  --color-divider: #eeece6; /* row dividers */
+  --color-field: #d5d2c8; /* input borders */
+  --color-chip: #f3f2ee; /* number tiles, option dots */
+  --color-footer: #c9ccd1;
+
+  --color-accent: #0b6b4f;
+  --color-accent-hover: #08513c;
+  --color-accent-soft: #e3f1ea;
+  --color-answer: #eef6f2;
+  --color-answer-ink: #1f3a30;
+
+  --color-cq: #1d4ed8;
+  --color-cq-soft: #e6eefb;
+  --color-cq-wash: #f3f6fd;
+  --color-mcq: #0b6b4f;
+  --color-mcq-soft: #e3f1ea;
+  --color-mcq-wash: #eef6f2;
+  --color-sq: #9a4a12;
+  --color-sq-soft: #fcebdd;
+  --color-sq-wash: #fcf1e7;
+  --color-board: #6b5300;
+  --color-board-soft: #fff3cc;
+  --color-board-wash: #fff6d9;
+  --color-board-line: #f1de9a;
+  --color-board-ink: #3d3a2e;
+  --color-board-cta: #f2b53a;
+  --color-purple: #5b2bb5;
+  --color-purple-soft: #efe8fb;
+
+  --color-wrong: #b4361f;
+  --color-wrong-soft: #fce8e4;
+
+  --shadow-search: 0 8px 24px rgba(23, 25, 28, 0.06);
+}
+
+@theme inline {
+  /* Hind Siliguri for body text (Bangla and Latin); Space Grotesk for headings and numbers. */
+  --font-sans: var(--font-hind), system-ui, sans-serif;
+  --font-display: var(--font-grotesk), var(--font-hind), sans-serif;
+}
+
+/* The page container: 1200px of content with 24px either side. (The mockups' max-width is on
+   the content box; Tailwind's border-box sizing includes the padding, hence 1248.) */
+@utility page-x {
+  max-width: 1248px;
+  margin-inline: auto;
+  padding-inline: 24px;
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer base {
+  body {
+    background: var(--color-page);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  /* As in the mockups: plain links are green and underlined; cards and buttons set their own look. */
+  a {
+    color: var(--color-accent);
+    text-decoration: underline;
+  }
+  a:hover {
+    color: var(--color-accent-hover);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  .on-dark :focus-visible {
+    outline-color: var(--color-board-cta);
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/* The page-loading bar (NavigationProgress). */
+.nav-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 60;
+  height: 3px;
+  pointer-events: none;
+  background: var(--color-accent);
+  transform-origin: left;
+  transform: scaleX(0);
+  opacity: 0;
+}
+.nav-progress[data-phase="busy"] {
+  opacity: 1;
+  animation: qb-progress 8s cubic-bezier(0.1, 0.7, 0.2, 1) forwards;
+}
+.nav-progress[data-phase="done"] {
+  opacity: 0;
+  transform: scaleX(1);
+  transition:
+    transform 0.2s ease-out,
+    opacity 0.3s ease 0.15s;
+}
+@keyframes qb-progress {
+  from {
+    transform: scaleX(0.08);
+  }
+  to {
+    transform: scaleX(0.9);
+  }
+}
+
+/* A question you jumped to (from the board list or a search result) flashes once. */
+@keyframes qb-flash {
+  0%,
+  35% {
+    box-shadow: 0 0 0 3px var(--color-board-cta);
+  }
+  100% {
+    box-shadow: 0 0 0 3px transparent;
+  }
+}
+.qb-flash {
+  animation: qb-flash 1.8s ease-out;
+}
+
+@keyframes qb-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+.qb-skeleton {
+  background: var(--color-divider);
+  border-radius: 8px;
+  animation: qb-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qb-flash,
+  .qb-skeleton {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  @page {
+    margin: 16mm 14mm;
+  }
+  body {
+    background: #ffffff;
+  }
+}

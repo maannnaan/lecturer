@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Class 9–10 — Subjects</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F5F1}
+a{color:#0B6B4F}a:hover{color:#08513C}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #F6F5F1; color: #17191C; font-family: 'Hind Siliguri', system-ui, sans-serif; font-size: 16px; line-height: 1.55">
+
+<header style="background: #FFFFFF; border-bottom: 1px solid #E3E1DA">
+<div style="max-width: 1200px; margin: 0 auto; padding: 14px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px 28px">
+<a href="Main.dc.html" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: #17191C">
+<span style="width: 36px; height: 36px; border-radius: 10px; background: #0B6B4F; display: flex; align-items: center; justify-content: center">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"></path><path d="M9 7h6M9 11h4"></path></svg>
+</span>
+<span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.02em">QBank</span>
+</a>
+<nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 auto">
+<a href="Class.dc.html" aria-current="page" style="padding: 10px 14px; border-radius: 8px; text-decoration: none; color: #0B6B4F; background: #E3F1EA; font-weight: 600">Classes</a>
+<a href="Subject.dc.html" style="padding: 10px 14px; border-radius: 8px; text-decoration: none; color: #17191C; font-weight: 500">Subjects</a>
+<a href="Chapter.dc.html" style="padding: 10px 14px; border-radius: 8px; text-decoration: none; color: #17191C; font-weight: 500">Board Questions</a>
+<a href="Main.dc.html" style="padding: 10px 14px; border-radius: 8px; text-decoration: none; color: #17191C; font-weight: 500">Model Tests</a>
+</nav>
+<button type="button" style="height: 44px; padding: 0 20px; border-radius: 10px; border: none; background: #17191C; font: inherit; font-weight: 600; color: #FFFFFF; cursor: pointer">Sign in</button>
+</div>
+</header>
+
+<div style="max-width: 1200px; margin: 0 auto; padding: 32px 24px 64px; display: flex; flex-direction: column; gap: 28px">
+<nav aria-label="Breadcrumb" style="font-size: 14px; color: #5B6068; display: flex; gap: 8px; flex-wrap: wrap">
+<a href="Main.dc.html">Home</a><span aria-hidden="true">/</span><span>Class 9–10 (SSC)</span>
+</nav>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; align-items: flex-end">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 44px; letter-spacing: -0.03em; line-height: 1.1">Class 9–10 · SSC</h1>
+<p style="margin: 0; color: #4E535B; font-size: 18px">Pick a subject to see its chapters and questions.</p>
+</div>
+<div role="tablist" aria-label="Class" style="display: flex; flex-wrap: wrap; gap: 6px; padding: 6px; background: #FFFFFF; border: 1px solid #E3E1DA; border-radius: 12px">
+<sc-for list="{{classTabs}}" as="t" hint-placeholder-count="5">
+<button type="button" role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+</sc-for>
+</div>
+</div>
+
+<div role="tablist" aria-label="Group" style="display: flex; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid #E3E1DA">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="4">
+<button type="button" role="tab" aria-selected="{{g.on}}" onClick="{{g.pick}}" style="{{g.style}}">{{g.label}}</button>
+</sc-for>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px">
+<sc-for list="{{subjects}}" as="s" hint-placeholder-count="8">
+<a href="Subject.dc.html" style="display: flex; flex-direction: column; gap: 16px; padding: 22px; background: #FFFFFF; border: 1px solid #E3E1DA; border-radius: 16px; text-decoration: none; color: #17191C">
+<span style="display: flex; align-items: center; gap: 14px">
+<span style="width: 48px; height: 48px; border-radius: 12px; background: {{s.bg}}; color: {{s.fg}}; display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px">{{s.abbr}}</span>
+<span style="display: flex; flex-direction: column">
+<span style="font-weight: 700; font-size: 19px; line-height: 1.25">{{s.name}}</span>
+<span style="font-size: 14px; color: #5B6068">{{s.bn}}</span>
+</span>
+</span>
+<span style="display: flex; justify-content: space-between; align-items: center; padding-top: 14px; border-top: 1px solid #EEECE6; font-size: 14px; color: #4E535B">
+<span>{{s.meta}}</span>
+<span style="display: flex; gap: 6px">
+<span style="padding: 2px 8px; border-radius: 5px; background: #E6EEFB; color: #1D4ED8; font-weight: 700; font-size: 12px">CQ</span>
+<span style="padding: 2px 8px; border-radius: 5px; background: #E3F1EA; color: #0B6B4F; font-weight: 700; font-size: 12px">MCQ</span>
+<span style="padding: 2px 8px; border-radius: 5px; background: #FCEBDD; color: #9A4A12; font-weight: 700; font-size: 12px">SQ</span>
+</span>
+</span>
+</a>
+</sc-for>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between; padding: 24px 28px; border-radius: 16px; background: #17191C; color: #FFFFFF">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px">Preparing for SSC?</span>
+<span style="color: #C9CCD1">See all board questions for Class 9–10, grouped by board and year.</span>
+</div>
+<a href="Chapter.dc.html" style="padding: 12px 20px; border-radius: 10px; background: #F2B53A; color: #17191C; text-decoration: none; font-weight: 700">Open board questions →</a>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1500}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { cls: '9–10', group: 'Science' }; }
+  renderVals() {
+    const pill = (on) => 'height: 44px; padding: 0 16px; border-radius: 8px; border: none; font: inherit; font-weight: 600; cursor: pointer; ' + (on ? 'background: #17191C; color: #FFFFFF;' : 'background: transparent; color: #4E535B;');
+    const tab = (on) => 'height: 48px; padding: 0 18px; margin-bottom: -1px; border: none; border-bottom: 3px solid ' + (on ? '#0B6B4F' : 'transparent') + '; background: transparent; font: inherit; font-weight: 600; font-size: 16px; cursor: pointer; color: ' + (on ? '#0B6B4F' : '#4E535B') + ';';
+    const classTabs = ['6', '7', '8', '9–10', '11–12'].map((c) => ({ label: c.length > 2 ? c : 'Class ' + c, on: this.state.cls === c, style: pill(this.state.cls === c), pick: () => this.setState({ cls: c }) }));
+    const groups = ['Common', 'Science', 'Business Studies', 'Humanities'].map((g) => ({ label: g, on: this.state.group === g, style: tab(this.state.group === g), pick: () => this.setState({ group: g }) }));
+    const C = { blue: ['#E6EEFB', '#1D4ED8'], green: ['#E3F1EA', '#0B6B4F'], orange: ['#FCEBDD', '#9A4A12'], purple: ['#EFE8FB', '#5B2BB5'] };
+    const mk = (abbr, name, bn, ch, c) => ({ abbr, name, bn, meta: typeof ch === 'number' ? ch + ' chapters' : ch, bg: C[c][0], fg: C[c][1] });
+    const sets = {
+      'Science': [mk('Ph', 'Physics', 'পদার্থবিজ্ঞান', 14, 'blue'), mk('Ch', 'Chemistry', 'রসায়ন', 12, 'green'), mk('Bi', 'Biology', 'জীববিজ্ঞান', 14, 'orange'), mk('HM', 'Higher Mathematics', 'উচ্চতর গণিত', 14, 'purple')],
+      'Common': [mk('Ba', 'Bangla 1st Paper', 'বাংলা ১ম পত্র', 'Prose · Poetry · Drama', 'orange'), mk('En', 'English 1st Paper', 'ইংরেজি ১ম পত্র', 'Units & lessons', 'blue'), mk('Ma', 'Mathematics', 'গণিত', 17, 'purple'), mk('ICT', 'ICT', 'তথ্য ও যোগাযোগ প্রযুক্তি', 6, 'green')],
+      'Business Studies': [mk('Ac', 'Accounting', 'হিসাববিজ্ঞান', 12, 'blue'), mk('Fi', 'Finance & Banking', 'ফিন্যান্স ও ব্যাংকিং', 15, 'green'), mk('Bu', 'Business Entrepreneurship', 'ব্যবসায় উদ্যোগ', 12, 'orange')],
+      'Humanities': [mk('Hi', 'History', 'ইতিহাস', 11, 'orange'), mk('Ge', 'Geography', 'ভূগোল', 14, 'green'), mk('Ci', 'Civics', 'পৌরনীতি', 11, 'blue'), mk('Ec', 'Economics', 'অর্থনীতি', 10, 'purple')]
+    };
+    return { classTabs, groups, subjects: sets[this.state.group] };
+  }
+}
+</script>
+</body>
+</html>
