@@ -7,10 +7,9 @@ import { type QbCtx, QbSubjectView, chapterChips, chapterSearch, pad2 } from "@/
 import { formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { subjectAbbr } from "@/lib/bank-look";
-import { buildBankTree } from "@/lib/bank-tree";
-import { gradeName, gradeOf } from "@/lib/grades";
+import { subjectNode } from "@/lib/bank-tree";
 import { requireTeacher } from "@/server/auth/current";
-import { getSubject, listSubjects } from "@/server/bank";
+import { getBankClass, getSubject, listSubjects } from "@/server/bank";
 import { getDb } from "@/server/db";
 import { bankCounts } from "@/server/questions";
 
@@ -25,15 +24,15 @@ export default async function BankSubjectPage({ params }: { params: Promise<{ su
   const db = await getDb();
   const subject = await getSubject(db, teacher.id, subjectId);
   if (!subject) notFound();
-  const [counts, all] = await Promise.all([bankCounts(db, teacher.id), listSubjects(db, teacher.id)]);
-  const node = buildBankTree([subject], counts)[0].subjects[0];
+  const [counts, all, bankClass] = await Promise.all([bankCounts(db, teacher.id), listSubjects(db, teacher.id), getBankClass(db, teacher.id, subject.classId)]);
+  if (!bankClass) notFound();
+  const node = subjectNode(subject, counts);
   const locale = await getLocale();
   const d = getDictionary(locale);
   const t = d.dashboard.bank;
   const ctx: QbCtx = { d, locale, voice: t.qb, titleAs: "h2" };
-  const grade = gradeOf(subject);
   const base = `/dashboard/bank/subject/${subject.id}`;
-  const onSite = node.total > 0 ? `/${teacher.handle}/bank/${grade}/${subject.number}` : null;
+  const onSite = node.total > 0 ? `/${teacher.handle}/bank/${bankClass.number}/${subject.number}` : null;
 
   const rows = node.chapters.map(({ chapter, counts: tabs }, i) => ({
     id: chapter.id,
@@ -64,7 +63,7 @@ export default async function BankSubjectPage({ params }: { params: Promise<{ su
           label={d.common.breadcrumb}
           items={[
             { label: t.title, href: "/dashboard/bank" },
-            { label: gradeName(grade, d).label, href: `/dashboard/bank/class/${grade}` },
+            { label: bankClass.name, href: `/dashboard/bank/class/${bankClass.id}` },
             { label: subject.name },
           ]}
         />
@@ -73,7 +72,7 @@ export default async function BankSubjectPage({ params }: { params: Promise<{ su
       abbr={subjectAbbr(subject.name)}
       tone={toneFor(subject, all)}
       facts={[
-        gradeName(grade, d).label,
+        bankClass.name,
         subject.group ? (subject.group === "common" ? d.qbank.forAllGroups : d.qbank.groupOf(d.bankGroups[subject.group as keyof typeof d.bankGroups])) : null,
         t.chapters(formatNumber(subject.chapters.length, locale)),
         t.total(formatNumber(node.total, locale)),

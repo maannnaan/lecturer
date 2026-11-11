@@ -1,35 +1,42 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { useFormStatus } from "react-dom";
+import { useActionState } from "react";
+import { Field, FormMessages, SubmitButton, emptyForm } from "@/components/form";
+import type { Dictionary } from "@/i18n";
+import { createClassAction, renameClassAction } from "./actions";
 
-/**
- * A class's card on "নতুন শ্রেণি", and a submit button of the form around the cards: the card
- * picked says it is being added while the others wait.
- */
-export function AddClassButton({ grade, add, adding, children }: { grade: string; add: string; adding: string; children: ReactNode }) {
-  const { pending, data } = useFormStatus();
-  const busy = pending && data?.get("grade") === grade;
+type ClassText = Dictionary["dashboard"]["bank"]["classForm"];
+type Common = Pick<Dictionary["common"], "save" | "saving" | "saved">;
+
+/** A class's name, typed by the teacher: a new class (no `bankClass`), or renaming one. */
+export function ClassForm({ bankClass, t, c }: { bankClass?: { id: string; name: string }; t: ClassText; c: Common }) {
+  const [state, action] = useActionState(bankClass ? renameClassAction : createClassAction, emptyForm);
   return (
-    <button
-      type="submit"
-      name="grade"
-      value={grade}
-      disabled={pending}
-      aria-busy={busy || undefined}
-      className="flex min-h-[170px] cursor-pointer flex-col items-start gap-3.5 rounded-2xl border border-qb-line bg-qb-surface p-[22px] text-left text-qb-ink hover:border-qb-accent disabled:cursor-wait"
-    >
-      {children}
-      <span className="inline-flex items-center gap-2 text-[15px] font-semibold text-qb-accent">
-        {busy ? (
-          <span aria-hidden="true" className="size-3.5 animate-spin rounded-full border-2 border-current border-r-transparent" />
-        ) : (
-          <span aria-hidden="true" className="text-[20px] leading-none">
-            +
-          </span>
-        )}
-        {busy ? adding : add}
-      </span>
-    </button>
+    <form action={action} className="card flex flex-col gap-5 p-5" noValidate>
+      {bankClass && <input type="hidden" name="classId" value={bankClass.id} />}
+      <Field
+        name="name"
+        label={t.name}
+        hint={t.nameHint}
+        placeholder={t.namePlaceholder}
+        defaultValue={state.values?.name ?? bankClass?.name ?? ""}
+        error={state.errors.name}
+        list="class-suggestions"
+        autoComplete="off"
+        maxLength={60}
+        required
+      />
+      <datalist id="class-suggestions">
+        {t.suggestions.map((s) => (
+          <option key={s} value={s} />
+        ))}
+      </datalist>
+      <div className="flex flex-wrap items-center gap-3">
+        <SubmitButton className="btn btn-primary" pendingLabel={c.saving}>
+          {bankClass ? c.save : t.create}
+        </SubmitButton>
+        <FormMessages state={state} saved={c.saved} />
+      </div>
+    </form>
   );
 }

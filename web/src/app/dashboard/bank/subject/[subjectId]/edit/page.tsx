@@ -5,11 +5,11 @@ import { Crumbs } from "@/components/bank-ui";
 import { PendingButton } from "@/components/form";
 import { formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
-import { buildBankTree } from "@/lib/bank-tree";
+import { classKey } from "@/lib/bank-look";
+import { subjectNode } from "@/lib/bank-tree";
 import { chapterLabel } from "@/lib/chapter-label";
-import { gradeName, gradeOf } from "@/lib/grades";
 import { requireTeacher } from "@/server/auth/current";
-import { getSubject } from "@/server/bank";
+import { getSubject, listBankClasses } from "@/server/bank";
 import { getDb } from "@/server/db";
 import { bankCounts } from "@/server/questions";
 import { deleteBankChapterAction, moveBankChapterAction } from "../../../actions";
@@ -26,11 +26,12 @@ export default async function EditSubjectPage({ params }: { params: Promise<{ su
   const db = await getDb();
   const subject = await getSubject(db, teacher.id, subjectId);
   if (!subject) notFound();
-  const questionCount = buildBankTree([subject], await bankCounts(db, teacher.id))[0].subjects[0].total;
+  const [counts, classes] = await Promise.all([bankCounts(db, teacher.id), listBankClasses(db, teacher.id)]);
+  const questionCount = subjectNode(subject, counts).total;
+  const bankClass = classes.find((x) => x.id === subject.classId);
   const locale = await getLocale();
   const d = getDictionary(locale);
   const t = d.dashboard.bank;
-  const grade = gradeOf(subject);
   const autoLabel = (i: number) => d.dashboard.courses.chapters.defaultLabel(formatNumber(i + 1, locale));
 
   return (
@@ -40,7 +41,7 @@ export default async function EditSubjectPage({ params }: { params: Promise<{ su
         label={d.common.breadcrumb}
         items={[
           { label: t.title, href: "/dashboard/bank" },
-          { label: gradeName(grade, d).label, href: `/dashboard/bank/class/${grade}` },
+          ...(bankClass ? [{ label: bankClass.name, href: `/dashboard/bank/class/${bankClass.id}` }] : []),
           { label: subject.name, href: `/dashboard/bank/subject/${subject.id}` },
           { label: t.editSubject },
         ]}
@@ -50,12 +51,12 @@ export default async function EditSubjectPage({ params }: { params: Promise<{ su
       <div className="grid items-start gap-6 xl:grid-cols-2">
         <div className="min-w-0">
           <SubjectForm
-            subject={{ id: subject.id, grade: subject.grade, group: subject.group, name: subject.name }}
+            subject={{ id: subject.id, classId: subject.classId, group: subject.group, name: subject.name }}
+            classes={classes.map((x) => ({ id: x.id, name: x.name, key: classKey(x.name) }))}
             groups={d.bankGroups}
             heading={t.subjectForm.editTitle}
             t={t.subjectForm}
             c={d.common}
-            grades={d.grades}
           />
         </div>
 

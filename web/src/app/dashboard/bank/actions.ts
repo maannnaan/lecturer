@@ -3,20 +3,22 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import type { FormState } from "@/components/form";
-import { chapterLines, parseBankChapter, parseSubject } from "@/lib/bank";
+import { chapterLines, parseBankChapter, parseBankClass, parseSubject, sameClassName } from "@/lib/bank";
 import { type FieldErrors, formInput, type Input } from "@/lib/form-input";
-import { gradeOf, isGrade } from "@/lib/grades";
+import { isUuid } from "@/lib/ids";
 import { parseQuestion } from "@/lib/questions";
 import { requireTeacher } from "@/server/auth/current";
 import {
   addBankChapters,
-  addBankClass,
+  createBankClass,
   createSubject,
   deleteBankChapter,
   deleteSubject,
   getSubject,
+  listBankClasses,
   moveBankChapter,
   removeBankClass,
+  renameBankClass,
   updateBankChapter,
   updateSubject,
 } from "@/server/bank";
@@ -52,22 +54,43 @@ async function placementRefusal(reason: Exclude<SaveQuestionResult, { ok: true }
 
 // ── Classes ──
 
-/** "নতুন শ্রেণি": adds the class picked, then opens it, ready for its first subject. */
-export async function addClassAction(formData: FormData) {
+/** The class form, checked: a name, and not one of the teacher's other classes' names. */
+async function checkedClass(teacherId: string, input: Input) {
+  const { bankClass, errors } = parseBankClass(input);
+  const db = await getDb();
+  if (!errors.name) {
+    const others = (await listBankClasses(db, teacherId)).filter((c) => c.id !== input.classId);
+    if (others.some((c) => sameClassName(c.name, bankClass.name))) errors.name = "classTaken";
+  }
+  return { db, bankClass, refusal: await refused(errors, input) };
+}
+
+/** "নতুন শ্রেণি": adds a class by the name typed, then opens it, ready for its first subject. */
+export async function createClassAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const teacher = await requireTeacher();
-  const grade = String(formData.get("grade") ?? "");
-  if (!isGrade(grade)) redirect("/dashboard/bank/class/new");
-  await addBankClass(await getDb(), teacher.id, grade);
-  redirect(`/dashboard/bank/class/${grade}`);
+  const { db, bankClass, refusal } = await checkedClass(teacher.id, formInput(formData));
+  if (refusal) return refusal;
+  const created = await createBankClass(db, teacher.id, bankClass);
+  redirect(`/dashboard/bank/class/${created.id}`);
+}
+
+export async function renameClassAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const teacher = await requireTeacher();
+  const input = formInput(formData);
+  const { db, bankClass, refusal } = await checkedClass(teacher.id, input);
+  if (refusal) return refusal;
+  const renamed = await renameBankClass(db, teacher.id, String(input.classId ?? ""), bankClass);
+  if (!renamed) return { errors: {}, formError: (await errorTexts()).generic, values: keep(input) };
+  redirect(`/dashboard/bank/class/${renamed.id}`);
 }
 
 /** Takes an empty class out of the bank. One that has subjects stays, and opens again. */
 export async function removeClassAction(formData: FormData) {
   const teacher = await requireTeacher();
-  const grade = String(formData.get("grade") ?? "");
-  if (!isGrade(grade)) redirect("/dashboard/bank");
-  const removed = await removeBankClass(await getDb(), teacher.id, grade);
-  redirect(removed ? "/dashboard/bank" : `/dashboard/bank/class/${grade}`);
+  const classId = String(formData.get("classId") ?? "");
+  if (!isUuid(classId)) redirect("/dashboard/bank");
+  const removed = await removeBankClass(await getDb(), teacher.id, classId);
+  redirect(removed ? "/dashboard/bank" : `/dashboard/bank/class/${classId}`);
 }
 
 // ── Subjects and their chapters ──
@@ -82,6 +105,8 @@ export async function createSubjectAction(_prev: FormState, formData: FormData):
   // No chapters typed: take them from the chosen course, if any (only one of the teacher's own).
   const titles = chapters.length > 0 || !input.copyFrom ? chapters : (await listChapters(db, teacher.id, input.copyFrom)).map((ch) => ch.title);
   const created = await createSubject(db, teacher.id, subject, titles);
+  // A class that isn't the teacher's (or was just removed).
+  if (!created) return { errors: { classId: (await errorTexts()).invalid }, values: keep(input) };
   redirect(`/dashboard/bank/subject/${created.id}`);
 }
 
@@ -103,7 +128,7 @@ export async function deleteSubjectAction(_prev: FormState, formData: FormData):
   const db = await getDb();
   const subject = await getSubject(db, teacher.id, String(formData.get("subjectId") ?? ""));
   if (subject) await deleteSubject(db, teacher.id, subject.id);
-  redirect(subject ? `/dashboard/bank/class/${gradeOf(subject)}` : "/dashboard/bank");
+  redirect(subject ? `/dashboard/bank/class/${subject.classId}` : "/dashboard/bank");
 }
 
 export async function addChaptersAction(_prev: FormState, formData: FormData): Promise<FormState> {

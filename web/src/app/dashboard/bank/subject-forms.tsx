@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { Field, FormMessages, SelectField, SubmitButton, TextAreaField, emptyForm } from "@/components/form";
 import type { Dictionary } from "@/i18n";
 import { SUBJECT_GROUPS } from "@/lib/bank";
-import { GRADES, gradeLine, isGrade } from "@/lib/grades";
+import type { Grade } from "@/lib/grades";
 import { addChaptersAction, createSubjectAction, deleteSubjectAction, updateBankChapterAction, updateSubjectAction } from "./actions";
 
 type Bank = Dictionary["dashboard"]["bank"];
@@ -12,30 +12,31 @@ type Common = Pick<Dictionary["common"], "save" | "saving" | "saved" | "optional
 
 /**
  * Create a bank subject (no `subject`): its class, its name, and its chapters pasted one per line
- * or taken from one of the teacher's courses. Or edit an existing subject's class and name.
+ * or taken from one of the teacher's courses. Or edit an existing subject's class and name. Each
+ * class comes with the ready-made list (`key`) its name suggests, for the subject name's hints.
  */
 export function SubjectForm({
   subject,
+  classes,
   courses = [],
-  defaultGrade = "",
+  defaultClassId = "",
   heading,
   t,
   c,
-  grades,
   groups,
 }: {
-  subject?: { id: string; grade: string; group: string; name: string };
+  subject?: { id: string; classId: string; group: string; name: string };
+  classes: { id: string; name: string; key: Grade }[];
   courses?: { id: string; title: string }[];
-  defaultGrade?: string;
+  defaultClassId?: string;
   heading?: string;
   t: Bank["subjectForm"];
   c: Common;
-  grades: Dictionary["grades"];
   groups: Dictionary["bankGroups"];
 }) {
   const [state, action] = useActionState(subject ? updateSubjectAction : createSubjectAction, emptyForm);
   const initial: Record<string, string> = {
-    grade: subject?.grade ?? defaultGrade,
+    classId: subject?.classId ?? (defaultClassId || classes[0]?.id || ""),
     group: subject?.group ?? "",
     name: subject?.name ?? "",
     chapters: "",
@@ -43,8 +44,8 @@ export function SubjectForm({
   };
   const v = (name: string) => state.values?.[name] ?? initial[name] ?? "";
   // The name suggestions follow the class picked; the select itself stays uncontrolled.
-  const [grade, setGrade] = useState(v("grade") || "other");
-  const suggestions = isGrade(grade) ? t.suggestions[grade] : [];
+  const [classId, setClassId] = useState(v("classId"));
+  const suggestions = t.suggestions[classes.find((x) => x.id === classId)?.key ?? "other"];
   const e = state.errors;
 
   return (
@@ -57,11 +58,12 @@ export function SubjectForm({
       {subject && <input type="hidden" name="subjectId" value={subject.id} />}
       <div className="grid gap-5">
         <SelectField
-          name="grade"
+          name="classId"
           label={t.grade}
-          defaultValue={v("grade") || "other"}
-          onChange={(event) => setGrade(event.target.value)}
-          options={GRADES.map((key) => ({ value: key, label: gradeLine(key, { grades }) }))}
+          defaultValue={v("classId")}
+          error={e.classId}
+          onChange={(event) => setClassId(event.target.value)}
+          options={classes.map((x) => ({ value: x.id, label: x.name }))}
         />
         <Field
           name="name"

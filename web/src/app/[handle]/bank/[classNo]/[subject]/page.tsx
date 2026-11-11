@@ -6,33 +6,32 @@ import { type QbCtx, QbSubjectView, chapterChips, chapterSearch, pad2 } from "@/
 import { formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { subjectAbbr } from "@/lib/bank-look";
-import { gradeName } from "@/lib/grades";
 import { getSiteSubjects } from "../../../data";
 import { getPageSubject } from "./data";
 
 export const instant = false;
 
-type Params = Promise<{ handle: string; grade: string; subject: string }>;
+type Params = Promise<{ handle: string; classNo: string; subject: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
-  const { handle, grade, subject } = await params;
-  const found = await getPageSubject(handle, grade, subject);
+  const { handle, classNo, subject } = await params;
+  const found = await getPageSubject(handle, classNo, subject);
   if (!found || found.teacher.status !== "approved") return { robots: { index: false } };
   const d = getDictionary(await getLocale(found.teacher.locale));
   const s = found.node.subject;
   return {
-    title: { absolute: `${s.name} (${gradeName(s.grade, d).label}) · ${d.site.bank.title} — ${found.teacher.nameBn}` },
-    alternates: { canonical: `/${found.teacher.handle}/bank/${grade}/${s.number}` },
+    title: { absolute: `${s.name} (${found.bankClass.name}) · ${d.site.bank.title} — ${found.teacher.nameBn}` },
+    alternates: { canonical: `/${found.teacher.handle}/bank/${found.bankClass.number}/${s.number}` },
     robots: found.node.total === 0 ? { index: false } : undefined,
   };
 }
 
 /** The website's question bank, third level: a subject's chapters and what each has to practise. */
 export default async function SiteBankSubjectPage({ params }: { params: Params }) {
-  const { handle, grade, subject: number } = await params;
-  const found = await getPageSubject(handle, grade, number);
+  const { handle, classNo, subject: number } = await params;
+  const found = await getPageSubject(handle, classNo, number);
   if (!found) notFound();
-  const { teacher, node } = found;
+  const { teacher, bankClass, node } = found;
   const { subject } = node;
   const locale = await getLocale(teacher.locale);
   const d = getDictionary(locale);
@@ -40,8 +39,8 @@ export default async function SiteBankSubjectPage({ params }: { params: Params }
   const ctx: QbCtx = { d, locale, voice: d.site.chapter.qb, titleAs: "h1" };
   const all = await getSiteSubjects(teacher.id);
   const home = `/${teacher.handle}`;
-  const subjectPath = `${home}/bank/${grade}/${subject.number}`;
-  const grades = gradeName(grade, d);
+  const classPath = `${home}/bank/${bankClass.number}`;
+  const subjectPath = `${classPath}/${subject.number}`;
 
   return (
     <QbSubjectView
@@ -52,7 +51,7 @@ export default async function SiteBankSubjectPage({ params }: { params: Params }
           items={[
             { label: locale === "bn" ? teacher.nameBn : teacher.nameEn, href: home },
             { label: b.title, href: `${home}/bank` },
-            { label: grades.label, href: `${home}/bank/${grade}` },
+            { label: bankClass.name, href: classPath },
             { label: subject.name },
           ]}
         />
@@ -61,7 +60,7 @@ export default async function SiteBankSubjectPage({ params }: { params: Params }
       abbr={subjectAbbr(subject.name)}
       tone={toneFor(subject, all)}
       facts={[
-        grades.label,
+        bankClass.name,
         subject.group ? (subject.group === "common" ? d.qbank.forAllGroups : d.qbank.groupOf(d.bankGroups[subject.group as keyof typeof d.bankGroups])) : null,
         subject.chapters.length > 0 ? b.chapters(formatNumber(subject.chapters.length, locale)) : null,
         node.total > 0 ? b.questions(formatNumber(node.total, locale)) : null,

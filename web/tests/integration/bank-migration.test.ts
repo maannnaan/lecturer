@@ -2,7 +2,17 @@ import { readFileSync } from "node:fs";
 import { eq, sql } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { parseCourse } from "@/lib/courses";
-import { createSubject, deleteBankChapter, getSubject, listBankClasses, listSubjectsWithChapters } from "@/server/bank";
+import {
+  bankAddress,
+  bankClassAddress,
+  createBankClass,
+  createSubject,
+  deleteBankChapter,
+  getSubject,
+  listBankClasses,
+  listSubjectsWithChapters,
+  removeBankClass,
+} from "@/server/bank";
 import { createCourse, deleteCourse } from "@/server/courses";
 import type { Database } from "@/server/db";
 import { courses } from "@/server/db/schema";
@@ -105,9 +115,13 @@ describe("migration 0004_bank_subjects", () => {
     await deleteBankChapter(db, teacher.id, vectors.id);
     expect((await getQuestion(db, teacher.id, filed.id))?.chapterId).toBeNull();
 
+    // Migrations 0006 and 0007: the subjects' class became a class of the teacher's own, by name.
+    const [hsc] = await listBankClasses(db, teacher.id);
+    expect(hsc).toMatchObject({ number: 1, name: "এইচএসসি", legacyGrade: "hsc" });
+    expect(subjects.every((s) => s.classId === hsc.id)).toBe(true);
     // New subjects number on from the migrated ones.
-    const next = await createSubject(db, teacher.id, { grade: "ssc", group: "", name: "গণিত" });
-    expect(next.number).toBe(3);
+    const next = await createSubject(db, teacher.id, { classId: hsc.id, group: "", name: "গণিত" });
+    expect(next?.number).toBe(3);
     expect((await getSubject(db, teacher.id, chem.id))?.chapters).toEqual([]);
     // Migration 0005: subjects and questions from before start with no group and no difficulty.
     expect((await getSubject(db, teacher.id, chem.id))?.group).toBe("");
@@ -133,8 +147,59 @@ describe("migration 0006_bank_classes", () => {
 
     await finish();
 
-    expect(await listBankClasses(db, a.id)).toEqual(["class-6", "hsc"]);
-    expect(await listBankClasses(db, b.id)).toEqual(["admission"]);
-    expect(await listBankClasses(db, none.id)).toEqual([]);
+    const keys = async (teacherId: string) => (await listBankClasses(db, teacherId)).map((c) => c.legacyGrade);
+    expect(await keys(a.id)).toEqual(["class-6", "hsc"]);
+    expect(await keys(b.id)).toEqual(["admission"]);
+    expect(await keys(none.id)).toEqual([]);
+  });
+});
+
+describe("migration 0007_typed_classes", () => {
+  it("names and numbers the classes so far, keeps their old keys for old addresses, and files each subject in its class", async () => {
+    const { db, finish } = await dbBeforeMigration(7);
+    const one = async <T>(query: ReturnType<typeof sql>) => ((await db.execute(query)) as unknown as { rows: T[] }).rows[0];
+    const teacher = async (handle: string, phone: string, locale: string) =>
+      one<{ id: string }>(
+        sql`insert into teachers (handle, name_bn, name_en, phone, password_hash, locale) values (${handle}, 'ক', 'K', ${phone}, 'x', ${locale}) returning id`,
+      );
+    const addClass = (teacherId: string, grade: string) => db.execute(sql`insert into bank_classes (teacher_id, grade) values (${teacherId}, ${grade})`);
+    const subject = async (teacherId: string, number: number, grade: string) =>
+      one<{ id: string }>(sql`insert into bank_subjects (teacher_id, number, grade, name) values (${teacherId}, ${number}, ${grade}, 'বিষয়') returning id`);
+    const bn = await teacher("t1", "01711111111", "bn");
+    const en = await teacher("t2", "01722222222", "en");
+    await addClass(bn.id, "hsc");
+    await addClass(bn.id, "ssc");
+    await addClass(bn.id, "admission");
+    const physics = await subject(bn.id, 1, "hsc");
+    const maths = await subject(bn.id, 2, "ssc");
+    // A subject whose class has no row (an older deployment made it while 0006 went live).
+    const loose = await subject(bn.id, 3, "class-7");
+    await addClass(en.id, "hsc");
+
+    await finish();
+
+    // Numbered in the old list's order, named as it called them, listed by the class each reads as.
+    const classes = await listBankClasses(db, bn.id);
+    expect(classes.map((c) => [c.name, c.number, c.legacyGrade])).toEqual([
+      ["সপ্তম শ্রেণি", 1, "class-7"],
+      ["এসএসসি", 2, "ssc"],
+      ["এইচএসসি", 3, "hsc"],
+      ["ভর্তি পরীক্ষা", 4, "admission"],
+    ]);
+    const idOf = new Map(classes.map((c) => [c.legacyGrade, c.id]));
+    expect((await getSubject(db, bn.id, physics.id))?.classId).toBe(idOf.get("hsc"));
+    expect((await getSubject(db, bn.id, maths.id))?.classId).toBe(idOf.get("ssc"));
+    expect((await getSubject(db, bn.id, loose.id))?.classId).toBe(idOf.get("class-7"));
+    // A website that opens in English gets English names.
+    expect((await listBankClasses(db, en.id)).map((c) => [c.name, c.number])).toEqual([["HSC", 1]]);
+
+    // Old addresses find their classes, and subjects answer with their class's number.
+    expect(await bankClassAddress(db, bn.id, "hsc")).toEqual({ number: 3 });
+    expect(await bankClassAddress(db, bn.id, "class-6")).toBeNull();
+    expect(await bankAddress(db, bn.id, 1)).toEqual({ classNumber: 3 });
+    // New classes number on, and the empty admission class can go while the others can't.
+    expect((await createBankClass(db, bn.id, { name: "দশম শ্রেণি" })).number).toBe(5);
+    expect(await removeBankClass(db, bn.id, idOf.get("admission")!)).toBe(true);
+    expect(await removeBankClass(db, bn.id, idOf.get("hsc")!)).toBe(false);
   });
 });

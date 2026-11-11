@@ -50,6 +50,13 @@
       "when": 1794402032693,
       "tag": "0006_bank_classes",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794408801987,
+      "tag": "0007_typed_classes",
+      "breakpoints": true
     }
   ]
 }

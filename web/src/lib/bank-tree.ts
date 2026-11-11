@@ -1,4 +1,3 @@
-import { GRADES, type Grade, gradeOf } from "./grades";
 import { BANK_TABS, type BankTab, type QuestionType, SECTION_TABS, tabOf } from "./questions";
 
 /** How many questions each tab has: the five sections, and the board questions among them. */
@@ -10,7 +9,7 @@ export type TabCounts = Record<BankTab, number>;
  */
 export type CountRow = { subjectId: string; chapterId: string | null; type: QuestionType; board: boolean; n: number };
 
-type SubjectLike = { id: string; grade: string; chapters: { id: string }[] };
+type SubjectLike = { id: string; classId: string; chapters: { id: string }[] };
 
 export type BankChapter<S extends SubjectLike> = { chapter: S["chapters"][number]; counts: TabCounts; total: number };
 
@@ -23,7 +22,7 @@ export type BankSubject<S extends SubjectLike> = {
   total: number;
 };
 
-export type BankGrade<S extends SubjectLike> = { grade: Grade; subjects: BankSubject<S>[]; counts: TabCounts; total: number };
+export type BankClassNode<C, S extends SubjectLike> = { bankClass: C; subjects: BankSubject<S>[]; counts: TabCounts; total: number };
 
 export function emptyCounts(): TabCounts {
   return { textbook: 0, practice: 0, mcq: 0, sq: 0, cq: 0, board: 0 };
@@ -38,47 +37,55 @@ function addInto(into: TabCounts, from: TabCounts) {
   for (const tab of BANK_TABS) into[tab] += from[tab];
 }
 
-/**
- * The question bank the way it is browsed: classes (in GRADES order: those that have subjects, and
- * the `classes` given, which may have none yet) › subjects (in the teacher's order) › chapters (in
- * order, plus unfiled questions), with each tab's question count at every level. Rows for subjects
- * not given are ignored.
- */
-export function buildBankTree<S extends SubjectLike>(subjects: S[], rows: CountRow[], classes: readonly string[] = []): BankGrade<S>[] {
-  const byPlace = new Map<string, TabCounts>();
+/** The count rows by place: "<subject id>/<chapter id>", or "<subject id>/" for no chapter. */
+function byPlace(rows: CountRow[]): Map<string, TabCounts> {
+  const places = new Map<string, TabCounts>();
   for (const row of rows) {
     const key = `${row.subjectId}/${row.chapterId ?? ""}`;
-    const counts = byPlace.get(key) ?? emptyCounts();
+    const counts = places.get(key) ?? emptyCounts();
     counts[tabOf(row.type)] += row.n;
     if (row.board) counts.board += row.n;
-    byPlace.set(key, counts);
+    places.set(key, counts);
   }
+  return places;
+}
 
-  const grades = new Map<Grade, BankGrade<S>>();
-  for (const subject of subjects) {
-    const chapters = subject.chapters.map((chapter) => {
-      const counts = byPlace.get(`${subject.id}/${chapter.id}`) ?? emptyCounts();
-      return { chapter, counts, total: totalOf(counts) };
-    });
-    const unfiled = byPlace.get(`${subject.id}/`) ?? emptyCounts();
+function nodeOf<S extends SubjectLike>(subject: S, places: Map<string, TabCounts>): BankSubject<S> {
+  const chapters = subject.chapters.map((chapter) => {
+    const counts = places.get(`${subject.id}/${chapter.id}`) ?? emptyCounts();
+    return { chapter, counts, total: totalOf(counts) };
+  });
+  const unfiled = places.get(`${subject.id}/`) ?? emptyCounts();
+  const counts = emptyCounts();
+  for (const chapter of chapters) addInto(counts, chapter.counts);
+  addInto(counts, unfiled);
+  return { subject, chapters, unfiled: { counts: unfiled, total: totalOf(unfiled) }, counts, total: totalOf(counts) };
+}
+
+/** One subject with each tab's question count, chapter by chapter, and in all. */
+export function subjectNode<S extends SubjectLike>(subject: S, rows: CountRow[]): BankSubject<S> {
+  return nodeOf(subject, byPlace(rows));
+}
+
+/**
+ * The question bank the way it is browsed: classes (in the order given, empty ones too) ›
+ * subjects (in the teacher's order) › chapters (in order, plus unfiled questions), with each tab's
+ * question count at every level. Subjects of classes not given, and rows of subjects not given,
+ * are left out.
+ */
+export function buildBankTree<C extends { id: string }, S extends SubjectLike>(classes: C[], subjects: S[], rows: CountRow[]): BankClassNode<C, S>[] {
+  const places = byPlace(rows);
+  return classes.map((bankClass) => {
+    const inClass = subjects.filter((subject) => subject.classId === bankClass.id).map((subject) => nodeOf(subject, places));
     const counts = emptyCounts();
-    for (const chapter of chapters) addInto(counts, chapter.counts);
-    addInto(counts, unfiled);
-
-    const grade = gradeOf(subject);
-    const group = grades.get(grade) ?? { grade, subjects: [], counts: emptyCounts(), total: 0 };
-    group.subjects.push({ subject, chapters, unfiled: { counts: unfiled, total: totalOf(unfiled) }, counts, total: totalOf(counts) });
-    addInto(group.counts, counts);
-    group.total = totalOf(group.counts);
-    grades.set(grade, group);
-  }
-  const added = new Set(classes);
-  return GRADES.flatMap((grade) => grades.get(grade) ?? (added.has(grade) ? [{ grade, subjects: [], counts: emptyCounts(), total: 0 }] : []));
+    for (const node of inClass) addInto(counts, node.counts);
+    return { bankClass, subjects: inClass, counts, total: totalOf(counts) };
+  });
 }
 
 /** Only the subjects that have questions, and the classes that still have one: the website's bank. */
-export function withQuestions<S extends SubjectLike>(tree: BankGrade<S>[]): BankGrade<S>[] {
+export function withQuestions<C, S extends SubjectLike>(tree: BankClassNode<C, S>[]): BankClassNode<C, S>[] {
   return tree
-    .map((grade) => ({ ...grade, subjects: grade.subjects.filter((subject) => subject.total > 0) }))
-    .filter((grade) => grade.subjects.length > 0);
+    .map((node) => ({ ...node, subjects: node.subjects.filter((subject) => subject.total > 0) }))
+    .filter((node) => node.subjects.length > 0);
 }

@@ -102,6 +102,8 @@ export const teachers = pgTable(
     courseCounter: integer("course_counter").notNull().default(0),
     /** The same for the question bank's subjects. */
     subjectCounter: integer("subject_counter").notNull().default(0),
+    /** The same for the question bank's classes. */
+    classCounter: integer("class_counter").notNull().default(0),
     approvedAt: timestamp("approved_at", { withTimezone: true }),
     trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
     createdAt: createdAt(),
@@ -287,19 +289,29 @@ export const notices = pgTable(
 );
 
 /**
- * A class the teacher keeps questions for (a key from GRADES), added with the bank's "নতুন শ্রেণি".
- * The bank lists these, even before they have a subject; adding a subject to a class adds the class.
+ * A class in the teacher's question bank, named by the teacher: "দশম শ্রেণি", "এইচএসসি ২০২৬ ব্যাচ".
+ * `number` (from teachers.class_counter, never reused) is its website address,
+ * lecturer.bd/<handle>/bank/<number>. Classes made before teachers named their own (migration
+ * 0007) keep the fixed-list key they came from in `legacyGrade`, so an old address such as
+ * /bank/hsc still finds them.
  */
 export const bankClasses = pgTable(
   "bank_classes",
   {
+    id: uuid("id").primaryKey().defaultRandom(),
     teacherId: uuid("teacher_id")
       .notNull()
       .references(() => teachers.id, { onDelete: "cascade" }),
-    grade: text("grade").notNull(),
+    number: integer("number").notNull(),
+    name: text("name").notNull(),
+    position: integer("position").notNull().default(0),
+    legacyGrade: text("grade"),
     createdAt: createdAt(),
   },
-  (t) => [primaryKey({ columns: [t.teacherId, t.grade] })],
+  (t) => [
+    uniqueIndex("bank_classes_teacher_number_key").on(t.teacherId, t.number),
+    uniqueIndex("bank_classes_teacher_grade_key").on(t.teacherId, t.legacyGrade),
+  ],
 );
 
 /**
@@ -316,7 +328,10 @@ export const bankSubjects = pgTable(
       .notNull()
       .references(() => teachers.id, { onDelete: "cascade" }),
     number: integer("number").notNull(),
-    /** A key from GRADES in src/lib/grades.ts. */
+    classId: uuid("class_id")
+      .notNull()
+      .references(() => bankClasses.id),
+    /** Unused since migration 0007 gave subjects a class of the teacher's own; dropped in Phase 4. */
     grade: text("grade").notNull().default("other"),
     /** A key from SUBJECT_GROUPS in src/lib/bank.ts (বিজ্ঞান, মানবিক…), or "" for none. */
     group: text("subject_group").notNull().default(""),
@@ -329,6 +344,7 @@ export const bankSubjects = pgTable(
   (t) => [
     uniqueIndex("bank_subjects_teacher_number_key").on(t.teacherId, t.number),
     index("bank_subjects_teacher_position_idx").on(t.teacherId, t.position),
+    index("bank_subjects_class_idx").on(t.classId),
   ],
 );
 

@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { bn } from "@/i18n/bn";
 import { en } from "@/i18n/en";
 import { type FieldErrors } from "@/lib/form-input";
-import { MAX_CHAPTERS_AT_ONCE, chapterLines, parseBankChapter, parseSubject } from "@/lib/bank";
-import { subjectAbbr, subjectTone } from "@/lib/bank-look";
-import { type CountRow, buildBankTree, emptyCounts, totalOf, withQuestions } from "@/lib/bank-tree";
+import { MAX_CHAPTERS_AT_ONCE, chapterLines, parseBankChapter, parseBankClass, parseSubject, sameClassName } from "@/lib/bank";
+import { classKey, classLook, sortClasses, subjectAbbr, subjectTone } from "@/lib/bank-look";
+import { type CountRow, buildBankTree, emptyCounts, subjectNode, totalOf, withQuestions } from "@/lib/bank-tree";
 import { GRADES, gradeLine, gradeName, gradeOf, isGrade } from "@/lib/grades";
 import {
   BANK_TABS,
@@ -102,7 +102,69 @@ describe("the bank's look", () => {
   });
 });
 
-describe("classes", () => {
+describe("bank classes", () => {
+  it("are named by the teacher, in at most 60 characters, and compared as they read", () => {
+    expect(parseBankClass({ name: "  এইচএসসি   ২০২৬  ব্যাচ " })).toEqual({ bankClass: { name: "এইচএসসি ২০২৬ ব্যাচ" }, errors: {} });
+    expect(parseBankClass({ name: " " }).errors).toEqual({ name: "required" });
+    expect(parseBankClass({ name: "ক".repeat(61) }).errors).toEqual({ name: "tooLong" });
+    expect(sameClassName("HSC 2026", " hsc  2026")).toBe(true);
+    // দ্বিতীয় written with the single character য় and with য + nukta.
+    expect(sameClassName("দ্বিতীয় বর্ষ", "দ্বিতীয় বর্ষ")).toBe(true);
+    expect(sameClassName("নবম শ্রেণি", "দশম শ্রেণি")).toBe(false);
+  });
+
+  it("show the class numbers their names read as, or that they are for admission tests", () => {
+    const shown = (name: string) => {
+      const look = classLook(name);
+      return look.numbers ?? (look.admission ? "admission" : null);
+    };
+    expect(shown("নবম শ্রেণি")).toEqual([9]);
+    expect(shown("নবম-দশম শ্রেণি")).toEqual([9, 10]);
+    expect(shown("এসএসসি")).toEqual([9, 10]);
+    expect(shown("এইচএসসি ২০২৬ ব্যাচ")).toEqual([11, 12]);
+    expect(shown("HSC 2027 batch")).toEqual([11, 12]);
+    expect(shown("একাদশ শ্রেণি")).toEqual([11]);
+    expect(shown("Class 6")).toEqual([6]);
+    expect(shown("৮ম শ্রেণি")).toEqual([8]);
+    expect(shown("দ্বিতীয় শ্রেণি")).toEqual([2]);
+    expect(shown("দ্বিতীয় শ্রেণি")).toEqual([2]);
+    expect(shown("মেডিকেল ভর্তি প্রস্তুতি")).toBe("admission");
+    expect(shown("ইঞ্জিনিয়ারিং ভর্তি ২০২৬")).toBe("admission");
+    expect(shown("স্পোকেন ইংলিশ")).toBeNull();
+    expect(shown("২০২৬ ব্যাচ")).toBeNull();
+    expect(["ষষ্ঠ শ্রেণি", "দশম শ্রেণি", "এইচএসসি", "ভর্তি পরীক্ষা", "আইইএলটিএস"].map((name) => classLook(name).tone)).toEqual([
+      "orange",
+      "green",
+      "blue",
+      "purple",
+      "gray",
+    ]);
+  });
+
+  it("are listed by the class each name reads as, then in the order they were added", () => {
+    const named = (name: string, position: number) => ({ name, position, number: position + 1 });
+    const sorted = sortClasses([
+      named("এইচএসসি", 0),
+      named("স্পোকেন ইংলিশ", 1),
+      named("নবম শ্রেণি", 2),
+      named("ভর্তি পরীক্ষা", 3),
+      named("ষষ্ঠ শ্রেণি", 4),
+      named("HSC 2027", 5),
+    ]);
+    expect(sorted.map((c) => c.name)).toEqual(["ষষ্ঠ শ্রেণি", "নবম শ্রেণি", "এইচএসসি", "HSC 2027", "ভর্তি পরীক্ষা", "স্পোকেন ইংলিশ"]);
+  });
+
+  it("suggest the subject names of the class each name reads as", () => {
+    expect(classKey("দশম শ্রেণি")).toBe("ssc");
+    expect(classKey("এইচএসসি ২০২৬")).toBe("hsc");
+    expect(classKey("সপ্তম শ্রেণি")).toBe("class-7");
+    expect(classKey("ভর্তি পরীক্ষা")).toBe("admission");
+    expect(classKey("পঞ্চম শ্রেণি")).toBe("other");
+    expect(classKey("স্পোকেন ইংলিশ")).toBe("other");
+  });
+});
+
+describe("the fixed class list (courses)", () => {
   it("are known keys, with anything else read as other", () => {
     expect(GRADES).toContain("hsc");
     expect(isGrade("hsc")).toBe(true);
@@ -158,22 +220,24 @@ describe("subjects and chapters", () => {
     expect(long.chapters).toBe("tooLong");
   });
 
-  it("need a name, and fall back to other for an unknown class and to no group", () => {
-    expect(parseSubject({ name: " পদার্থবিজ্ঞান ১ম পত্র ", grade: "hsc", group: "science", chapters: "ভেক্টর\nগতিবিদ্যা" })).toEqual({
-      subject: { grade: "hsc", group: "science", name: "পদার্থবিজ্ঞান ১ম পত্র" },
+  it("need a name and a class, and fall back to no group", () => {
+    const classId = "6f1c2d3e-4a5b-4c6d-8e7f-001122334455";
+    expect(parseSubject({ name: " পদার্থবিজ্ঞান ১ম পত্র ", classId, group: "science", chapters: "ভেক্টর\nগতিবিদ্যা" })).toEqual({
+      subject: { classId, group: "science", name: "পদার্থবিজ্ঞান ১ম পত্র" },
       chapters: ["ভেক্টর", "গতিবিদ্যা"],
       errors: {},
     });
-    const { subject, errors } = parseSubject({ name: "", grade: "HSC", group: "arts" });
-    expect(subject.grade).toBe("other");
+    const { subject, errors } = parseSubject({ name: "", classId: "hsc", group: "arts" });
     expect(subject.group).toBe("");
-    expect(errors.name).toBe("required");
+    expect(errors).toEqual({ name: "required", classId: "invalid" });
+    expect(parseSubject({ name: "গণিত" }).errors).toEqual({ classId: "required" });
     expect(parseBankChapter({ title: "", label: "ক".repeat(31) }).errors).toEqual({ title: "required", label: "tooLong" });
   });
 });
 
 describe("buildBankTree", () => {
-  const subject = (id: string, grade: string, chapters: string[]) => ({ id, grade, chapters: chapters.map((c) => ({ id: c })) });
+  const cls = (id: string) => ({ id });
+  const subject = (id: string, classId: string, chapters: string[]) => ({ id, classId, chapters: chapters.map((c) => ({ id: c })) });
   const rows: CountRow[] = [
     { subjectId: "p1", chapterId: "c1", type: "mcq", board: false, n: 1 },
     { subjectId: "p1", chapterId: "c1", type: "mcq", board: true, n: 2 },
@@ -185,9 +249,13 @@ describe("buildBankTree", () => {
     { subjectId: "gone", chapterId: null, type: "mcq", board: false, n: 9 },
   ];
 
-  it("groups subjects by class in the bank's order, with each tab's count at every level", () => {
-    const tree = buildBankTree([subject("s1", "ssc", ["d1"]), subject("p1", "hsc", ["c1", "c2", "c3"]), subject("e1", "nonsense", [])], rows);
-    expect(tree.map((g) => g.grade)).toEqual(["ssc", "hsc", "other"]);
+  it("groups subjects by class in the order given, with each tab's count at every level", () => {
+    const tree = buildBankTree(
+      [cls("ssc"), cls("hsc"), cls("empty")],
+      [subject("s1", "ssc", ["d1"]), subject("p1", "hsc", ["c1", "c2", "c3"]), subject("e1", "gone", [])],
+      rows,
+    );
+    expect(tree.map((g) => g.bankClass.id)).toEqual(["ssc", "hsc", "empty"]);
 
     const [p1] = tree[1].subjects;
     expect(p1.chapters.map((c) => [c.chapter.id, c.counts.mcq, c.counts.board, c.total])).toEqual([
@@ -201,32 +269,34 @@ describe("buildBankTree", () => {
     expect(tree[1].counts).toEqual({ textbook: 1, practice: 0, mcq: 5, sq: 4, cq: 0, board: 6 });
     expect(totalOf(tree[1].counts)).toBe(tree[1].total);
     expect(tree[0].total).toBe(5);
-    expect(tree[2].subjects.map((s) => s.subject.id)).toEqual(["e1"]);
-    expect(tree[2].total).toBe(0);
+    // A class without a subject yet is listed, empty; a subject of a class not given is left out.
+    expect(tree[2]).toEqual({ bankClass: { id: "empty" }, subjects: [], counts: emptyCounts(), total: 0 });
+    expect(tree.flatMap((g) => g.subjects.map((s) => s.subject.id))).not.toContain("e1");
   });
 
   it("keeps the teacher's subject order within a class", () => {
-    const tree = buildBankTree([subject("b", "hsc", []), subject("x", "ssc", []), subject("a", "hsc", [])], []);
-    expect(tree.map((g) => [g.grade, g.subjects.map((s) => s.subject.id)])).toEqual([
+    const tree = buildBankTree([cls("ssc"), cls("hsc")], [subject("b", "hsc", []), subject("x", "ssc", []), subject("a", "hsc", [])], []);
+    expect(tree.map((g) => [g.bankClass.id, g.subjects.map((s) => s.subject.id)])).toEqual([
       ["ssc", ["x"]],
       ["hsc", ["b", "a"]],
     ]);
   });
 
-  it("lists the classes the teacher added, in the bank's order, before they have a subject", () => {
-    const tree = buildBankTree([subject("p1", "hsc", ["c1"])], rows, ["admission", "class-6", "hsc", "nonsense"]);
-    expect(tree.map((g) => [g.grade, g.subjects.length, g.total])).toEqual([
-      ["class-6", 0, 0],
-      ["hsc", 1, 9],
-      ["admission", 0, 0],
+  it("counts one subject on its own, chapter by chapter", () => {
+    const node = subjectNode(subject("p1", "hsc", ["c1", "c2"]), rows);
+    expect(node.chapters.map((c) => [c.chapter.id, c.total])).toEqual([
+      ["c1", 5],
+      ["c2", 1],
     ]);
-    // The website never shows an empty class.
-    expect(withQuestions(tree).map((g) => g.grade)).toEqual(["hsc"]);
+    expect(node.unfiled.total).toBe(4);
+    expect(node.total).toBe(10);
   });
 
   it("leaves out, for the website, subjects and classes with no questions", () => {
-    const tree = withQuestions(buildBankTree([subject("p1", "hsc", ["c1"]), subject("p2", "hsc", []), subject("e1", "admission", [])], rows));
-    expect(tree.map((g) => g.grade)).toEqual(["hsc"]);
+    const tree = withQuestions(
+      buildBankTree([cls("hsc"), cls("adm"), cls("empty")], [subject("p1", "hsc", ["c1"]), subject("p2", "hsc", []), subject("e1", "adm", [])], rows),
+    );
+    expect(tree.map((g) => g.bankClass.id)).toEqual(["hsc"]);
     expect(tree[0].subjects.map((s) => s.subject.id)).toEqual(["p1"]);
   });
 });

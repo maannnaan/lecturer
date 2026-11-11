@@ -7,7 +7,6 @@ import { formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { chapterLabel } from "@/lib/chapter-label";
 import { asciiDigits } from "@/lib/digits";
-import { gradeName } from "@/lib/grades";
 import { SECTION_TABS, filtersFromParams, tabFromParam } from "@/lib/questions";
 import { getDb } from "@/server/db";
 import { CHAPTER_PAGE_SIZE, PRINT_LIMIT, listChapterForPrint, listChapterQuestions } from "@/server/questions";
@@ -16,25 +15,25 @@ import { getPageSubject } from "../data";
 
 export const instant = false;
 
-type Params = Promise<{ handle: string; grade: string; subject: string; chapter: string }>;
+type Params = Promise<{ handle: string; classNo: string; subject: string; chapter: string }>;
 type Search = Promise<{ tab?: string; board?: string; year?: string; diff?: string; src?: string; page?: string; q?: string; print?: string }>;
 
-async function getPageChapter(handle: string, grade: string, subject: string, chapterNumber: string) {
-  const found = await getPageSubject(handle, grade, subject);
+async function getPageChapter(handle: string, classNo: string, subject: string, chapterNumber: string) {
+  const found = await getPageSubject(handle, classNo, subject);
   if (!found || !/^\d{1,6}$/.test(chapterNumber)) return null;
   const index = found.node.subject.chapters.findIndex((ch) => ch.number === Number(chapterNumber));
   return index < 0 ? null : { ...found, chapter: found.node.subject.chapters[index], index };
 }
 
 export async function generateMetadata({ params, searchParams }: { params: Params; searchParams: Search }): Promise<Metadata> {
-  const { handle, grade, subject, chapter } = await params;
-  const found = await getPageChapter(handle, grade, subject, chapter);
+  const { handle, classNo, subject, chapter } = await params;
+  const found = await getPageChapter(handle, classNo, subject, chapter);
   if (!found || found.teacher.status !== "approved") return { robots: { index: false } };
   const s = found.node.subject;
   const printing = Boolean((await searchParams).print);
   return {
     title: { absolute: `${found.chapter.title} — ${s.name} · ${found.teacher.nameBn}` },
-    alternates: { canonical: `/${found.teacher.handle}/bank/${grade}/${s.number}/${found.chapter.number}` },
+    alternates: { canonical: `/${found.teacher.handle}/bank/${found.bankClass.number}/${s.number}/${found.chapter.number}` },
     robots: printing ? { index: false } : undefined,
   };
 }
@@ -44,10 +43,10 @@ export async function generateMetadata({ params, searchParams }: { params: Param
  * filters, answers to reveal and MCQs to check. `?print=chapter|board` is the printable sheet.
  */
 export default async function SiteBankChapterPage({ params, searchParams }: { params: Params; searchParams: Search }) {
-  const { handle, grade, subject: subjectNumber, chapter: chapterNumber } = await params;
-  const found = await getPageChapter(handle, grade, subjectNumber, chapterNumber);
+  const { handle, classNo, subject: subjectNumber, chapter: chapterNumber } = await params;
+  const found = await getPageChapter(handle, classNo, subjectNumber, chapterNumber);
   if (!found) notFound();
-  const { teacher, node, chapter, index } = found;
+  const { teacher, bankClass, node, chapter, index } = found;
   const { subject } = node;
   const locale = await getLocale(teacher.locale);
   const d = getDictionary(locale);
@@ -56,7 +55,8 @@ export default async function SiteBankChapterPage({ params, searchParams }: { pa
   const db = await getDb();
 
   const home = `/${teacher.handle}`;
-  const subjectPath = `${home}/bank/${grade}/${subject.number}`;
+  const classPath = `${home}/bank/${bankClass.number}`;
+  const subjectPath = `${classPath}/${subject.number}`;
   const path = `${subjectPath}/${chapter.number}`;
   const label = chapterLabel(chapter, index, d, locale);
   const place = { subjectId: subject.id, chapterId: chapter.id };
@@ -98,7 +98,7 @@ export default async function SiteBankChapterPage({ params, searchParams }: { pa
           items={[
             { label: owner, href: home },
             { label: d.site.bank.title, href: `${home}/bank` },
-            { label: gradeName(grade, d).label, href: `${home}/bank/${grade}` },
+            { label: bankClass.name, href: classPath },
             { label: subject.name, href: subjectPath },
             { label },
           ]}

@@ -2,7 +2,7 @@ import "server-only";
 import { connection } from "next/server";
 import { cache } from "react";
 import { buildBankTree, withQuestions } from "@/lib/bank-tree";
-import { listSubjects, listSubjectsWithChapters } from "@/server/bank";
+import { listBankClasses, listSubjects, listSubjectsWithChapters } from "@/server/bank";
 import { listPublishedCourses } from "@/server/courses";
 import { getDb } from "@/server/db";
 import { listNotices } from "@/server/notices";
@@ -25,15 +25,25 @@ export const getSiteCourses = cache(async (teacherId: string) => {
   return listPublishedCourses(await getDb(), teacherId);
 });
 
+/** The teacher's bank classes, in the bank's order, those without questions too. */
+export const getSiteClasses = cache(async (teacherId: string) => {
+  await connection();
+  return listBankClasses(await getDb(), teacherId);
+});
+
 /**
  * The website's question bank: classes › subjects › chapters, with each section's count of
- * public questions. Subjects without any public question aren't listed.
+ * public questions. Subjects without any public question, and classes left empty, aren't listed.
  */
 export const getSiteBank = cache(async (teacherId: string) => {
   await connection();
   const db = await getDb();
-  const [subjects, counts] = await Promise.all([listSubjectsWithChapters(db, teacherId), bankCounts(db, teacherId, { publicOnly: true })]);
-  return withQuestions(buildBankTree(subjects, counts));
+  const [classes, subjects, counts] = await Promise.all([
+    getSiteClasses(teacherId),
+    listSubjectsWithChapters(db, teacherId),
+    bankCounts(db, teacherId, { publicOnly: true }),
+  ]);
+  return withQuestions(buildBankTree(classes, subjects, counts));
 });
 
 /** Every bank subject of the teacher, in order: what each subject's colour is worked out from. */

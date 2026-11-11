@@ -8,7 +8,7 @@ import type { QbSubjectCard } from "./subject-groups";
 
 // Data the question bank's pages share between the dashboard and the website.
 
-type SubjectRow = { id: string; grade: string; group: string; name: string };
+type SubjectRow = { id: string; classId: string; group: string; name: string };
 
 /** The group tabs a class page needs: the groups its subjects use, in order, "other" last. */
 export function groupTabs(subjects: { group: string }[], d: Dictionary): { key: string; label: string }[] {
@@ -17,8 +17,8 @@ export function groupTabs(subjects: { group: string }[], d: Dictionary): { key: 
 }
 
 /** A subject's colour: by its place among its class's subjects, in the teacher's order. */
-export function toneFor(subject: { id: string; grade: string }, all: SubjectRow[]) {
-  const inClass = all.filter((s) => s.grade === subject.grade);
+export function toneFor(subject: { id: string; classId: string }, all: SubjectRow[]) {
+  const inClass = all.filter((s) => s.classId === subject.classId);
   return subjectTone(Math.max(0, inClass.findIndex((s) => s.id === subject.id)));
 }
 

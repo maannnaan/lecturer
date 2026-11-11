@@ -10,7 +10,8 @@ export type FieldError =
   | "pricePositive"
   | "dateOrder"
   | "invalid"
-  | "pickAnswer";
+  | "pickAnswer"
+  | "classTaken";
 
 export type FieldErrors = Record<string, FieldError>;
 

@@ -4,7 +4,6 @@ import { QbCrumbs } from "@/components/qbank/ui";
 import { type QbCtx, QbClassesView } from "@/components/qbank/views";
 import { formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
-import { gradeName } from "@/lib/grades";
 import { getSite, getSiteBank } from "../data";
 
 export const instant = false;
@@ -42,10 +41,11 @@ export default async function SiteBankPage({ params }: { params: Params }) {
       title={b.title}
       lead={b.lead}
       heading={ctx.voice.chooseClass}
-      grades={tree.map((g) => ({
-        grade: g.grade,
-        href: `${home}/bank/${g.grade}`,
-        line: `${gradeName(g.grade, d).detail} · ${b.subjects(formatNumber(g.subjects.length, locale))}`,
+      classes={tree.map(({ bankClass, subjects }) => ({
+        id: bankClass.id,
+        name: bankClass.name,
+        href: `${home}/bank/${bankClass.number}`,
+        line: b.subjects(formatNumber(subjects.length, locale)),
       }))}
       empty={<p className="m-0 rounded-2xl border border-qb-line bg-qb-surface p-6 text-qb-muted">{b.empty}</p>}
     />

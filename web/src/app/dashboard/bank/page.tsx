@@ -5,7 +5,6 @@ import { type QbCtx, QbClassesView } from "@/components/qbank/views";
 import { formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { buildBankTree } from "@/lib/bank-tree";
-import { GRADES, gradeName } from "@/lib/grades";
 import { requireTeacher } from "@/server/auth/current";
 import { listBankClasses, listSubjectsWithChapters } from "@/server/bank";
 import { getDb } from "@/server/db";
@@ -23,33 +22,31 @@ export default async function BankPage() {
   const t = d.dashboard.bank;
   const ctx: QbCtx = { d, locale, voice: t.qb, titleAs: "h2" };
   const db = await getDb();
-  const [subjects, counts, classes] = await Promise.all([
+  const [classes, subjects, counts] = await Promise.all([
+    listBankClasses(db, teacher.id),
     listSubjectsWithChapters(db, teacher.id),
     bankCounts(db, teacher.id),
-    listBankClasses(db, teacher.id),
   ]);
-  const tree = buildBankTree(subjects, counts, classes);
+  const tree = buildBankTree(classes, subjects, counts);
 
   return (
     <QbClassesView
       ctx={ctx}
       title={t.title}
       actions={
-        // Every class is in the bank already: nothing left to add.
-        tree.length < GRADES.length ? (
-          <Link href="/dashboard/bank/class/new" className={cx(qbButton.accent, "h-11 px-4")}>
-            <span aria-hidden="true" className="text-[20px] leading-none">
-              +
-            </span>
-            {t.newClass}
-          </Link>
-        ) : undefined
+        <Link href="/dashboard/bank/class/new" className={cx(qbButton.accent, "h-11 px-4")}>
+          <span aria-hidden="true" className="text-[20px] leading-none">
+            +
+          </span>
+          {t.newClass}
+        </Link>
       }
       heading={t.qb.chooseClass}
-      grades={tree.map((g) => ({
-        grade: g.grade,
-        href: `/dashboard/bank/class/${g.grade}`,
-        line: `${gradeName(g.grade, d).detail} · ${t.subjects(formatNumber(g.subjects.length, locale))} · ${t.total(formatNumber(g.total, locale))}`,
+      classes={tree.map(({ bankClass, subjects: inClass, total }) => ({
+        id: bankClass.id,
+        name: bankClass.name,
+        href: `/dashboard/bank/class/${bankClass.id}`,
+        line: `${t.subjects(formatNumber(inClass.length, locale))} · ${t.total(formatNumber(total, locale))}`,
       }))}
       empty={<p className="m-0 rounded-2xl border border-qb-line bg-qb-surface p-6 text-qb-muted">{t.noClasses}</p>}
     />

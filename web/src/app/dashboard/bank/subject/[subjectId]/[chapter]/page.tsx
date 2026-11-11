@@ -8,13 +8,12 @@ import { QbCrumbs, cx, qbButton } from "@/components/qbank/ui";
 import { type QbCtx, QbChapterView, QbPrintView, pad2, printSubtitle, toCard } from "@/components/qbank/views";
 import { type Dictionary, formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
-import { buildBankTree } from "@/lib/bank-tree";
+import { subjectNode } from "@/lib/bank-tree";
 import { chapterLabel } from "@/lib/chapter-label";
 import { asciiDigits } from "@/lib/digits";
-import { gradeName, gradeOf } from "@/lib/grades";
 import { SECTION_TABS, activeFilters, filtersFromParams, tabFromParam, tabTypes } from "@/lib/questions";
 import { requireTeacher } from "@/server/auth/current";
-import { getSubject, listSubjects } from "@/server/bank";
+import { getBankClass, getSubject, listSubjects } from "@/server/bank";
 import { getDb } from "@/server/db";
 import { BANK_PAGE_SIZE, type Question, PRINT_LIMIT, bankCounts, listChapterForPrint, listChapterQuestions } from "@/server/questions";
 import { duplicateQuestionAction, moveQuestionAction } from "../../../actions";
@@ -82,7 +81,6 @@ export default async function BankChapterPage({ params, searchParams }: { params
   const t = d.dashboard.bank;
   const ctx: QbCtx = { d, locale, voice: t.qb, titleAs: "h2" };
   const s = await searchParams;
-  const grade = gradeOf(subject);
   const label = chapter ? chapterLabel(chapter, index, d, locale) : t.unfiled;
   const path = `/dashboard/bank/subject/${subject.id}/${chapter?.id ?? "unfiled"}`;
   const place = { subjectId: subject.id, chapterId: chapter?.id ?? null };
@@ -104,8 +102,9 @@ export default async function BankChapterPage({ params, searchParams }: { params
     );
   }
 
-  const [counts, all] = await Promise.all([bankCounts(db, teacher.id), listSubjects(db, teacher.id)]);
-  const node = buildBankTree([subject], counts)[0].subjects[0];
+  const [counts, all, bankClass] = await Promise.all([bankCounts(db, teacher.id), listSubjects(db, teacher.id), getBankClass(db, teacher.id, subject.classId)]);
+  if (!bankClass) notFound();
+  const node = subjectNode(subject, counts);
   const allCounts = chapter ? node.chapters[index].counts : node.unfiled.counts;
   const tab = tabFromParam(s.tab) ?? SECTION_TABS.find((x) => allCounts[x] > 0) ?? SECTION_TABS[0];
   const page = Math.max(1, Number(asciiDigits(s.page ?? "")) || 1);
@@ -127,7 +126,7 @@ export default async function BankChapterPage({ params, searchParams }: { params
             {t.addTo(d.questions.types[type])}
           </Link>
         ));
-  const onSite = chapter && allCounts[tab] > 0 ? `/${teacher.handle}/bank/${grade}/${subject.number}/${chapter.number}?tab=${tab}` : null;
+  const onSite = chapter && allCounts[tab] > 0 ? `/${teacher.handle}/bank/${bankClass.number}/${subject.number}/${chapter.number}?tab=${tab}` : null;
   const prev = chapter ? subject.chapters[index - 1] : undefined;
   const next = chapter ? subject.chapters[index + 1] : undefined;
   const subjectPath = `/dashboard/bank/subject/${subject.id}`;
@@ -140,7 +139,7 @@ export default async function BankChapterPage({ params, searchParams }: { params
           label={d.common.breadcrumb}
           items={[
             { label: t.title, href: "/dashboard/bank" },
-            { label: gradeName(grade, d).label, href: `/dashboard/bank/class/${grade}` },
+            { label: bankClass.name, href: `/dashboard/bank/class/${bankClass.id}` },
             { label: subject.name, href: subjectPath },
             { label },
           ]}

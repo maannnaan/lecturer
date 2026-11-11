@@ -16,7 +16,7 @@ import type { SubjectGroup } from "@/lib/bank";
 import type { Grade } from "@/lib/grades";
 import { parseQuestion } from "@/lib/questions";
 import type { ThemeName } from "@/lib/themes";
-import { createSubject, getSubject } from "@/server/bank";
+import { createBankClass, createSubject, getSubject } from "@/server/bank";
 import { addChapter, createCourse, listCourses } from "@/server/courses";
 import { createNotice } from "@/server/notices";
 import { createQuestion } from "@/server/questions";
@@ -44,9 +44,9 @@ type DemoCourse = {
   price?: number;
   chapters: (string | DemoChapter)[];
 };
-/** A subject of the question bank, which is separate from the courses. */
+/** A subject of the question bank, which is separate from the courses, and the class it is in. */
 type DemoSubject = {
-  grade: Grade;
+  className: string;
   group?: SubjectGroup;
   name: string;
   chapters: string[];
@@ -338,13 +338,13 @@ const DEMO: DemoTeacher[] = [
     ],
     bank: [
       {
-        grade: "hsc",
+        className: "এইচএসসি",
         group: "science",
         name: "পদার্থবিজ্ঞান ১ম পত্র",
         chapters: titles(HSC_PHYSICS_1),
         questions: { 2: KINEMATICS, 3: NEWTONIAN_MECHANICS },
       },
-      { grade: "ssc", group: "science", name: "পদার্থবিজ্ঞান", chapters: titles(SSC_PHYSICS), questions: { 1: SSC_MOTION } },
+      { className: "এসএসসি", group: "science", name: "পদার্থবিজ্ঞান", chapters: titles(SSC_PHYSICS), questions: { 1: SSC_MOTION } },
     ],
     notices: [
       { title: "এ সপ্তাহে শুক্রবারের ক্লাস রবিবার বিকেল ৪টায় হবে।", pinned: true, daysAgo: 2 },
@@ -394,7 +394,7 @@ const DEMO: DemoTeacher[] = [
     ],
     bank: [
       {
-        grade: "hsc",
+        className: "এইচএসসি",
         name: "রসায়ন ১ম পত্র",
         chapters: titles(HSC_CHEMISTRY_1),
         questions: {
@@ -484,9 +484,13 @@ async function main() {
           });
         }
       }
+      // Each class once, numbered in the order the subjects first name them.
+      const classIds = new Map<string, string>();
       for (const b of t.bank ?? []) {
-        const created = await createSubject(db, id, { grade: b.grade, group: b.group ?? "", name: b.name }, b.chapters);
-        const subject = (await getSubject(db, id, created.id))!;
+        const classId = classIds.get(b.className) ?? (await createBankClass(db, id, { name: b.className })).id;
+        classIds.set(b.className, classId);
+        const created = await createSubject(db, id, { classId, group: b.group ?? "", name: b.name }, b.chapters);
+        const subject = (await getSubject(db, id, created!.id))!;
         for (const [index, list] of Object.entries(b.questions ?? {})) {
           for (const fields of list) {
             const { question, errors } = parseQuestion({ ...fields, subjectId: subject.id, chapterId: subject.chapters[Number(index)].id });

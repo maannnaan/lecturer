@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { parseSubject } from "@/lib/bank";
 import { parseQuestion } from "@/lib/questions";
-import { createSubject, deleteBankChapter, deleteSubject, getSubject } from "@/server/bank";
+import { createBankClass, createSubject, deleteBankChapter, deleteSubject, getSubject } from "@/server/bank";
 import type { Database } from "@/server/db";
 import { media } from "@/server/db/schema";
 import {
@@ -34,10 +34,11 @@ function input(type: string, subjectId: string, chapterId: string | null, extra:
   return question;
 }
 
-/** A bank subject with two chapters. */
+/** A bank subject with two chapters, in a class of its own. */
 async function setup(t: Teacher) {
-  const created = await createSubject(db, t.id, parseSubject({ name: "পদার্থবিজ্ঞান", grade: "hsc" }).subject, ["ভেক্টর", "গতিবিদ্যা"]);
-  const subject = (await getSubject(db, t.id, created.id))!;
+  const bankClass = await createBankClass(db, t.id, { name: "এইচএসসি" });
+  const created = await createSubject(db, t.id, parseSubject({ name: "পদার্থবিজ্ঞান", classId: bankClass.id }).subject, ["ভেক্টর", "গতিবিদ্যা"]);
+  const subject = (await getSubject(db, t.id, created!.id))!;
   return { subject, ch1: subject.chapters[0], ch2: subject.chapters[1] };
 }
 

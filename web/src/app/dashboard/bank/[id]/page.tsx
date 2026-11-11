@@ -5,10 +5,9 @@ import { ArrowLeft, Copy, Eye } from "lucide-react";
 import { PendingButton } from "@/components/form";
 import { getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
-import { gradeOf } from "@/lib/grades";
 import { tabOf } from "@/lib/questions";
 import { requireTeacher } from "@/server/auth/current";
-import { listSubjectsWithChapters } from "@/server/bank";
+import { listBankClasses, listSubjectsWithChapters } from "@/server/bank";
 import { getDb } from "@/server/db";
 import { getQuestion } from "@/server/questions";
 import { duplicateQuestionAction } from "../actions";
@@ -26,16 +25,17 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ i
   const db = await getDb();
   const question = await getQuestion(db, teacher.id, id);
   if (!question) notFound();
-  const subjects = await listSubjectsWithChapters(db, teacher.id);
+  const [subjects, classes] = await Promise.all([listSubjectsWithChapters(db, teacher.id), listBankClasses(db, teacher.id)]);
   const locale = await getLocale();
   const d = getDictionary(locale);
   const t = d.dashboard.bank;
 
   const subject = subjects.find((x) => x.id === question.subjectId);
   const chapter = subject?.chapters.find((ch) => ch.id === question.chapterId);
+  const bankClass = classes.find((x) => x.id === subject?.classId);
   const onSite =
-    question.visibility === "public" && subject && chapter
-      ? `/${teacher.handle}/bank/${gradeOf(subject)}/${subject.number}/${chapter.number}?tab=${tabOf(question.type)}`
+    question.visibility === "public" && subject && chapter && bankClass
+      ? `/${teacher.handle}/bank/${bankClass.number}/${subject.number}/${chapter.number}?tab=${tabOf(question.type)}`
       : null;
 
   return (
@@ -80,7 +80,7 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ i
           videoUrl: question.videoUrl,
         }}
         type={question.type}
-        subjects={subjectChoices(subjects, d, locale)}
+        subjects={subjectChoices(subjects, classes, d, locale)}
         defaults={{ subjectId: question.subjectId, chapterId: question.chapterId ?? "" }}
         t={t.form}
         q={d.questions}

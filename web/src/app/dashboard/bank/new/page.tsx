@@ -5,7 +5,7 @@ import { getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { QUESTION_TYPES, type QuestionType, tabOf } from "@/lib/questions";
 import { requireTeacher } from "@/server/auth/current";
-import { listSubjectsWithChapters } from "@/server/bank";
+import { listBankClasses, listSubjectsWithChapters } from "@/server/bank";
 import { getDb } from "@/server/db";
 import { subjectChoices } from "../choices";
 import { NoSubjects } from "../no-subjects";
@@ -23,7 +23,8 @@ export default async function NewQuestionPage({ searchParams }: { searchParams: 
   const d = getDictionary(locale);
   const t = d.dashboard.bank;
   const s = await searchParams;
-  const subjects = await listSubjectsWithChapters(await getDb(), teacher.id);
+  const db = await getDb();
+  const [subjects, classes] = await Promise.all([listSubjectsWithChapters(db, teacher.id), listBankClasses(db, teacher.id)]);
   const type = (QUESTION_TYPES as readonly string[]).includes(s.type ?? "") ? (s.type as QuestionType) : null;
 
   // Back to where the teacher came from: the chapter (on this type's section), the subject, or the bank.
@@ -96,7 +97,7 @@ export default async function NewQuestionPage({ searchParams }: { searchParams: 
         // A fresh, empty form after each "add and write the next".
         key={s.added ?? "new"}
         type={type}
-        subjects={subjectChoices(subjects, d, locale)}
+        subjects={subjectChoices(subjects, classes, d, locale)}
         defaults={{ subjectId: subject.id, chapterId }}
         t={t.form}
         q={d.questions}

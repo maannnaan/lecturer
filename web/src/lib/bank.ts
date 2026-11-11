@@ -1,5 +1,5 @@
 import { type FieldErrors, type Input, text } from "./form-input";
-import { GRADES } from "./grades";
+import { isUuid } from "./ids";
 
 /** How many chapters one pasted list may add. */
 export const MAX_CHAPTERS_AT_ONCE = 60;
@@ -36,11 +36,27 @@ export function chapterLines(raw: string, errors: FieldErrors, name = "chapters"
 export const SUBJECT_GROUPS = ["common", "science", "business", "humanities"] as const;
 export type SubjectGroup = (typeof SUBJECT_GROUPS)[number];
 
+/** A class in the question bank: the name the teacher gives it, e.g. "দশম শ্রেণি". */
+export function parseBankClass(input: Input) {
+  const errors: FieldErrors = {};
+  const bankClass = { name: text(input, "name", 60, errors, true).replace(/\s+/g, " ") };
+  return { bankClass, errors };
+}
+
+/** Whether two class names read the same: letter case, spacing and the two ways to write য় aside. */
+export function sameClassName(a: string, b: string): boolean {
+  const key = (name: string) => name.normalize("NFC").replace(/\s+/g, " ").trim().toLowerCase();
+  return key(a) === key(b);
+}
+
 /** A bank subject's class, group and name, and the chapters to start it with (one per line). */
 export function parseSubject(input: Input) {
   const errors: FieldErrors = {};
+  const classId = (input.classId ?? "").trim();
+  if (!classId) errors.classId = "required";
+  else if (!isUuid(classId)) errors.classId = "invalid";
   const subject = {
-    grade: oneOf(input.grade, GRADES, "other"),
+    classId,
     group: oneOf<SubjectGroup | "">(input.group, SUBJECT_GROUPS, ""),
     name: text(input, "name", 80, errors, true),
   };
@@ -57,5 +73,6 @@ export function parseBankChapter(input: Input) {
   return { chapter, errors };
 }
 
+export type BankClassInput = ReturnType<typeof parseBankClass>["bankClass"];
 export type SubjectInput = ReturnType<typeof parseSubject>["subject"];
 export type BankChapterInput = ReturnType<typeof parseBankChapter>["chapter"];

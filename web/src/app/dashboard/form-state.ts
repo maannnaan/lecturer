@@ -18,6 +18,7 @@ function messages(e: Dictionary["errors"]): Record<FieldError, string> {
     dateOrder: e.dateOrder,
     invalid: e.invalid,
     pickAnswer: e.pickAnswer,
+    classTaken: e.classTaken,
   };
 }
 

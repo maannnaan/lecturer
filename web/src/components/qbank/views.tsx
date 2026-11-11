@@ -3,9 +3,8 @@ import type { ReactNode } from "react";
 import { GraduationCap, Shapes } from "lucide-react";
 import { MathText } from "@/components/math-text";
 import { type Dictionary, type Locale, formatNumber, formatYear } from "@/i18n";
-import { GRADE_NUMBER, GRADE_TONE, type Tone } from "@/lib/bank-look";
+import { type ClassLook, type Tone, classLook } from "@/lib/bank-look";
 import type { TabCounts } from "@/lib/bank-tree";
-import { type Grade, gradeName } from "@/lib/grades";
 import {
   BANK_TABS,
   type BankTab,
@@ -135,17 +134,19 @@ export function toCard(q: Question, number: number, { d, locale }: QbCtx, extra:
 
 /* ── Classes: the bank's first page ─────────────────────────────────────────────────────── */
 
-/** A class's big number in its colour ("০৯–১০"), or an icon for classes without one. */
-export function QbClassNumber({ grade, locale }: { grade: Grade; locale: Locale }) {
-  const numbers = GRADE_NUMBER[grade];
-  const tone = TONE[GRADE_TONE[grade]].text;
-  if (!numbers) {
-    const Icon = grade === "admission" ? GraduationCap : Shapes;
+/**
+ * A class's big number in its colour, read from its name ("দশম শ্রেণি" ১০, "এইচএসসি" ১১–১২), or an
+ * icon for a class without one. Decoration: the class's name is always written beside it.
+ */
+export function QbClassNumber({ look, locale }: { look: ClassLook; locale: Locale }) {
+  const tone = TONE[look.tone].text;
+  if (!look.numbers) {
+    const Icon = look.admission ? GraduationCap : Shapes;
     return <Icon className={cx("size-10", tone)} aria-hidden="true" />;
   }
   return (
-    <span className={cx("font-qb-display text-[34px] font-bold tracking-[-0.03em] @min-[640px]:text-[40px]", tone)}>
-      {numbers.map((n) => pad2(n, locale)).join("–")}
+    <span aria-hidden="true" className={cx("font-qb-display text-[34px] font-bold tracking-[-0.03em] @min-[640px]:text-[40px]", tone)}>
+      {look.numbers.map((n) => pad2(n, locale)).join("–")}
     </span>
   );
 }
@@ -157,7 +158,7 @@ export function QbClassesView({
   title,
   lead,
   actions,
-  grades,
+  classes,
   heading,
   empty,
 }: {
@@ -167,11 +168,11 @@ export function QbClassesView({
   lead?: string;
   /** Beside the title: the dashboard's "নতুন শ্রেণি". */
   actions?: ReactNode;
-  grades: { grade: Grade; href: string; line: string }[];
+  classes: { id: string; name: string; href: string; line: string }[];
   heading: string;
   empty?: ReactNode;
 }) {
-  const { d, locale } = ctx;
+  const { locale } = ctx;
   return (
     <main id="main" className="qb flex-1">
       <div className="border-b border-qb-line bg-qb-surface">
@@ -192,19 +193,19 @@ export function QbClassesView({
         <h2 id="qb-classes" className="m-0 font-qb-display text-[clamp(26px,5vw,34px)] font-bold tracking-[-0.02em]">
           {heading}
         </h2>
-        {grades.length === 0 ? (
+        {classes.length === 0 ? (
           empty
         ) : (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-4 @min-[640px]:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]">
-            {grades.map(({ grade, href, line }) => (
+            {classes.map(({ id, name, href, line }) => (
               <Link
-                key={grade}
+                key={id}
                 href={href}
                 className="flex min-h-[150px] flex-col gap-3.5 rounded-2xl border border-qb-line bg-qb-surface p-[22px] text-qb-ink no-underline hover:border-qb-field hover:text-qb-ink"
               >
-                <QbClassNumber grade={grade} locale={locale} />
-                <span className="mt-auto flex flex-col gap-0.5">
-                  <span className="text-[18px] font-bold">{gradeName(grade, d).label}</span>
+                <QbClassNumber look={classLook(name)} locale={locale} />
+                <span className="mt-auto flex min-w-0 flex-col gap-0.5">
+                  <span className="text-[18px] font-bold [overflow-wrap:anywhere]">{name}</span>
                   <span className="text-[14px] text-qb-subtle">{line}</span>
                 </span>
               </Link>
@@ -221,47 +222,53 @@ export function QbClassesView({
 export function QbClassView({
   ctx,
   crumbs,
-  grade,
+  title,
+  current,
   classes,
   groups,
   subjects,
   add,
+  actions,
   aside,
   empty,
 }: {
   ctx: QbCtx;
   crumbs: ReactNode;
-  grade: Grade;
+  /** The class's name. */
+  title: string;
+  /** The class's id, to mark it in the switcher. */
+  current: string;
   /** The class switcher: the classes this bank has. */
-  classes: { grade: Grade; href: string }[];
+  classes: { id: string; name: string; href: string }[];
   groups: { key: string; label: string }[];
   subjects: QbSubjectCard[];
   add?: { href: string; label: string };
-  /** Below the cards: the dashboard's board-questions banner. */
+  /** Under the title: the dashboard's "শ্রেণির নাম বদলান". */
+  actions?: ReactNode;
+  /** Below the cards: the dashboard's "শ্রেণিটি সরান" for an empty class. */
   aside?: ReactNode;
   empty?: ReactNode;
 }) {
   const { d } = ctx;
-  const name = gradeName(grade, d);
   return (
     <main id="main" className="qb flex-1">
       <div className="qb-x flex flex-col gap-7 pt-8 pb-16">
         {crumbs}
         <div className="flex flex-wrap items-end justify-between gap-5">
-          <div className="flex flex-col gap-1.5">
-            <QbTitle as={ctx.titleAs} size="lg">
-              {name.label}{" "}
-              <span className="font-qb text-[clamp(20px,4.6vw,26px)] font-medium tracking-normal text-qb-subtle">· {name.detail}</span>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <QbTitle as={ctx.titleAs} size="lg" className="[overflow-wrap:anywhere]">
+              {title}
             </QbTitle>
             <p className="m-0 text-[18px] text-qb-muted">{ctx.voice.pickSubject}</p>
+            {actions && <div className="mt-1.5 flex flex-wrap gap-2.5">{actions}</div>}
           </div>
           {classes.length > 1 && (
             <nav aria-label={d.qbank.classes} className="flex flex-wrap gap-1.5 rounded-xl border border-qb-line bg-qb-surface p-1.5">
               {classes.map((c) => {
-                const on = c.grade === grade;
+                const on = c.id === current;
                 return (
                   <Link
-                    key={c.grade}
+                    key={c.id}
                     href={c.href}
                     aria-current={on ? "page" : undefined}
                     className={cx(
@@ -269,7 +276,7 @@ export function QbClassView({
                       on ? "bg-qb-ink text-white hover:text-white" : "text-qb-muted hover:bg-qb-page hover:text-qb-ink",
                     )}
                   >
-                    {gradeName(c.grade, d).label}
+                    {c.name}
                   </Link>
                 );
               })}

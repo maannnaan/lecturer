@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { gradeOf, isGrade } from "@/lib/grades";
+import { isGrade } from "@/lib/grades";
 import { RESERVED_HANDLES } from "@/lib/handles";
 import { ADMIN_COOKIE, TEACHER_COOKIE } from "@/server/auth/cookies";
-import { bankAddress } from "@/server/bank";
+import { bankAddress, bankClassAddress } from "@/server/bank";
 import { courseVisibility } from "@/server/courses";
 import { getDb } from "@/server/db";
 import { lookupHandle } from "@/server/teachers";
@@ -42,18 +42,23 @@ export async function proxy(request: NextRequest) {
   const signedIn = request.cookies.has(TEACHER_COOKIE);
   if ((site.status === "pending" || site.status === "rejected") && !signedIn) return notFound(request);
 
-  // lecturer.bd/<handle>/bank[/<class>[/<subject number>[/<chapter number>]]]
+  // lecturer.bd/<handle>/bank[/<class number>[/<subject number>[/<chapter number>]]]. Before
+  // teachers named their own classes, the class was a fixed-list key (/bank/hsc/1/4): those
+  // addresses are sent on to the class's number.
   if (rest[0] === "bank" && rest.length > 1) {
-    const [, grade, subject, chapter] = rest;
-    if (rest.length > 4 || !isGrade(grade)) return notFound(request);
-    if (subject !== undefined) {
-      const number = /^\d{1,6}$/;
+    const [, cls, subject, chapter] = rest;
+    const number = /^\d{1,6}$/;
+    if (rest.length > 4 || !(number.test(cls) || isGrade(cls))) return notFound(request);
+    if (subject === undefined) {
+      const found = await bankClassAddress(db, site.teacherId, cls);
+      if (!found) return notFound(request);
+      if (String(found.number) !== cls) return redirect(request, `/${handle}/bank/${found.number}${search}`, 308);
+    } else {
       if (!number.test(subject) || (chapter !== undefined && !number.test(chapter))) return notFound(request);
       const found = await bankAddress(db, site.teacherId, Number(subject), chapter === undefined ? undefined : Number(chapter));
       if (!found) return notFound(request);
-      // A subject moved to another class: old links follow it.
-      const actual = gradeOf(found);
-      if (actual !== grade) return redirect(request, `/${handle}/bank/${actual}/${rest.slice(2).join("/")}${search}`, 308);
+      // A subject moved to another class, or an old address: links follow it.
+      if (String(found.classNumber) !== cls) return redirect(request, `/${handle}/bank/${found.classNumber}/${rest.slice(2).join("/")}${search}`, 308);
     }
   }
   // lecturer.bd/<handle>/courses/<number>

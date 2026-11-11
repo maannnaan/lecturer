@@ -2,7 +2,7 @@ import { type Page, expect, test } from "@playwright/test";
 
 // Phase 3: questions and their chapter pages. Runs after phase1/phase2 on the same demo database:
 // tanvir's question bank has the subject HSC পদার্থবিজ্ঞান ১ম পত্র (number 1) with questions in
-// chapters 3 and 4, at /tanvir/bank/hsc/1/<chapter>.
+// chapters 3 and 4, at /tanvir/bank/1/1/<chapter> (class 1, এইচএসসি; subject 1).
 
 const SHOTS = process.env.SHOTS_DIR;
 async function shot(page: Page, name: string) {
@@ -23,7 +23,7 @@ async function login(page: Page, phone: string) {
  */
 const field = (page: Page, label: string) => page.getByLabel(label, { exact: true }).filter({ visible: true });
 
-const SUBJECT = "/tanvir/bank/hsc/1";
+const SUBJECT = "/tanvir/bank/1/1";
 const CHAPTER_4 = `${SUBJECT}/4`;
 const PRIVATE_STEM = "কোনটি নিউটনের তৃতীয় সূত্রের উদাহরণ?";
 
@@ -91,7 +91,7 @@ test("chapter addresses that don't exist are real 404s", async ({ request }) => 
   expect(await missing.text()).toContain("পাতাটি পাওয়া যায়নি");
   expect((await request.get("/no-such-teacher-xyz")).status()).toBe(404);
   expect((await request.get(`${SUBJECT}/abc`)).status()).toBe(404);
-  expect((await request.get("/tanvir/bank/hsc/999/1")).status()).toBe(404);
+  expect((await request.get("/tanvir/bank/1/999/1")).status()).toBe(404);
   // Chapters no longer live under courses: courses are what the website advertises.
   expect((await request.get("/tanvir/courses/1/chapters/4")).status()).toBe(404);
 });
@@ -189,8 +189,12 @@ test("a question is edited, then deleted", async ({ page }) => {
 
 test("another teacher can't open a question's editor", async ({ page }) => {
   await login(page, "01710000001");
-  await page.goto("/dashboard/bank/all");
-  const href = await page.locator("main li:visible").first().getByRole("link", { name: "সম্পাদনা" }).getAttribute("href");
+  await page.goto("/dashboard/bank");
+  await page.getByRole("region", { name: /শ্রেণি বেছে/ }).getByRole("link").filter({ hasText: "এইচএসসি" }).click();
+  await page.locator("#qb-subjects:visible > a").filter({ hasText: "পদার্থবিজ্ঞান ১ম পত্র" }).click();
+  await page.getByRole("list", { name: "অধ্যায়" }).getByRole("link").filter({ hasText: "নিউটনিয়ান বলবিদ্যা" }).click();
+  const href = await page.getByRole("article").first().getByRole("link", { name: "সম্পাদনা" }).getAttribute("href");
+  expect(href).toMatch(/^\/dashboard\/bank\/[0-9a-f-]{36}$/);
   // /login sends a signed-in teacher to the dashboard, so start the second teacher fresh.
   await page.context().clearCookies();
   await login(page, "01710000002");
@@ -213,7 +217,6 @@ test.describe("on a phone", () => {
     for (const path of [
       "/dashboard/bank",
       "/dashboard/bank/class/new",
-      "/dashboard/bank/all",
       "/dashboard/bank/new",
       "/dashboard/bank/new?type=creative",
       "/dashboard/bank/new?type=mcq_multi",

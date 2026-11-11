@@ -4,7 +4,7 @@ import { type Page, expect, test } from "@playwright/test";
 // dashboard. Runs after phase3b on the same demo database: tanvir's HSC পদার্থবিজ্ঞান ১ম পত্র,
 // chapter 4 (নিউটনিয়ান বলবিদ্যা), has every kind of question, four of them public board questions.
 
-const CHAPTER = "/tanvir/bank/hsc/1/4";
+const CHAPTER = "/tanvir/bank/1/1/4";
 const UUID = "[0-9a-f-]{36}";
 
 async function login(page: Page, phone: string) {
@@ -19,6 +19,15 @@ const field = (page: Page, label: string) => page.getByLabel(label, { exact: tru
 const tabs = (page: Page) => page.getByRole("navigation", { name: "প্রশ্নের ধরন" }).getByRole("link");
 const openTab = (page: Page) => page.getByRole("navigation", { name: "প্রশ্নের ধরন" }).locator('[aria-current="page"]');
 const subjectCards = (page: Page) => page.locator("#qb-subjects:visible > a");
+const classCards = (page: Page) => page.getByRole("region", { name: /শ্রেণি বেছে/ }).getByRole("link");
+
+/** The dashboard's এইচএসসি class page, from the bank's first page. */
+async function openHsc(page: Page) {
+  await page.goto("/dashboard/bank");
+  await classCards(page).filter({ hasText: "এইচএসসি" }).click();
+  await expect(page).toHaveURL(new RegExp(`/dashboard/bank/class/${UUID}$`));
+  return page.url();
+}
 /** The board tab's rows: one per board question, each with its Open link. */
 const boardRows = (page: Page) => page.getByRole("listitem").filter({ has: page.getByRole("link", { name: "খোলো" }) });
 
@@ -115,14 +124,15 @@ test("the chapter PDF opens the print dialog on every public question, with its 
 
 test("a subject's group gives its class page tabs, and a question gets a difficulty", async ({ page }) => {
   await login(page, "01710000001");
-  await page.goto("/dashboard/bank/subject/new?grade=hsc");
+  const hsc = await openHsc(page);
+  await subjectCards(page).filter({ hasText: "নতুন বিষয়" }).click();
   await field(page, "বিষয়ের নাম").fill("তথ্য ও যোগাযোগ প্রযুক্তি");
   await field(page, "বিভাগ").selectOption({ label: "সব বিভাগ" });
   await page.getByRole("button", { name: "বিষয় তৈরি করুন" }).click();
   await expect(page).toHaveURL(new RegExp(`/dashboard/bank/subject/${UUID}$`));
   await expect(page.getByText(/এইচএসসি · সব বিভাগের জন্য/)).toBeVisible();
 
-  await page.goto("/dashboard/bank/class/hsc");
+  await page.goto(hsc);
   const groups = page.getByRole("tablist", { name: "বিভাগ" }).getByRole("tab");
   await expect(groups).toHaveText(["সব বিভাগ", "বিজ্ঞান"]);
   // It opens on the group of the teacher's first subject in the class.
@@ -137,7 +147,7 @@ test("a subject's group gives its class page tabs, and a question gets a difficu
   await page.getByRole("link", { name: "বিষয় ও অধ্যায় সম্পাদনা" }).filter({ visible: true }).click();
   await field(page, "হ্যাঁ, বিষয়টি মুছে ফেলতে চাই").check();
   await page.getByRole("button", { name: "মুছে ফেলুন" }).filter({ visible: true }).click();
-  await expect(page).toHaveURL(/\/dashboard\/bank\/class\/hsc$/);
+  await expect(page).toHaveURL(hsc);
   await expect(page.getByRole("tablist", { name: "বিভাগ" })).toHaveCount(0);
 
   await page.goto("/dashboard/bank/new?type=short");
@@ -147,7 +157,7 @@ test("a subject's group gives its class page tabs, and a question gets a difficu
 
 test("in the dashboard each card carries the teacher's tools", async ({ page }) => {
   await login(page, "01710000001");
-  await page.goto("/dashboard/bank/class/hsc");
+  await openHsc(page);
   await subjectCards(page).filter({ hasText: "পদার্থবিজ্ঞান ১ম পত্র" }).click();
   await page.getByRole("list", { name: "অধ্যায়" }).getByRole("link").filter({ hasText: "নিউটনিয়ান বলবিদ্যা" }).click();
   await tabs(page).filter({ hasText: "MCQ" }).click();
