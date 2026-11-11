@@ -39,11 +39,12 @@ function addInto(into: TabCounts, from: TabCounts) {
 }
 
 /**
- * The question bank the way it is browsed: classes (in GRADES order, only those that have
- * subjects) › subjects (in the teacher's order) › chapters (in order, plus unfiled questions), with
- * each tab's question count at every level. Rows for subjects not given are ignored.
+ * The question bank the way it is browsed: classes (in GRADES order: those that have subjects, and
+ * the `classes` given, which may have none yet) › subjects (in the teacher's order) › chapters (in
+ * order, plus unfiled questions), with each tab's question count at every level. Rows for subjects
+ * not given are ignored.
  */
-export function buildBankTree<S extends SubjectLike>(subjects: S[], rows: CountRow[]): BankGrade<S>[] {
+export function buildBankTree<S extends SubjectLike>(subjects: S[], rows: CountRow[], classes: readonly string[] = []): BankGrade<S>[] {
   const byPlace = new Map<string, TabCounts>();
   for (const row of rows) {
     const key = `${row.subjectId}/${row.chapterId ?? ""}`;
@@ -71,7 +72,8 @@ export function buildBankTree<S extends SubjectLike>(subjects: S[], rows: CountR
     group.total = totalOf(group.counts);
     grades.set(grade, group);
   }
-  return GRADES.flatMap((grade) => grades.get(grade) ?? []);
+  const added = new Set(classes);
+  return GRADES.flatMap((grade) => grades.get(grade) ?? (added.has(grade) ? [{ grade, subjects: [], counts: emptyCounts(), total: 0 }] : []));
 }
 
 /** Only the subjects that have questions, and the classes that still have one: the website's bank. */

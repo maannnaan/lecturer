@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { eq, sql } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { parseCourse } from "@/lib/courses";
-import { createSubject, deleteBankChapter, getSubject, listSubjectsWithChapters } from "@/server/bank";
+import { createSubject, deleteBankChapter, getSubject, listBankClasses, listSubjectsWithChapters } from "@/server/bank";
 import { createCourse, deleteCourse } from "@/server/courses";
 import type { Database } from "@/server/db";
 import { courses } from "@/server/db/schema";
@@ -112,5 +112,29 @@ describe("migration 0004_bank_subjects", () => {
     // Migration 0005: subjects and questions from before start with no group and no difficulty.
     expect((await getSubject(db, teacher.id, chem.id))?.group).toBe("");
     expect((await getQuestion(db, teacher.id, filed.id))?.difficulty).toBe("");
+  });
+});
+
+describe("migration 0006_bank_classes", () => {
+  it("keeps in the bank every class that has subjects, each teacher's own", async () => {
+    const { db, finish } = await dbBeforeMigration(6);
+    const one = async <T>(query: ReturnType<typeof sql>) => ((await db.execute(query)) as unknown as { rows: T[] }).rows[0];
+    const teacher = async (handle: string, phone: string) =>
+      one<{ id: string }>(sql`insert into teachers (handle, name_bn, name_en, phone, password_hash) values (${handle}, 'ক', 'K', ${phone}, 'x') returning id`);
+    const subject = async (teacherId: string, number: number, grade: string) =>
+      db.execute(sql`insert into bank_subjects (teacher_id, number, grade, name) values (${teacherId}, ${number}, ${grade}, 'বিষয়')`);
+    const a = await teacher("t1", "01711111111");
+    const b = await teacher("t2", "01722222222");
+    const none = await teacher("t3", "01733333333");
+    await subject(a.id, 1, "hsc");
+    await subject(a.id, 2, "hsc");
+    await subject(a.id, 3, "class-6");
+    await subject(b.id, 1, "admission");
+
+    await finish();
+
+    expect(await listBankClasses(db, a.id)).toEqual(["class-6", "hsc"]);
+    expect(await listBankClasses(db, b.id)).toEqual(["admission"]);
+    expect(await listBankClasses(db, none.id)).toEqual([]);
   });
 });

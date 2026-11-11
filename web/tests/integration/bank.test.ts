@@ -2,14 +2,17 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { parseSubject } from "@/lib/bank";
 import {
   addBankChapters,
+  addBankClass,
   bankAddress,
   createSubject,
   deleteBankChapter,
   deleteSubject,
   getSubject,
   getSubjectByNumber,
+  listBankClasses,
   listSubjectsWithChapters,
   moveBankChapter,
+  removeBankClass,
   updateBankChapter,
   updateSubject,
 } from "@/server/bank";
@@ -26,6 +29,38 @@ const titles = async (t: Teacher, subjectId: string) => (await getSubject(db, t.
 beforeAll(async () => {
   db = await freshDb();
   stranger = await makeTeacher(db);
+});
+
+describe("bank classes", () => {
+  it("are added once, listed in the bank's order, and stay until removed, which needs them empty", async () => {
+    const t = await makeTeacher(db);
+    expect(await listBankClasses(db, t.id)).toEqual([]);
+    await addBankClass(db, t.id, "hsc");
+    await addBankClass(db, t.id, "class-6");
+    await addBankClass(db, t.id, "hsc");
+    expect(await listBankClasses(db, t.id)).toEqual(["class-6", "hsc"]);
+
+    const s = await createSubject(db, t.id, subject("পদার্থবিজ্ঞান ১ম পত্র", "hsc"), ["ভেক্টর"]);
+    expect(await removeBankClass(db, t.id, "hsc")).toBe(false);
+    expect((await getSubject(db, t.id, s.id))?.chapters).toHaveLength(1);
+    expect(await removeBankClass(db, t.id, "class-6")).toBe(true);
+    expect(await removeBankClass(db, t.id, "class-6")).toBe(false);
+    expect(await listBankClasses(db, t.id)).toEqual(["hsc"]);
+
+    // Its last subject gone, the class stays in the bank, empty, until the teacher removes it.
+    await deleteSubject(db, t.id, s.id);
+    expect(await listBankClasses(db, t.id)).toEqual(["hsc"]);
+    expect(await removeBankClass(db, t.id, "hsc")).toBe(true);
+    expect(await listBankClasses(db, t.id)).toEqual([]);
+  });
+
+  it("are each teacher's own", async () => {
+    const t = await makeTeacher(db);
+    await addBankClass(db, t.id, "class-8");
+    expect(await listBankClasses(db, stranger.id)).not.toContain("class-8");
+    expect(await removeBankClass(db, stranger.id, "class-8")).toBe(false);
+    expect(await listBankClasses(db, t.id)).toEqual(["class-8"]);
+  });
 });
 
 describe("bank subjects", () => {
@@ -86,6 +121,18 @@ describe("bank subjects", () => {
     expect(await bankAddress(db, stranger.id, s.number)).toBeNull();
     expect(await titles(t, s.id)).toEqual([[1, "পরমাণুর গঠন"]]);
     expect((await getSubject(db, t.id, s.id))?.name).toBe("রসায়ন");
+  });
+
+  it("bring their class into the bank, when created in it or moved to it", async () => {
+    const t = await makeTeacher(db);
+    const s = await createSubject(db, t.id, subject("গণিত", "ssc"));
+    expect(await listBankClasses(db, t.id)).toEqual(["ssc"]);
+    await updateSubject(db, t.id, s.id, subject("গণিত", "admission"));
+    expect(await listBankClasses(db, t.id)).toEqual(["ssc", "admission"]);
+    // The class it left is empty now and can go; the one it is in can't.
+    expect(await removeBankClass(db, t.id, "ssc")).toBe(true);
+    expect(await removeBankClass(db, t.id, "admission")).toBe(false);
+    expect(await listBankClasses(db, t.id)).toEqual(["admission"]);
   });
 
   it("answer the website's addresses with the class they are in now", async () => {

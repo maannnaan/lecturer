@@ -100,6 +100,9 @@ test("a teacher writes an MCQ with maths, fixes a mistake, and adds the next", a
   await login(page, "01710000001");
   await page.getByRole("link", { name: "প্রশ্নব্যাংক" }).filter({ visible: true }).first().click();
   await expect(page).toHaveURL(/\/dashboard\/bank$/);
+  // Questions are added inside a class's subject: the bank's first page only adds classes.
+  await page.getByRole("region", { name: /শ্রেণি বেছে/ }).getByRole("link").filter({ hasText: "এইচএসসি" }).click();
+  await page.locator("#qb-subjects:visible > a").filter({ hasText: "পদার্থবিজ্ঞান ১ম পত্র" }).click();
   await page.getByRole("link", { name: "নতুন প্রশ্ন" }).filter({ visible: true }).click();
   await expect(page.getByRole("heading", { name: "কোন ধরনের প্রশ্ন লিখবেন?" })).toBeVisible();
   // Next keeps the previous page mounted (hidden) for instant Back, so only count what's visible.
@@ -209,6 +212,7 @@ test.describe("on a phone", () => {
     await login(page, "01710000001");
     for (const path of [
       "/dashboard/bank",
+      "/dashboard/bank/class/new",
       "/dashboard/bank/all",
       "/dashboard/bank/new",
       "/dashboard/bank/new?type=creative",

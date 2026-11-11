@@ -509,7 +509,6 @@ export const en: Dictionary = {
     },
     bank: {
       title: "Question bank",
-      lead: "Questions and solutions by class › subject › chapter, separate from your courses. Public questions appear in your website's question bank for practice.",
       new: "New question",
       empty: "No questions yet. Add your first one.",
       noMatch: "No questions match these filters.",
@@ -519,6 +518,18 @@ export const en: Dictionary = {
       allQuestions: "All questions",
       allLead: "Every class, subject and chapter in one list, to search and filter.",
       newSubject: "New subject",
+      newClass: "New class",
+      noClasses: "Your question bank has no classes yet. Start with “New class”, then add the class's subjects and chapters.",
+      classForm: {
+        lead: "Pick the class you keep questions for. You'll add its subjects and chapters next.",
+        add: "Add",
+        adding: "Adding…",
+        allAdded: "Every class is already in your question bank.",
+      },
+      removeClass: {
+        lead: "If you don't need this class, you can remove it.",
+        button: "Remove class",
+      },
       noSubjects: "Your question bank has no subjects yet. Start with one, such as HSC › Physics 1st paper.",
       noSubjectsInClass: "This class has no subjects yet.",
       noChapters: "This subject has no chapters yet.",

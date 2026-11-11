@@ -213,6 +213,17 @@ describe("buildBankTree", () => {
     ]);
   });
 
+  it("lists the classes the teacher added, in the bank's order, before they have a subject", () => {
+    const tree = buildBankTree([subject("p1", "hsc", ["c1"])], rows, ["admission", "class-6", "hsc", "nonsense"]);
+    expect(tree.map((g) => [g.grade, g.subjects.length, g.total])).toEqual([
+      ["class-6", 0, 0],
+      ["hsc", 1, 9],
+      ["admission", 0, 0],
+    ]);
+    // The website never shows an empty class.
+    expect(withQuestions(tree).map((g) => g.grade)).toEqual(["hsc"]);
+  });
+
   it("leaves out, for the website, subjects and classes with no questions", () => {
     const tree = withQuestions(buildBankTree([subject("p1", "hsc", ["c1"]), subject("p2", "hsc", []), subject("e1", "admission", [])], rows));
     expect(tree.map((g) => g.grade)).toEqual(["hsc"]);

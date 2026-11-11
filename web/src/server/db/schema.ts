@@ -287,6 +287,22 @@ export const notices = pgTable(
 );
 
 /**
+ * A class the teacher keeps questions for (a key from GRADES), added with the bank's "নতুন শ্রেণি".
+ * The bank lists these, even before they have a subject; adding a subject to a class adds the class.
+ */
+export const bankClasses = pgTable(
+  "bank_classes",
+  {
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => teachers.id, { onDelete: "cascade" }),
+    grade: text("grade").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.teacherId, t.grade] })],
+);
+
+/**
  * A subject in the teacher's question bank, e.g. এইচএসসি পদার্থবিজ্ঞান ১ম পত্র. The bank is browsed
  * class › subject › chapter › section, on its own: courses are what the website advertises.
  * `number` (from teachers.subject_counter, never reused) is its public address,

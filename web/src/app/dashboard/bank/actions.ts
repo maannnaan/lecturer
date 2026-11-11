@@ -5,16 +5,18 @@ import { redirect } from "next/navigation";
 import type { FormState } from "@/components/form";
 import { chapterLines, parseBankChapter, parseSubject } from "@/lib/bank";
 import { type FieldErrors, formInput, type Input } from "@/lib/form-input";
-import { gradeOf } from "@/lib/grades";
+import { gradeOf, isGrade } from "@/lib/grades";
 import { parseQuestion } from "@/lib/questions";
 import { requireTeacher } from "@/server/auth/current";
 import {
   addBankChapters,
+  addBankClass,
   createSubject,
   deleteBankChapter,
   deleteSubject,
   getSubject,
   moveBankChapter,
+  removeBankClass,
   updateBankChapter,
   updateSubject,
 } from "@/server/bank";
@@ -46,6 +48,26 @@ async function placementRefusal(reason: Exclude<SaveQuestionResult, { ok: true }
   if (reason === "missing") return { errors: {}, formError: e.generic, values: keep(input) };
   const field = reason === "image" ? "imageId" : reason === "subject" ? "subjectId" : "chapterId";
   return { errors: { [field]: e.invalid }, values: keep(input) };
+}
+
+// ── Classes ──
+
+/** "নতুন শ্রেণি": adds the class picked, then opens it, ready for its first subject. */
+export async function addClassAction(formData: FormData) {
+  const teacher = await requireTeacher();
+  const grade = String(formData.get("grade") ?? "");
+  if (!isGrade(grade)) redirect("/dashboard/bank/class/new");
+  await addBankClass(await getDb(), teacher.id, grade);
+  redirect(`/dashboard/bank/class/${grade}`);
+}
+
+/** Takes an empty class out of the bank. One that has subjects stays, and opens again. */
+export async function removeClassAction(formData: FormData) {
+  const teacher = await requireTeacher();
+  const grade = String(formData.get("grade") ?? "");
+  if (!isGrade(grade)) redirect("/dashboard/bank");
+  const removed = await removeBankClass(await getDb(), teacher.id, grade);
+  redirect(removed ? "/dashboard/bank" : `/dashboard/bank/class/${grade}`);
 }
 
 // ── Subjects and their chapters ──

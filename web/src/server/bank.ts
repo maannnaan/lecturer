@@ -1,13 +1,14 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, notExists, sql } from "drizzle-orm";
 import type { Database } from "@/server/db";
-import { bankChapters, bankSubjects, teachers } from "@/server/db/schema";
+import { bankChapters, bankClasses, bankSubjects, teachers } from "@/server/db/schema";
 import type { BankChapterInput, SubjectInput } from "@/lib/bank";
+import { GRADES, type Grade } from "@/lib/grades";
 import { isUuid } from "@/lib/ids";
-import { renumber, swapped } from "./ordering";
+import { type Tx, renumber, swapped } from "./ordering";
 
-// The question bank's own subjects and chapters (courses are what the website advertises). Like
-// courses, every function takes the teacher's id from the session and filters on it: another
-// teacher's subject or chapter id simply isn't found.
+// The question bank's own classes, subjects and chapters (courses are what the website
+// advertises). Like courses, every function takes the teacher's id from the session and filters on
+// it: another teacher's subject or chapter id simply isn't found.
 
 export type Subject = typeof bankSubjects.$inferSelect;
 export type BankChapter = typeof bankChapters.$inferSelect;
@@ -15,6 +16,34 @@ export type SubjectWithChapters = Subject & { chapters: BankChapter[] };
 
 const subjectOrder = [asc(bankSubjects.position), asc(bankSubjects.number)];
 const chapterOrder = [asc(bankChapters.position), asc(bankChapters.number)];
+
+/** The classes in the teacher's bank, in GRADES order. */
+export async function listBankClasses(db: Database, teacherId: string): Promise<Grade[]> {
+  const rows = await db.select({ grade: bankClasses.grade }).from(bankClasses).where(eq(bankClasses.teacherId, teacherId));
+  const added = new Set(rows.map((row) => row.grade));
+  return GRADES.filter((grade) => added.has(grade));
+}
+
+/** Adds a class to the teacher's bank; a class that is already there stays as it is. */
+export async function addBankClass(db: Database | Tx, teacherId: string, grade: Grade): Promise<void> {
+  await db.insert(bankClasses).values({ teacherId, grade }).onConflictDoNothing();
+}
+
+/**
+ * Takes a class out of the teacher's bank, but only while it has no subject: nothing else is ever
+ * deleted with it. False when the class has subjects, or wasn't in the bank.
+ */
+export async function removeBankClass(db: Database, teacherId: string, grade: string): Promise<boolean> {
+  const inUse = db
+    .select({ id: bankSubjects.id })
+    .from(bankSubjects)
+    .where(and(eq(bankSubjects.teacherId, teacherId), eq(bankSubjects.grade, grade)));
+  const gone = await db
+    .delete(bankClasses)
+    .where(and(eq(bankClasses.teacherId, teacherId), eq(bankClasses.grade, grade), notExists(inUse)))
+    .returning({ grade: bankClasses.grade });
+  return gone.length > 0;
+}
 
 export async function listSubjects(db: Database, teacherId: string): Promise<Subject[]> {
   return db.select().from(bankSubjects).where(eq(bankSubjects.teacherId, teacherId)).orderBy(...subjectOrder);
@@ -62,10 +91,12 @@ export async function getSubjectByNumber(db: Database, teacherId: string, number
 
 /**
  * Adds a subject at the end of the teacher's list, with the next never-used subject number, and
- * its first chapters (numbered 1, 2, 3… in the order given).
+ * its first chapters (numbered 1, 2, 3… in the order given). Its class joins the bank if it wasn't
+ * there yet.
  */
 export async function createSubject(db: Database, teacherId: string, input: SubjectInput, chapterTitles: string[] = []): Promise<Subject> {
   return db.transaction(async (tx) => {
+    await addBankClass(tx, teacherId, input.grade);
     const [{ number }] = await tx
       .update(teachers)
       .set({ subjectCounter: sql`${teachers.subjectCounter} + 1` })
@@ -88,14 +119,19 @@ export async function createSubject(db: Database, teacherId: string, input: Subj
   });
 }
 
+/** Changes a subject's class, group or name; a class it moves to joins the bank. */
 export async function updateSubject(db: Database, teacherId: string, subjectId: string, input: SubjectInput): Promise<Subject | null> {
   if (!isUuid(subjectId)) return null;
-  const [row] = await db
-    .update(bankSubjects)
-    .set(input)
-    .where(and(eq(bankSubjects.id, subjectId), eq(bankSubjects.teacherId, teacherId)))
-    .returning();
-  return row ?? null;
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(bankSubjects)
+      .set(input)
+      .where(and(eq(bankSubjects.id, subjectId), eq(bankSubjects.teacherId, teacherId)))
+      .returning();
+    if (!row) return null;
+    await addBankClass(tx, teacherId, input.grade);
+    return row;
+  });
 }
 
 /** Deletes a subject with its chapters and every question in it. Its number is never reused. */

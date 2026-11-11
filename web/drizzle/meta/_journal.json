@@ -43,6 +43,13 @@
       "when": 1794334508226,
       "tag": "0005_qbank_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794402032693,
+      "tag": "0006_bank_classes",
+      "breakpoints": true
     }
   ]
 }

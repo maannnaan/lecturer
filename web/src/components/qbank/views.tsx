@@ -135,7 +135,8 @@ export function toCard(q: Question, number: number, { d, locale }: QbCtx, extra:
 
 /* ── Classes: the bank's first page ─────────────────────────────────────────────────────── */
 
-function ClassNumber({ grade, locale }: { grade: Grade; locale: Locale }) {
+/** A class's big number in its colour ("০৯–১০"), or an icon for classes without one. */
+export function QbClassNumber({ grade, locale }: { grade: Grade; locale: Locale }) {
   const numbers = GRADE_NUMBER[grade];
   const tone = TONE[GRADE_TONE[grade]].text;
   if (!numbers) {
@@ -149,13 +150,13 @@ function ClassNumber({ grade, locale }: { grade: Grade; locale: Locale }) {
   );
 }
 
-/** The bank's first page: a white band with the title (and, in the dashboard, search and tools), then a card per class. */
+/** The bank's first page: a white band with the title (and the dashboard's "নতুন শ্রেণি"), then a card per class. */
 export function QbClassesView({
   ctx,
   crumbs,
   title,
   lead,
-  band,
+  actions,
   grades,
   heading,
   empty,
@@ -163,9 +164,9 @@ export function QbClassesView({
   ctx: QbCtx;
   crumbs?: ReactNode;
   title: string;
-  lead: string;
-  /** More of the white band: the dashboard's buttons and search. */
-  band?: ReactNode;
+  lead?: string;
+  /** Beside the title: the dashboard's "নতুন শ্রেণি". */
+  actions?: ReactNode;
   grades: { grade: Grade; href: string; line: string }[];
   heading: string;
   empty?: ReactNode;
@@ -176,13 +177,15 @@ export function QbClassesView({
       <div className="border-b border-qb-line bg-qb-surface">
         <div className="qb-x flex flex-col gap-5 pt-7 pb-8">
           {crumbs}
-          <div className="flex max-w-[760px] flex-col gap-2">
-            <QbTitle as={ctx.titleAs} size="lg">
-              {title}
-            </QbTitle>
-            <p className="m-0 text-[18px] text-qb-muted">{lead}</p>
+          <div className="flex flex-wrap items-end justify-between gap-5">
+            <div className="flex max-w-[760px] flex-col gap-2">
+              <QbTitle as={ctx.titleAs} size="lg">
+                {title}
+              </QbTitle>
+              {lead && <p className="m-0 text-[18px] text-qb-muted">{lead}</p>}
+            </div>
+            {actions && <div className="flex flex-wrap gap-2.5">{actions}</div>}
           </div>
-          {band}
         </div>
       </div>
       <section aria-labelledby="qb-classes" className="qb-x @container flex flex-col gap-6 pt-8 pb-16">
@@ -199,7 +202,7 @@ export function QbClassesView({
                 href={href}
                 className="flex min-h-[150px] flex-col gap-3.5 rounded-2xl border border-qb-line bg-qb-surface p-[22px] text-qb-ink no-underline hover:border-qb-field hover:text-qb-ink"
               >
-                <ClassNumber grade={grade} locale={locale} />
+                <QbClassNumber grade={grade} locale={locale} />
                 <span className="mt-auto flex flex-col gap-0.5">
                   <span className="text-[18px] font-bold">{gradeName(grade, d).label}</span>
                   <span className="text-[14px] text-qb-subtle">{line}</span>

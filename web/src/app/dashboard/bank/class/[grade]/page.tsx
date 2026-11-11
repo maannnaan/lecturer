@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PendingButton } from "@/components/form";
 import { groupTabs, subjectCard } from "@/components/qbank/build";
-import { QbCrumbs } from "@/components/qbank/ui";
+import { QbCrumbs, cx, qbButton } from "@/components/qbank/ui";
 import { type QbCtx, QbClassView } from "@/components/qbank/views";
 import { getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { buildBankTree } from "@/lib/bank-tree";
 import { gradeName, isGrade } from "@/lib/grades";
 import { requireTeacher } from "@/server/auth/current";
-import { listSubjectsWithChapters } from "@/server/bank";
+import { listBankClasses, listSubjectsWithChapters } from "@/server/bank";
 import { getDb } from "@/server/db";
 import { bankCounts } from "@/server/questions";
+import { removeClassAction } from "../../actions";
 
 export const instant = false;
 
@@ -27,10 +29,16 @@ export default async function BankClassPage({ params }: { params: Promise<{ grad
   const t = d.dashboard.bank;
   const ctx: QbCtx = { d, locale, voice: t.qb, titleAs: "h2" };
   const db = await getDb();
-  const [subjects, counts] = await Promise.all([listSubjectsWithChapters(db, teacher.id), bankCounts(db, teacher.id)]);
-  const tree = buildBankTree(subjects, counts);
+  const [subjects, counts, classes] = await Promise.all([
+    listSubjectsWithChapters(db, teacher.id),
+    bankCounts(db, teacher.id),
+    listBankClasses(db, teacher.id),
+  ]);
+  const tree = buildBankTree(subjects, counts, classes);
   const node = tree.find((g) => g.grade === grade);
-  const cards = (node?.subjects ?? []).map((s) => subjectCard(s, `/dashboard/bank/subject/${s.subject.id}`, subjects, d, locale, t.chapters));
+  // A class that isn't in this teacher's bank: it is added with "নতুন শ্রেণি" first.
+  if (!node) notFound();
+  const cards = node.subjects.map((s) => subjectCard(s, `/dashboard/bank/subject/${s.subject.id}`, subjects, d, locale, t.chapters));
   const name = gradeName(grade, d);
 
   return (
@@ -43,7 +51,18 @@ export default async function BankClassPage({ params }: { params: Promise<{ grad
       subjects={cards}
       add={{ href: `/dashboard/bank/subject/new?grade=${grade}`, label: t.newSubject }}
       aside={
-        node && node.counts.board > 0 ? (
+        node.subjects.length === 0 ? (
+          <form
+            action={removeClassAction}
+            className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-qb-line bg-qb-surface px-6 py-5"
+          >
+            <input type="hidden" name="grade" value={grade} />
+            <p className="m-0 text-qb-muted">
+              {t.noSubjectsInClass} {t.removeClass.lead}
+            </p>
+            <PendingButton className={cx(qbButton.outline, "h-11 px-4")}>{t.removeClass.button}</PendingButton>
+          </form>
+        ) : node.counts.board > 0 ? (
           <div className="on-dark flex flex-wrap items-center justify-between gap-5 rounded-2xl bg-qb-ink px-7 py-6 text-white">
             <div className="flex flex-col gap-1">
               <span className="font-qb-display text-[22px] font-bold">{t.prep.title(name.label)}</span>
