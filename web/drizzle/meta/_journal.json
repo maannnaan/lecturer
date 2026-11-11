@@ -36,6 +36,13 @@
       "when": 1794241753823,
       "tag": "0004_bank_subjects",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794334508226,
+      "tag": "0005_qbank_fields",
+      "breakpoints": true
     }
   ]
 }

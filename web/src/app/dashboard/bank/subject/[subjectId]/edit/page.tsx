@@ -50,7 +50,8 @@ export default async function EditSubjectPage({ params }: { params: Promise<{ su
       <div className="grid items-start gap-6 xl:grid-cols-2">
         <div className="min-w-0">
           <SubjectForm
-            subject={{ id: subject.id, grade: subject.grade, name: subject.name }}
+            subject={{ id: subject.id, grade: subject.grade, group: subject.group, name: subject.name }}
+            groups={d.bankGroups}
             heading={t.subjectForm.editTitle}
             t={t.subjectForm}
             c={d.common}

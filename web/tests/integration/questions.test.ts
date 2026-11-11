@@ -10,6 +10,7 @@ import {
   deleteQuestion,
   duplicateQuestion,
   getQuestion,
+  listChapterForPrint,
   listChapterQuestions,
   listQuestions,
   moveQuestion,
@@ -158,15 +159,23 @@ describe("questions", () => {
     const place = { subjectId: s.id, chapterId: ch1.id };
 
     const mcq = await listChapterQuestions(db, t.id, place, { tab: "mcq" });
-    expect(mcq.counts).toEqual({ textbook: 1, practice: 1, mcq: 2, sq: 0, cq: 1 });
+    expect(mcq.counts).toEqual({ textbook: 1, practice: 1, mcq: 2, sq: 0, cq: 1, board: 3 });
     expect(mcq.items.map((q) => q.type)).toEqual(["mcq", "mcq_multi"]);
-    // The filters offer this section's boards and years only: not the creative question's.
-    expect(mcq.boards).toEqual(["dhaka", "sylhet"]);
-    expect(mcq.years).toEqual([2024, 2023]);
-    expect((await listChapterQuestions(db, t.id, place, { tab: "mcq", year: 2024 })).items.map((q) => q.board)).toEqual(["sylhet"]);
-    expect((await listChapterQuestions(db, t.id, place, { tab: "mcq", board: "dhaka" })).total).toBe(1);
-    expect((await listChapterQuestions(db, t.id, place, { tab: "cq", board: "any" })).total).toBe(1);
-    expect((await listChapterQuestions(db, t.id, place, { tab: "textbook", board: "any" })).total).toBe(0);
+    // The filter menus offer every board and year the chapter's board questions come from.
+    expect(mcq.boards).toEqual(["dhaka", "rajshahi", "sylhet"]);
+    expect(mcq.years).toEqual([2024, 2023, 2022]);
+    const mcqWith = async (filters: Parameters<typeof listChapterQuestions>[3]["filters"]) =>
+      listChapterQuestions(db, t.id, place, { tab: "mcq", filters });
+    expect((await mcqWith({ year: 2024 })).items.map((q) => q.board)).toEqual(["sylhet"]);
+    expect((await mcqWith({ board: "dhaka" })).total).toBe(1);
+    expect((await listChapterQuestions(db, t.id, place, { tab: "cq", filters: { board: "any" } })).total).toBe(1);
+    expect((await listChapterQuestions(db, t.id, place, { tab: "textbook", filters: { board: "any" } })).total).toBe(0);
+    // The tabs' counts follow the filters.
+    expect((await mcqWith({ board: "dhaka" })).counts).toEqual({ textbook: 0, practice: 0, mcq: 1, sq: 0, cq: 0, board: 1 });
+
+    // The board tab lists the board questions of every type, sections in order.
+    const board = await listChapterQuestions(db, t.id, place, { tab: "board" });
+    expect(board.items.map((q) => q.type)).toEqual(["mcq", "mcq_multi", "creative"]);
 
     // Textbook and practice problems keep to their own sections.
     expect((await listChapterQuestions(db, t.id, place, { tab: "textbook" })).items.map((q) => q.body.solution)).toEqual(["$F = ma$"]);
@@ -192,12 +201,12 @@ describe("questions", () => {
     expect(sum(await bankCounts(db, t.id))).toBe(4);
     const shown = await bankCounts(db, t.id, { publicOnly: true });
     expect(sum(shown)).toBe(3);
-    expect(shown.find((row) => row.chapterId === null)).toEqual({ subjectId: s.id, chapterId: null, type: "short", n: 1 });
+    expect(shown.find((row) => row.chapterId === null)).toEqual({ subjectId: s.id, chapterId: null, type: "short", board: false, n: 1 });
     expect(await bankCounts(db, stranger.id)).toEqual([]);
 
     const unfiled = await listChapterQuestions(db, t.id, { subjectId: s.id, chapterId: null }, { tab: "sq" });
     expect(unfiled.items.map((q) => q.type)).toEqual(["short"]);
-    expect(unfiled.counts).toEqual({ textbook: 0, practice: 0, mcq: 0, sq: 1, cq: 0 });
+    expect(unfiled.counts).toEqual({ textbook: 0, practice: 0, mcq: 0, sq: 1, cq: 0, board: 0 });
     // Ids that aren't ids find nothing rather than failing.
     expect((await listChapterQuestions(db, t.id, { subjectId: "x", chapterId: null }, { tab: "sq" })).total).toBe(0);
   });
@@ -216,10 +225,48 @@ describe("questions", () => {
   it("duplicate to the end of the same chapter", async () => {
     const t = await makeTeacher(db);
     const { subject: s, ch1 } = await setup(t);
-    const q = await created(t, input("creative", s.id, ch1.id, { stem: "মূল" }));
+    const q = await created(t, input("creative", s.id, ch1.id, { stem: "মূল", difficulty: "hard" }));
     const copy = await duplicateQuestion(db, t.id, q.id);
     expect(copy?.id).not.toBe(q.id);
     expect(copy?.body).toEqual(q.body);
+    expect(copy?.difficulty).toBe("hard");
     expect(copy?.position).toBe(1);
+  });
+
+  it("filter a chapter by source and difficulty, open on a question's page, and print whole", async () => {
+    const t = await makeTeacher(db);
+    const { subject: s, ch1 } = await setup(t);
+    await created(t, input("mcq", s.id, ch1.id, { stem: "বোর্ড", board: "dhaka", year: "2024", difficulty: "easy" }));
+    await created(t, input("mcq", s.id, ch1.id, { stem: "টেস্ট", source: "নটর ডেম কলেজ", difficulty: "hard" }));
+    await created(t, input("mcq", s.id, ch1.id, { stem: "নিজস্ব" }));
+    await created(t, input("creative", s.id, ch1.id, { stem: "সৃজনশীল", difficulty: "hard" }));
+    const place = { subjectId: s.id, chapterId: ch1.id };
+    const stems = async (filters: Parameters<typeof listChapterQuestions>[3]["filters"]) =>
+      (await listChapterQuestions(db, t.id, place, { tab: "mcq", filters })).items.map((q) => q.body.stem);
+
+    expect(await stems({})).toEqual(["বোর্ড", "টেস্ট", "নিজস্ব"]);
+    expect(await stems({ sources: ["board"] })).toEqual(["বোর্ড"]);
+    expect(await stems({ sources: ["school", "own"] })).toEqual(["টেস্ট", "নিজস্ব"]);
+    expect(await stems({ sources: [] })).toEqual([]);
+    expect(await stems({ difficulty: "hard" })).toEqual(["টেস্ট"]);
+    expect((await listChapterQuestions(db, t.id, place, { tab: "mcq", filters: { difficulty: "hard" } })).counts.cq).toBe(1);
+
+    // Ten more MCQs, two to a page: the last one is on page 7, and `focus` opens that page.
+    for (let i = 0; i < 10; i++) await created(t, input("mcq", s.id, ch1.id, { stem: `আরও ${i}` }));
+    const last = (await listQuestions(db, t.id, { subjectId: s.id, chapterId: ch1.id, type: "mcq", search: "আরও 9" })).items[0];
+    const focused = await listChapterQuestions(db, t.id, place, { tab: "mcq", pageSize: 2, focus: last.id });
+    expect(focused.page).toBe(7);
+    expect(focused.items.map((q) => q.id)).toContain(last.id);
+    // A page past the end shows the last one; a focus that isn't in the list changes nothing.
+    expect((await listChapterQuestions(db, t.id, place, { tab: "mcq", pageSize: 2, page: 99 })).page).toBe(7);
+    expect((await listChapterQuestions(db, t.id, place, { tab: "mcq", pageSize: 2, page: 2, focus: "nope" })).page).toBe(2);
+
+    // The printout holds every section, in order, with the filters applied.
+    const all = await listChapterForPrint(db, t.id, place, {});
+    expect(all).toHaveLength(14);
+    expect(all.at(-1)?.type).toBe("creative");
+    expect((await listChapterForPrint(db, t.id, place, { boardOnly: true })).map((q) => q.body.stem)).toEqual(["বোর্ড"]);
+    expect((await listChapterForPrint(db, t.id, place, { filters: { difficulty: "hard" } })).map((q) => q.body.stem)).toEqual(["টেস্ট", "সৃজনশীল"]);
+    expect(await listChapterForPrint(db, stranger.id, place, {})).toEqual([]);
   });
 });

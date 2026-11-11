@@ -302,6 +302,8 @@ export const bankSubjects = pgTable(
     number: integer("number").notNull(),
     /** A key from GRADES in src/lib/grades.ts. */
     grade: text("grade").notNull().default("other"),
+    /** A key from SUBJECT_GROUPS in src/lib/bank.ts (বিজ্ঞান, মানবিক…), or "" for none. */
+    group: text("subject_group").notNull().default(""),
     name: text("name").notNull(),
     position: integer("position").notNull().default(0),
     /** The last chapter number handed out in this subject. */
@@ -398,6 +400,8 @@ export const questions = pgTable(
     body: jsonb("body").$type<QuestionBody>().notNull(),
     board: text("board").notNull().default(""),
     year: integer("year"),
+    /** A key from DIFFICULTIES in src/lib/questions.ts, or "" when not set. */
+    difficulty: text("difficulty").notNull().default(""),
     /** Where else it is from, e.g. "নটর ডেম কলেজ, টেস্ট ২০২৪". */
     source: text("source").notNull().default(""),
     /** A YouTube link to a video solution. */

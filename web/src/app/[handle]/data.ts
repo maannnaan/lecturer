@@ -2,7 +2,7 @@ import "server-only";
 import { connection } from "next/server";
 import { cache } from "react";
 import { buildBankTree, withQuestions } from "@/lib/bank-tree";
-import { listSubjectsWithChapters } from "@/server/bank";
+import { listSubjects, listSubjectsWithChapters } from "@/server/bank";
 import { listPublishedCourses } from "@/server/courses";
 import { getDb } from "@/server/db";
 import { listNotices } from "@/server/notices";
@@ -34,6 +34,12 @@ export const getSiteBank = cache(async (teacherId: string) => {
   const db = await getDb();
   const [subjects, counts] = await Promise.all([listSubjectsWithChapters(db, teacherId), bankCounts(db, teacherId, { publicOnly: true })]);
   return withQuestions(buildBankTree(subjects, counts));
+});
+
+/** Every bank subject of the teacher, in order: what each subject's colour is worked out from. */
+export const getSiteSubjects = cache(async (teacherId: string) => {
+  await connection();
+  return listSubjects(await getDb(), teacherId);
 });
 
 /** The teacher's notices, pinned first then newest; all of them when no limit is given. */

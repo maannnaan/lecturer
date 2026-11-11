@@ -1,9 +1,18 @@
-import { type SQL, and, asc, count, desc, eq, ilike, inArray, isNull, ne, sql } from "drizzle-orm";
+import { type SQL, and, asc, count, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import type { Database } from "@/server/db";
 import { bankChapters, bankSubjects, questions } from "@/server/db/schema";
 import { type CountRow, type TabCounts, emptyCounts } from "@/lib/bank-tree";
 import { isUuid } from "@/lib/ids";
-import { BOARDS, type BankTab, type QuestionInput, type QuestionType, isMcq, tabOf, tabTypes } from "@/lib/questions";
+import {
+  BOARDS,
+  type BankTab,
+  type ChapterFilters,
+  type QuestionInput,
+  type QuestionType,
+  isMcq,
+  tabOf,
+  tabTypes,
+} from "@/lib/questions";
 import { getMedia } from "./media";
 import { renumber, swapped } from "./ordering";
 
@@ -84,6 +93,7 @@ function columns(input: QuestionInput) {
     visibility: input.visibility,
     board: input.board,
     year: input.year,
+    difficulty: input.difficulty,
     source: input.source,
     videoUrl: input.videoUrl,
   };
@@ -182,6 +192,7 @@ export async function duplicateQuestion(db: Database, teacherId: string, questio
         body: source.body,
         board: source.board,
         year: source.year,
+        difficulty: source.difficulty,
         source: source.source,
         videoUrl: source.videoUrl,
         position: Number(last) + 1,
@@ -269,80 +280,161 @@ export async function countByType(db: Database, teacherId: string): Promise<Part
  * How many questions each subject and chapter has of each type, for the bank's class, subject and
  * chapter pages (see buildBankTree). The website counts public questions only.
  */
+/** Whether a question is a board question, as a column to count and group by. */
+const IS_BOARD = sql<boolean>`${questions.board} <> ''`;
+
+/** The sections' order (textbook problems, practice problems, MCQ, SQ, CQ), for lists that mix them. */
+const SECTION_ORDER = sql`case ${questions.type}
+  when 'textbook' then 0 when 'practice' then 1 when 'mcq' then 2 when 'mcq_multi' then 2
+  when 'short' then 3 when 'creative' then 4 else 5 end`;
+
 export async function bankCounts(db: Database, teacherId: string, options: { publicOnly?: boolean } = {}): Promise<CountRow[]> {
   const conditions: SQL[] = [eq(questions.teacherId, teacherId)];
   if (options.publicOnly) conditions.push(eq(questions.visibility, "public"));
   const rows = await db
-    .select({ subjectId: questions.subjectId, chapterId: questions.chapterId, type: questions.type, n: count() })
+    .select({ subjectId: questions.subjectId, chapterId: questions.chapterId, type: questions.type, board: IS_BOARD, n: count() })
     .from(questions)
     .where(and(...conditions))
-    .groupBy(questions.subjectId, questions.chapterId, questions.type);
-  return rows.map((row) => ({ ...row, n: Number(row.n) }));
+    .groupBy(questions.subjectId, questions.chapterId, questions.type, IS_BOARD);
+  return rows.map((row) => ({ ...row, board: Boolean(row.board), n: Number(row.n) }));
 }
+
+/** The conditions a chapter page's filters add (see ChapterFilters). */
+function filterConditions(filters: ChapterFilters): SQL[] {
+  const conditions: SQL[] = [];
+  if (filters.board === "any") conditions.push(ne(questions.board, ""));
+  else if (filters.board) conditions.push(eq(questions.board, filters.board));
+  if (filters.year) conditions.push(eq(questions.year, filters.year));
+  if (filters.difficulty) conditions.push(eq(questions.difficulty, filters.difficulty));
+  if (filters.sources) {
+    const any: SQL[] = [];
+    if (filters.sources.includes("board")) any.push(ne(questions.board, ""));
+    if (filters.sources.includes("school")) any.push(and(eq(questions.board, ""), ne(questions.source, ""))!);
+    if (filters.sources.includes("own")) any.push(and(eq(questions.board, ""), eq(questions.source, ""))!);
+    conditions.push(any.length > 0 ? or(...any)! : sql`false`);
+  }
+  return conditions;
+}
+
+/** A chapter's questions (public ones only unless `includePrivate`), with the filters applied. */
+function chapterConditions(
+  teacherId: string,
+  place: { subjectId: string; chapterId: string | null },
+  options: { filters?: ChapterFilters; includePrivate?: boolean },
+): { chapter: SQL; filtered: SQL } {
+  const inChapter: SQL[] = [sameGroup(teacherId, place.subjectId, place.chapterId)];
+  if (!options.includePrivate) inChapter.push(eq(questions.visibility, "public"));
+  const chapter = and(...inChapter)!;
+  return { chapter, filtered: and(chapter, ...filterConditions(options.filters ?? {}))! };
+}
+
+const validPlace = (place: { subjectId: string; chapterId: string | null }) =>
+  isUuid(place.subjectId) && (place.chapterId === null || isUuid(place.chapterId));
 
 export type SectionQuestions = {
   items: Question[];
   total: number;
-  /** How many questions each section of the chapter has, for its tabs. */
+  /** The page shown: the one asked for (within range), or the one holding the `focus` question. */
+  page: number;
+  /** How many questions each tab has with the filters applied, for the tabs' counts. */
   counts: TabCounts;
-  /** The boards and years this section's board questions come from, for its filters. */
+  /** The boards and years the chapter's board questions come from, for the filter menus. */
   boards: string[];
   years: number[];
 };
 
 /**
- * One section of a chapter (its textbook problems, its MCQs…), a page at a time, in the teacher's
- * order. The website sees public questions only; the teacher's bank passes `includePrivate`.
- * `chapterId: null` means the subject's questions filed under no chapter. `board` is a board key,
- * or "any" for every board question.
+ * One tab of a chapter (its textbook problems, its MCQs…, or its board questions of every type), a
+ * page at a time, in the teacher's order, with the chapter page's filters applied. The website sees
+ * public questions only; the teacher's bank passes `includePrivate`. `chapterId: null` means the
+ * subject's questions filed under no chapter. With `focus` (a question id), the page that holds
+ * that question is shown.
  */
 export async function listChapterQuestions(
   db: Database,
   teacherId: string,
   place: { subjectId: string; chapterId: string | null },
-  options: { tab: BankTab; board?: string; year?: number; page?: number; pageSize?: number; includePrivate?: boolean },
+  options: {
+    tab: BankTab;
+    filters?: ChapterFilters;
+    page?: number;
+    pageSize?: number;
+    includePrivate?: boolean;
+    focus?: string;
+  },
 ): Promise<SectionQuestions> {
-  if (!isUuid(place.subjectId) || (place.chapterId !== null && !isUuid(place.chapterId))) {
-    return { items: [], total: 0, counts: emptyCounts(), boards: [], years: [] };
-  }
-  const inChapter: SQL[] = [sameGroup(teacherId, place.subjectId, place.chapterId)];
-  if (!options.includePrivate) inChapter.push(eq(questions.visibility, "public"));
-  const chapter = and(...inChapter)!;
-  const section = and(chapter, inArray(questions.type, [...tabTypes(options.tab)]))!;
-  const conditions: SQL[] = [section];
-  if (options.board === "any") conditions.push(ne(questions.board, ""));
-  else if (options.board) conditions.push(eq(questions.board, options.board));
-  if (options.year) conditions.push(eq(questions.year, options.year));
-  const where = and(...conditions);
+  if (!validPlace(place)) return { items: [], total: 0, page: 1, counts: emptyCounts(), boards: [], years: [] };
+  const { chapter, filtered } = chapterConditions(teacherId, place, options);
+  const where = and(filtered, options.tab === "board" ? ne(questions.board, "") : inArray(questions.type, [...tabTypes(options.tab)]));
+  const order = [...(options.tab === "board" ? [SECTION_ORDER] : []), asc(questions.position), asc(questions.createdAt)];
   const size = options.pageSize ?? CHAPTER_PAGE_SIZE;
-  const page = Math.max(1, Math.floor(options.page ?? 1));
 
-  const [items, [{ total }], typeRows, boardRows] = await Promise.all([
-    db
-      .select()
-      .from(questions)
-      .where(where)
-      .orderBy(asc(questions.position), asc(questions.createdAt))
-      .limit(size)
-      .offset((page - 1) * size),
+  const [[{ total }], countRows, boardRows, focusIds] = await Promise.all([
     db.select({ total: count() }).from(questions).where(where),
-    db.select({ type: questions.type, n: count() }).from(questions).where(chapter).groupBy(questions.type),
+    db
+      .select({ type: questions.type, board: IS_BOARD, n: count() })
+      .from(questions)
+      .where(filtered)
+      .groupBy(questions.type, IS_BOARD),
     db
       .selectDistinct({ board: questions.board, year: questions.year })
       .from(questions)
-      .where(and(section, ne(questions.board, ""))),
+      .where(and(chapter, ne(questions.board, ""))),
+    options.focus && isUuid(options.focus)
+      ? db.select({ id: questions.id }).from(questions).where(where).orderBy(...order)
+      : Promise.resolve(null),
   ]);
 
+  const pages = Math.max(1, Math.ceil(Number(total) / size));
+  let page = Math.min(pages, Math.max(1, Math.floor(options.page ?? 1)));
+  const at = focusIds?.findIndex((row) => row.id === options.focus) ?? -1;
+  if (at >= 0) page = Math.floor(at / size) + 1;
+
+  const items = await db
+    .select()
+    .from(questions)
+    .where(where)
+    .orderBy(...order)
+    .limit(size)
+    .offset((page - 1) * size);
+
   const counts = emptyCounts();
-  for (const row of typeRows) counts[tabOf(row.type)] += Number(row.n);
+  for (const row of countRows) {
+    counts[tabOf(row.type)] += Number(row.n);
+    if (row.board) counts.board += Number(row.n);
+  }
   const boards = new Set(boardRows.map((r) => r.board));
   return {
     items,
     total: Number(total),
+    page,
     counts,
     boards: BOARDS.filter((b) => boards.has(b)),
     years: [...new Set(boardRows.map((r) => r.year).filter((y): y is number => y !== null))].sort((a, b) => b - a),
   };
+}
+
+/** The most questions one printout holds. */
+export const PRINT_LIMIT = 500;
+
+/**
+ * Everything a chapter's printout holds: the questions the filters show, every section in order
+ * (or only the board questions), with no paging.
+ */
+export async function listChapterForPrint(
+  db: Database,
+  teacherId: string,
+  place: { subjectId: string; chapterId: string | null },
+  options: { boardOnly?: boolean; filters?: ChapterFilters; includePrivate?: boolean },
+): Promise<Question[]> {
+  if (!validPlace(place)) return [];
+  const { filtered } = chapterConditions(teacherId, place, options);
+  return db
+    .select()
+    .from(questions)
+    .where(options.boardOnly ? and(filtered, ne(questions.board, "")) : filtered)
+    .orderBy(SECTION_ORDER, asc(questions.position), asc(questions.createdAt))
+    .limit(PRINT_LIMIT);
 }
 
 /** MCQ-type questions are the ones exams and OMR papers can use. */

@@ -39,6 +39,7 @@ export default async function NewSubjectPage({ searchParams }: { searchParams: P
         t={t.subjectForm}
         c={d.common}
         grades={d.grades}
+        groups={d.bankGroups}
       />
     </main>
   );

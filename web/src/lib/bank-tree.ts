@@ -1,11 +1,14 @@
 import { GRADES, type Grade, gradeOf } from "./grades";
-import { BANK_TABS, type BankTab, type QuestionType, tabOf } from "./questions";
+import { BANK_TABS, type BankTab, type QuestionType, SECTION_TABS, tabOf } from "./questions";
 
-/** How many questions each section has. */
+/** How many questions each tab has: the five sections, and the board questions among them. */
 export type TabCounts = Record<BankTab, number>;
 
-/** How many questions of one type a subject has in one chapter (`chapterId` null: in no chapter). */
-export type CountRow = { subjectId: string; chapterId: string | null; type: QuestionType; n: number };
+/**
+ * How many questions of one type a subject has in one chapter (`chapterId` null: in no chapter),
+ * and whether they are board questions.
+ */
+export type CountRow = { subjectId: string; chapterId: string | null; type: QuestionType; board: boolean; n: number };
 
 type SubjectLike = { id: string; grade: string; chapters: { id: string }[] };
 
@@ -23,11 +26,12 @@ export type BankSubject<S extends SubjectLike> = {
 export type BankGrade<S extends SubjectLike> = { grade: Grade; subjects: BankSubject<S>[]; counts: TabCounts; total: number };
 
 export function emptyCounts(): TabCounts {
-  return { textbook: 0, practice: 0, mcq: 0, sq: 0, cq: 0 };
+  return { textbook: 0, practice: 0, mcq: 0, sq: 0, cq: 0, board: 0 };
 }
 
+/** How many questions there are in all: the sections' counts (board questions are in them too). */
 export function totalOf(counts: TabCounts): number {
-  return BANK_TABS.reduce((sum, tab) => sum + counts[tab], 0);
+  return SECTION_TABS.reduce((sum, tab) => sum + counts[tab], 0);
 }
 
 function addInto(into: TabCounts, from: TabCounts) {
@@ -37,7 +41,7 @@ function addInto(into: TabCounts, from: TabCounts) {
 /**
  * The question bank the way it is browsed: classes (in GRADES order, only those that have
  * subjects) › subjects (in the teacher's order) › chapters (in order, plus unfiled questions), with
- * each section's question count at every level. Rows for subjects not given are ignored.
+ * each tab's question count at every level. Rows for subjects not given are ignored.
  */
 export function buildBankTree<S extends SubjectLike>(subjects: S[], rows: CountRow[]): BankGrade<S>[] {
   const byPlace = new Map<string, TabCounts>();
@@ -45,6 +49,7 @@ export function buildBankTree<S extends SubjectLike>(subjects: S[], rows: CountR
     const key = `${row.subjectId}/${row.chapterId ?? ""}`;
     const counts = byPlace.get(key) ?? emptyCounts();
     counts[tabOf(row.type)] += row.n;
+    if (row.board) counts.board += row.n;
     byPlace.set(key, counts);
   }
 

@@ -28,11 +28,20 @@ export function chapterLines(raw: string, errors: FieldErrors, name = "chapters"
   return lines.slice(0, MAX_CHAPTERS_AT_ONCE).map((line) => [...line].slice(0, CHAPTER_TITLE_MAX).join(""));
 }
 
-/** A bank subject's class and name, and the chapters to start it with (one per line). */
+/**
+ * The groups a class's subjects can belong to (বিজ্ঞান, ব্যবসায় শিক্ষা, মানবিক, and the subjects
+ * every group takes). A class page shows them as tabs when its subjects span more than one. ""
+ * means no group. Names live in the dictionaries under `bankGroups`.
+ */
+export const SUBJECT_GROUPS = ["common", "science", "business", "humanities"] as const;
+export type SubjectGroup = (typeof SUBJECT_GROUPS)[number];
+
+/** A bank subject's class, group and name, and the chapters to start it with (one per line). */
 export function parseSubject(input: Input) {
   const errors: FieldErrors = {};
   const subject = {
     grade: oneOf(input.grade, GRADES, "other"),
+    group: oneOf<SubjectGroup | "">(input.group, SUBJECT_GROUPS, ""),
     name: text(input, "name", 80, errors, true),
   };
   const chapters = chapterLines(input.chapters ?? "", errors);

@@ -106,8 +106,11 @@ describe("migration 0004_bank_subjects", () => {
     expect((await getQuestion(db, teacher.id, filed.id))?.chapterId).toBeNull();
 
     // New subjects number on from the migrated ones.
-    const next = await createSubject(db, teacher.id, { grade: "ssc", name: "গণিত" });
+    const next = await createSubject(db, teacher.id, { grade: "ssc", group: "", name: "গণিত" });
     expect(next.number).toBe(3);
     expect((await getSubject(db, teacher.id, chem.id))?.chapters).toEqual([]);
+    // Migration 0005: subjects and questions from before start with no group and no difficulty.
+    expect((await getSubject(db, teacher.id, chem.id))?.group).toBe("");
+    expect((await getQuestion(db, teacher.id, filed.id))?.difficulty).toBe("");
   });
 });

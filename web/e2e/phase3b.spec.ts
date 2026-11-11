@@ -20,7 +20,15 @@ async function login(page: Page, phone: string) {
 /** A form field by its exact label, on the page in view (Next keeps left pages mounted, hidden). */
 const field = (page: Page, label: string) => page.getByLabel(label, { exact: true }).filter({ visible: true });
 
-const SECTIONS = [/^পাঠ্যবইয়ের সমস্যা/, /^প্র্যাকটিস সমস্যা/, /^MCQ/, /^SQ/, /^CQ/];
+/** The bank's pages, by role: class cards, subject cards, chapter rows, a chapter's tabs. */
+const classCards = (page: Page) => page.getByRole("region", { name: /শ্রেণি বেছে/ }).getByRole("link");
+const subjectCards = (page: Page) => page.locator("#qb-subjects:visible > a");
+const chapterRows = (page: Page) => page.getByRole("list", { name: "অধ্যায়" }).getByRole("link");
+const tabs = (page: Page) => page.getByRole("navigation", { name: "প্রশ্নের ধরন" }).getByRole("link");
+const openTab = (page: Page) => page.getByRole("navigation", { name: "প্রশ্নের ধরন" }).locator('[aria-current="page"]');
+
+// A tab's text holds its short and its full name (one is hidden by width), then its count.
+const TABS = [/পাঠ্যবই/, /প্র্যাকটিস/, /^MCQ/, /^SQ/, /^CQ/, /বোর্ড/];
 const UUID = "[0-9a-f-]{36}";
 
 test.describe.configure({ mode: "serial" });
@@ -29,36 +37,34 @@ test("the teacher's bank goes class › subject › chapter › section, and add
   await login(page, "01710000001");
   await page.getByRole("link", { name: "প্রশ্নব্যাংক" }).filter({ visible: true }).first().click();
   await expect(page).toHaveURL(/\/dashboard\/bank$/);
-  const classes = page.locator("main:visible .bank-card");
-  await expect(classes).toHaveText([/^এসএসসি/, /^এইচএসসি/]);
+  await expect(classCards(page)).toHaveText([/এসএসসি/, /এইচএসসি/]);
   await shot(page, "dashboard-bank-classes-1280");
 
-  await classes.filter({ hasText: "এইচএসসি" }).click();
+  await classCards(page).filter({ hasText: "এইচএসসি" }).click();
   await expect(page).toHaveURL(/\/dashboard\/bank\/class\/hsc$/);
-  // The bank's own subjects: courses (what the website advertises) aren't listed here.
-  await expect(page.locator("main:visible .bank-card")).toHaveText([/^পদার্থবিজ্ঞান ১ম পত্র/]);
-  await page.locator("main:visible .bank-card").click();
+  // The bank's own subjects (courses, what the website advertises, aren't listed), and a card to add one.
+  await expect(subjectCards(page)).toHaveText([/পদার্থবিজ্ঞান ১ম পত্র/, /নতুন বিষয়/]);
+  await subjectCards(page).filter({ hasText: "পদার্থবিজ্ঞান ১ম পত্র" }).click();
   await expect(page).toHaveURL(new RegExp(`/dashboard/bank/subject/${UUID}$`));
-  await expect(page.locator("main:visible .ch-row")).toHaveCount(10);
+  await expect(chapterRows(page)).toHaveCount(10);
   await shot(page, "dashboard-bank-chapters-1280");
 
-  await page.locator("main:visible .ch-row").filter({ hasText: "নিউটনিয়ান বলবিদ্যা" }).click();
+  await chapterRows(page).filter({ hasText: "নিউটনিয়ান বলবিদ্যা" }).click();
   await expect(page).toHaveURL(new RegExp(`/dashboard/bank/subject/${UUID}/${UUID}$`));
-  const tabs = page.locator("main:visible .tabs .tab");
-  // All five sections, in order, empty ones too; the first with questions is open.
-  await expect(tabs).toHaveText(SECTIONS);
-  await expect(tabs.first()).toHaveAttribute("aria-current", "page");
+  // All six tabs, in order, empty ones too; the first with questions is open.
+  await expect(tabs(page)).toHaveText(TABS);
+  await expect(tabs(page).first()).toHaveAttribute("aria-current", "page");
 
   // The teacher's own view includes private questions, marked.
-  await tabs.nth(2).click();
+  await tabs(page).nth(2).click();
   await expect(page).toHaveURL(/tab=mcq/);
-  await expect(page.locator("main:visible li.card").filter({ hasText: "কোনটি নিউটনের তৃতীয় সূত্রের উদাহরণ?" })).toContainText("শুধু আপনি");
+  await expect(page.getByRole("article").filter({ hasText: "কোনটি নিউটনের তৃতীয় সূত্রের উদাহরণ?" })).toContainText("শুধু আপনি");
 
-  await page.locator("main:visible .tabs .tab").nth(1).click();
+  await tabs(page).nth(1).click();
   await expect(page).toHaveURL(/tab=practice/);
-  await expect(page.locator("main:visible li.card")).toHaveCount(2);
+  await expect(page.getByRole("article")).toHaveCount(2);
   await shot(page, "dashboard-bank-section-1280");
-  await page.getByRole("link", { name: "নতুন প্র্যাকটিস সমস্যা" }).filter({ visible: true }).click();
+  await page.getByRole("link", { name: "নতুন প্র্যাকটিস সমস্যা" }).filter({ visible: true }).first().click();
   await expect(page).toHaveURL(/\/dashboard\/bank\/new\?type=practice&subject=.+&chapter=.+/);
   // Subject and chapter are already chosen: where the teacher was.
   await expect(field(page, "অধ্যায়")).toHaveValue(/.+/);
@@ -68,8 +74,8 @@ test("the teacher's bank goes class › subject › chapter › section, and add
   await page.getByRole("button", { name: "প্রশ্ন যোগ করুন" }).click();
 
   await expect(page).toHaveURL(new RegExp(`/dashboard/bank/subject/${UUID}/${UUID}\\?tab=practice$`));
-  await expect(page.locator("main:visible li.card")).toHaveCount(3);
-  await expect(page.locator("main:visible li.card").last()).toContainText("ত্বরণ কত?");
+  await expect(page.getByRole("article")).toHaveCount(3);
+  await expect(page.getByRole("article").last()).toContainText("ত্বরণ কত?");
 });
 
 test("a teacher sets up a subject by pasting its chapters, then adds, moves and deletes chapters", async ({ page }) => {
@@ -83,7 +89,7 @@ test("a teacher sets up a subject by pasting its chapters, then adds, moves and 
   await field(page, "অধ্যায়গুলো, প্রতি লাইনে একটি (ঐচ্ছিক)").fill("অধ্যায় ১: ভৌতজগৎ ও পরিমাপ\n২. ভেক্টর\n\n৩) গতিবিদ্যা");
   await page.getByRole("button", { name: "বিষয় তৈরি করুন" }).click();
   await expect(page).toHaveURL(new RegExp(`/dashboard/bank/subject/${UUID}$`));
-  await expect(page.locator("main:visible .ch-row .ch-row-title")).toHaveText(["ভৌতজগৎ ও পরিমাপ", "ভেক্টর", "গতিবিদ্যা"]);
+  await expect(chapterRows(page)).toHaveText([/ভৌতজগৎ ও পরিমাপ/, /ভেক্টর/, /গতিবিদ্যা/]);
 
   await page.getByRole("link", { name: "বিষয় ও অধ্যায় সম্পাদনা" }).filter({ visible: true }).click();
   const chapters = page.locator("#chapters:visible ol > li");
@@ -98,7 +104,7 @@ test("a teacher sets up a subject by pasting its chapters, then adds, moves and 
   await shot(page, "dashboard-bank-subject-edit-1280");
 
   await page.goto("/dashboard/bank");
-  await expect(page.locator("main:visible .bank-card")).toHaveText([/^এসএসসি/, /^এইচএসসি/, /^ভর্তি পরীক্ষা/]);
+  await expect(classCards(page)).toHaveText([/এসএসসি/, /এইচএসসি/, /ভর্তি পরীক্ষা/]);
 });
 
 test("a subject can take its chapters from a course, and is deleted with its questions", async ({ page }) => {
@@ -109,13 +115,13 @@ test("a subject can take its chapters from a course, and is deleted with its que
   await field(page, "অথবা কোনো কোর্সের অধ্যায়গুলো নিন").selectOption({ label: "পদার্থবিজ্ঞান ২য় পত্র (১১টি অধ্যায়)" });
   await page.getByRole("button", { name: "বিষয় তৈরি করুন" }).click();
   await expect(page).toHaveURL(new RegExp(`/dashboard/bank/subject/${UUID}$`));
-  await expect(page.locator("main:visible .ch-row")).toHaveCount(11);
+  await expect(chapterRows(page)).toHaveCount(11);
 
   await page.getByRole("link", { name: "বিষয় ও অধ্যায় সম্পাদনা" }).filter({ visible: true }).click();
   await field(page, "হ্যাঁ, বিষয়টি মুছে ফেলতে চাই").check();
   await page.getByRole("button", { name: "মুছে ফেলুন" }).filter({ visible: true }).click();
   await expect(page).toHaveURL(/\/dashboard\/bank\/class\/hsc$/);
-  await expect(page.locator("main:visible .bank-card")).toHaveText([/^পদার্থবিজ্ঞান ১ম পত্র/]);
+  await expect(subjectCards(page)).toHaveText([/পদার্থবিজ্ঞান ১ম পত্র/, /নতুন বিষয়/]);
 
   // Courses are adverts now: their form no longer asks for a subject.
   await page.goto("/dashboard/courses/new");
@@ -128,33 +134,37 @@ test("students reach a chapter's sections through the website's question bank", 
   await page.locator(".site-nav").getByRole("link", { name: "প্রশ্নব্যাংক" }).click();
   await expect(page).toHaveURL(/\/tanvir\/bank$/);
   // Only classes and subjects with public questions: the new admission subject has none yet.
-  await expect(page.locator(".bank-card:visible")).toHaveText([/^এসএসসি/, /^এইচএসসি/]);
+  await expect(classCards(page)).toHaveText([/এসএসসি/, /এইচএসসি/]);
   await shot(page, "site-bank-ink-1280");
-  await page.locator(".bank-card:visible").filter({ hasText: "এইচএসসি" }).click();
+  await classCards(page).filter({ hasText: "এইচএসসি" }).click();
   await expect(page).toHaveURL(/\/tanvir\/bank\/hsc$/);
-  await expect(page.locator(".bank-card:visible")).toHaveText([/^পদার্থবিজ্ঞান ১ম পত্র/]);
-  await page.locator(".bank-card:visible").click();
+  await expect(subjectCards(page)).toHaveText([/পদার্থবিজ্ঞান ১ম পত্র/]);
+  await subjectCards(page).click();
   await expect(page).toHaveURL(/\/tanvir\/bank\/hsc\/1$/);
   await shot(page, "site-bank-chapters-ink-1280");
 
-  const newton = page.locator(".ch-row:visible").filter({ hasText: "নিউটনিয়ান বলবিদ্যা" });
-  await expect(newton.locator(".tag")).toHaveText(SECTIONS);
-  await expect(page.locator(".ch-row:visible").filter({ hasText: "আদর্শ গ্যাস" })).toContainText("শীঘ্রই");
+  // Each chapter row counts its tabs' questions (the first test added a practice problem);
+  // a chapter without any says so.
+  const newton = chapterRows(page).filter({ hasText: "নিউটনিয়ান বলবিদ্যা" });
+  await expect(newton).toContainText("প্র্যাকটিস ৩");
+  await expect(newton).toContainText("বোর্ড ৪");
+  await expect(chapterRows(page).filter({ hasText: "আদর্শ গ্যাস" })).toContainText("এখনো প্রশ্ন নেই");
 
-  await newton.getByRole("link", { name: /^প্র্যাকটিস সমস্যা/ }).click();
+  await newton.click();
+  await tabs(page).filter({ hasText: "প্র্যাকটিস" }).click();
   await expect(page).toHaveURL(/\/tanvir\/bank\/hsc\/1\/4\?tab=practice$/);
-  await expect(page.locator(".tabs .tab:visible")).toHaveText(SECTIONS);
-  await expect(page.locator(".tabs .tab.on:visible")).toHaveText(/^প্র্যাকটিস সমস্যা/);
-  await expect(page.locator(".crumbs:visible")).toContainText("প্রশ্নব্যাংক");
-  await expect(page.locator(".q-card:visible")).toHaveCount(3);
+  await expect(tabs(page)).toHaveText(TABS);
+  await expect(openTab(page)).toContainText("প্র্যাকটিস সমস্যা");
+  await expect(page.getByRole("navigation", { name: "অবস্থান" })).toContainText("প্রশ্নব্যাংক");
+  await expect(page.getByRole("article")).toHaveCount(3);
 
   // Students try first: the answer and the solution open only when asked.
-  const card = page.locator(".q-card:visible").filter({ hasText: "ভরবেগের পরিবর্তন কত?" });
+  const card = page.getByRole("article").filter({ hasText: "ভরবেগের পরিবর্তন কত?" });
   await expect(card.getByText("উত্তর:")).toBeHidden();
-  await card.getByText("উত্তর দেখো").click();
+  await card.getByRole("button", { name: "উত্তর দেখো" }).click();
   await expect(card.getByText("উত্তর:")).toBeVisible();
   await expect(card.getByText("বলের ঘাত")).toBeHidden();
-  await card.getByText("সমাধান দেখো").click();
+  await card.getByRole("button", { name: "সমাধান দেখো" }).click();
   await expect(card.getByText("বলের ঘাত")).toBeVisible();
 
   // The course page advertises the course; it no longer links into the bank.
@@ -163,15 +173,14 @@ test("students reach a chapter's sections through the website's question bank", 
 });
 
 test("old and moved addresses land on the right page", async ({ page, request }) => {
-  const open = page.locator(".tabs .tab.on:visible");
   await page.goto("/tanvir/bank/hsc/1/4?tab=problem");
-  await expect(open).toHaveText(/^পাঠ্যবইয়ের সমস্যা/);
+  await expect(openTab(page)).toContainText("পাঠ্যবইয়ের সমস্যা");
   await page.goto("/tanvir/bank/hsc/1/4?tab=creative");
-  await expect(open).toHaveText(/^CQ/);
-  // The old board-questions tab: the MCQ section, showing its board questions.
+  await expect(openTab(page)).toHaveText(/^CQ/);
+  // ?tab=board is the board questions' tab again: every type, one row each.
   await page.goto("/tanvir/bank/hsc/1/4?tab=board");
-  await expect(open).toHaveText(/^MCQ/);
-  await expect(page.locator(".q-card:visible")).toHaveCount(3);
+  await expect(openTab(page)).toContainText("বোর্ড");
+  await expect(page.getByRole("listitem").filter({ has: page.getByRole("link", { name: "খোলো" }) })).toHaveCount(4);
 
   // A subject asked for under another class is sent to its class, permanently.
   const moved = await request.get("/tanvir/bank/ssc/1/4?tab=mcq", { maxRedirects: 0 });
@@ -213,14 +222,14 @@ test.describe("on a phone", () => {
     await login(page, "01710000001");
     await page.goto("/dashboard/bank");
     await fits(page, "classes");
-    await page.locator("main:visible .bank-card").filter({ hasText: "এইচএসসি" }).click();
+    await classCards(page).filter({ hasText: "এইচএসসি" }).click();
     await expect(page).toHaveURL(/\/class\/hsc$/);
     await fits(page, "subjects");
-    await page.locator("main:visible .bank-card").filter({ hasText: "পদার্থবিজ্ঞান ১ম পত্র" }).click();
+    await subjectCards(page).filter({ hasText: "পদার্থবিজ্ঞান ১ম পত্র" }).click();
     await expect(page).toHaveURL(new RegExp(`/subject/${UUID}$`));
     await fits(page, "chapters");
     await shot(page, "dashboard-bank-chapters-360");
-    await page.locator("main:visible .ch-row").filter({ hasText: "নিউটনিয়ান বলবিদ্যা" }).click();
+    await chapterRows(page).filter({ hasText: "নিউটনিয়ান বলবিদ্যা" }).click();
     await expect(page).toHaveURL(new RegExp(`/subject/${UUID}/${UUID}$`));
     await fits(page, "questions");
     await shot(page, "dashboard-bank-section-360");

@@ -75,6 +75,7 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ i
           body: question.body,
           board: question.board,
           year: question.year,
+          difficulty: question.difficulty,
           source: question.source,
           videoUrl: question.videoUrl,
         }}

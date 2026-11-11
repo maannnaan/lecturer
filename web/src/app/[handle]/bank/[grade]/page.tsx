@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BookOpen } from "lucide-react";
-import { Crumbs, SectionChips } from "@/components/bank-ui";
-import { formatNumber, getDictionary } from "@/i18n";
+import { groupTabs, subjectCard } from "@/components/qbank/build";
+import { QbCrumbs } from "@/components/qbank/ui";
+import { type QbCtx, QbClassView } from "@/components/qbank/views";
+import { getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { gradeName, isGrade } from "@/lib/grades";
-import { getSite, getSiteBank } from "../../data";
+import { getSite, getSiteBank, getSiteSubjects } from "../../data";
 
 export const instant = false;
 
@@ -35,50 +35,30 @@ export default async function SiteBankClassPage({ params }: { params: Params }) 
   const locale = await getLocale(teacher.locale);
   const d = getDictionary(locale);
   const b = d.site.bank;
-  const node = (await getSiteBank(teacher.id)).find((g) => g.grade === grade);
-  const name = gradeName(grade, d);
+  const ctx: QbCtx = { d, locale, voice: d.site.chapter.qb, titleAs: "h1" };
+  const [tree, all] = await Promise.all([getSiteBank(teacher.id), getSiteSubjects(teacher.id)]);
+  const node = tree.find((g) => g.grade === grade);
   const home = `/${teacher.handle}`;
+  const subjects = (node?.subjects ?? []).map((s) => subjectCard(s, `${home}/bank/${grade}/${s.subject.number}`, all, d, locale, b.chapters));
 
   return (
-    <main>
-      <div className="wrap pb-20">
-        <Crumbs
+    <QbClassView
+      ctx={ctx}
+      crumbs={
+        <QbCrumbs
           label={d.common.breadcrumb}
           items={[
             { label: locale === "bn" ? teacher.nameBn : teacher.nameEn, href: home },
             { label: b.title, href: `${home}/bank` },
-            { label: name.label },
+            { label: gradeName(grade, d).label },
           ]}
         />
-        <div className="ch-head mt-5">
-          <p className="ch-course">{b.title}</p>
-          <h1>{name.label}</h1>
-          <p className="mt-2 text-[16.5px] text-ink-2">{name.detail}</p>
-        </div>
-
-        {!node ? (
-          <p className="card mt-6 p-6 text-ink-2">{b.emptyGrade}</p>
-        ) : (
-          <ul className="bank-grid mt-6">
-            {node.subjects.map(({ subject, chapters, counts, total }) => (
-              <li key={subject.id}>
-                <Link href={`${home}/bank/${grade}/${subject.number}`} className="bank-card bank-subject">
-                  <span className="bank-icon" aria-hidden="true">
-                    <BookOpen />
-                  </span>
-                  <span className="flex min-w-0 flex-col gap-1">
-                    <span className="bank-card-title">{subject.name}</span>
-                    <span className="bank-card-meta">
-                      {`${b.chapters(formatNumber(chapters.length, locale))} · ${b.questions(formatNumber(total, locale))}`}
-                    </span>
-                    <SectionChips counts={counts} d={d} locale={locale} />
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </main>
+      }
+      grade={grade}
+      classes={tree.map((g) => ({ grade: g.grade, href: `${home}/bank/${g.grade}` }))}
+      groups={groupTabs(subjects, d)}
+      subjects={subjects}
+      empty={<p className="m-0 rounded-2xl border border-qb-line bg-qb-surface p-6 text-qb-muted">{b.emptyGrade}</p>}
+    />
   );
 }

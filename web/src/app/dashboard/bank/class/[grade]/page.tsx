@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BookOpen, Plus } from "lucide-react";
-import { Crumbs, SectionChips } from "@/components/bank-ui";
-import { formatNumber, getDictionary } from "@/i18n";
+import { groupTabs, subjectCard } from "@/components/qbank/build";
+import { QbCrumbs } from "@/components/qbank/ui";
+import { type QbCtx, QbClassView } from "@/components/qbank/views";
+import { getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { buildBankTree } from "@/lib/bank-tree";
 import { gradeName, isGrade } from "@/lib/grades";
@@ -16,7 +17,7 @@ export const instant = false;
 
 export const metadata: Metadata = { title: "প্রশ্নব্যাংক" };
 
-/** The bank's second level: one class's subjects. */
+/** The bank's second level: one class's subjects, by group, and a card to add another. */
 export default async function BankClassPage({ params }: { params: Promise<{ grade: string }> }) {
   const teacher = await requireTeacher();
   const { grade } = await params;
@@ -24,47 +25,39 @@ export default async function BankClassPage({ params }: { params: Promise<{ grad
   const locale = await getLocale();
   const d = getDictionary(locale);
   const t = d.dashboard.bank;
+  const ctx: QbCtx = { d, locale, voice: t.qb, titleAs: "h2" };
   const db = await getDb();
   const [subjects, counts] = await Promise.all([listSubjectsWithChapters(db, teacher.id), bankCounts(db, teacher.id)]);
-  const node = buildBankTree(subjects, counts).find((g) => g.grade === grade);
+  const tree = buildBankTree(subjects, counts);
+  const node = tree.find((g) => g.grade === grade);
+  const cards = (node?.subjects ?? []).map((s) => subjectCard(s, `/dashboard/bank/subject/${s.subject.id}`, subjects, d, locale, t.chapters));
   const name = gradeName(grade, d);
 
   return (
-    <main className="dash-content">
-      <Crumbs className="crumbs !pt-0" label={d.common.breadcrumb} items={[{ label: t.title, href: "/dashboard/bank" }, { label: name.label }]} />
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-2xl">{name.label}</h2>
-          <p className="mt-1 text-ink-2">{name.detail}</p>
-        </div>
-        <Link href={`/dashboard/bank/subject/new?grade=${grade}`} className="btn btn-primary btn-sm">
-          <Plus aria-hidden="true" />
-          {t.newSubject}
-        </Link>
-      </header>
-
-      {!node ? (
-        <p className="card p-6 text-ink-2">{t.noSubjectsInClass}</p>
-      ) : (
-        <ul className="bank-grid">
-          {node.subjects.map(({ subject, chapters, counts: sections, total }) => (
-            <li key={subject.id}>
-              <Link href={`/dashboard/bank/subject/${subject.id}`} className="bank-card bank-subject">
-                <span className="bank-icon" aria-hidden="true">
-                  <BookOpen />
-                </span>
-                <span className="flex min-w-0 flex-col gap-1">
-                  <span className="bank-card-title">{subject.name}</span>
-                  <span className="bank-card-meta">
-                    {`${t.chapters(formatNumber(chapters.length, locale))} · ${t.total(formatNumber(total, locale))}`}
-                  </span>
-                  <SectionChips counts={sections} d={d} locale={locale} />
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </main>
+    <QbClassView
+      ctx={ctx}
+      crumbs={<QbCrumbs label={d.common.breadcrumb} items={[{ label: t.title, href: "/dashboard/bank" }, { label: name.label }]} />}
+      grade={grade}
+      classes={tree.map((g) => ({ grade: g.grade, href: `/dashboard/bank/class/${g.grade}` }))}
+      groups={groupTabs(cards, d)}
+      subjects={cards}
+      add={{ href: `/dashboard/bank/subject/new?grade=${grade}`, label: t.newSubject }}
+      aside={
+        node && node.counts.board > 0 ? (
+          <div className="on-dark flex flex-wrap items-center justify-between gap-5 rounded-2xl bg-qb-ink px-7 py-6 text-white">
+            <div className="flex flex-col gap-1">
+              <span className="font-qb-display text-[22px] font-bold">{t.prep.title(name.label)}</span>
+              <span className="text-qb-footer">{t.prep.lead}</span>
+            </div>
+            <Link
+              href="/dashboard/bank/all?board=any"
+              className="rounded-[10px] bg-qb-board-cta px-5 py-3 font-bold text-qb-ink no-underline hover:bg-[#f5c25c] hover:text-qb-ink"
+            >
+              {t.prep.cta}
+            </Link>
+          </div>
+        ) : null
+      }
+    />
   );
 }

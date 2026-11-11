@@ -14,13 +14,20 @@ export const isMcq = (type: QuestionType) => (MCQ_TYPES as readonly string[]).in
 export const isProblem = (type: QuestionType) => type === "textbook" || type === "practice";
 
 /**
- * The sections of the question bank, in the order a chapter shows them: textbook problems,
- * practice problems, MCQ, SQ (short) and CQ (creative). Each is a chapter page's `?tab=` value.
+ * The sections a question is filed in, in the order a chapter shows them: textbook problems,
+ * practice problems, MCQ, SQ (short) and CQ (creative). Every question is in exactly one.
  */
-export const BANK_TABS = ["textbook", "practice", "mcq", "sq", "cq"] as const;
+export const SECTION_TABS = ["textbook", "practice", "mcq", "sq", "cq"] as const;
+export type SectionTab = (typeof SECTION_TABS)[number];
+
+/**
+ * A chapter's tabs: the five sections, then its board questions of every type. Each is a chapter
+ * page's `?tab=` value.
+ */
+export const BANK_TABS = [...SECTION_TABS, "board"] as const;
 export type BankTab = (typeof BANK_TABS)[number];
 
-const TAB_TYPES: Record<BankTab, readonly QuestionType[]> = {
+const TAB_TYPES: Record<SectionTab, readonly QuestionType[]> = {
   textbook: ["textbook"],
   practice: ["practice"],
   mcq: MCQ_TYPES,
@@ -28,27 +35,81 @@ const TAB_TYPES: Record<BankTab, readonly QuestionType[]> = {
   cq: ["creative"],
 };
 
-/** The question types a section lists. */
-export const tabTypes = (tab: BankTab): readonly QuestionType[] => TAB_TYPES[tab];
+/** The question types a tab lists; the board tab lists every type. */
+export const tabTypes = (tab: BankTab): readonly QuestionType[] => (tab === "board" ? QUESTION_TYPES : TAB_TYPES[tab]);
 
 /** The section a question type is listed in. */
-export function tabOf(type: QuestionType): BankTab {
-  return BANK_TABS.find((tab) => TAB_TYPES[tab].includes(type)) ?? "mcq";
+export function tabOf(type: QuestionType): SectionTab {
+  return SECTION_TABS.find((tab) => TAB_TYPES[tab].includes(type)) ?? "mcq";
 }
 
-/** `?tab=` names from before the sections were renamed; "board" is now a filter in each section. */
+/** `?tab=` names from before the sections were renamed. */
 const OLD_TABS = new Map<string, BankTab>([
   ["problem", "textbook"],
   ["short", "sq"],
   ["creative", "cq"],
-  ["board", "mcq"],
 ]);
 
 /** A chapter page's `?tab=`, old names included; null for anything else. */
-export function tabFromParam(raw: string | undefined): { tab: BankTab; anyBoard: boolean } | null {
-  if ((BANK_TABS as readonly string[]).includes(raw ?? "")) return { tab: raw as BankTab, anyBoard: false };
-  const old = OLD_TABS.get(raw ?? "");
-  return old ? { tab: old, anyBoard: raw === "board" } : null;
+export function tabFromParam(raw: string | undefined): BankTab | null {
+  if ((BANK_TABS as readonly string[]).includes(raw ?? "")) return raw as BankTab;
+  return OLD_TABS.get(raw ?? "") ?? null;
+}
+
+/** How hard a question is; "" when the teacher hasn't said. */
+export const DIFFICULTIES = ["easy", "medium", "hard"] as const;
+export type Difficulty = (typeof DIFFICULTIES)[number];
+
+/**
+ * Where a question comes from, for the chapter filters: a board exam (it has a board), a school or
+ * college test (it names another source), or neither: the teacher's own.
+ */
+export const SOURCES = ["board", "school", "own"] as const;
+export type Source = (typeof SOURCES)[number];
+
+export function sourceOf(question: { board: string; source: string }): Source {
+  if (question.board) return "board";
+  return question.source ? "school" : "own";
+}
+
+/** The filters a chapter page applies to every tab; empty means "all". */
+export type ChapterFilters = {
+  /** A board key, or "any" for every board question. */
+  board?: string;
+  year?: number;
+  difficulty?: Difficulty;
+  /** The sources to show; undefined shows all three. */
+  sources?: Source[];
+};
+
+/** Reads a chapter page's filter parameters (`board`, `year`, `diff`, `src`), ignoring nonsense. */
+export function filtersFromParams(params: { board?: string; year?: string; diff?: string; src?: string }): ChapterFilters {
+  const filters: ChapterFilters = {};
+  if (params.board === "any" || (BOARDS as readonly string[]).includes(params.board ?? "")) filters.board = params.board;
+  const year = asciiDigits(params.year ?? "");
+  if (/^\d{4}$/.test(year)) filters.year = Number(year);
+  if ((DIFFICULTIES as readonly string[]).includes(params.diff ?? "")) filters.difficulty = params.diff as Difficulty;
+  if (params.src !== undefined) {
+    const picked = params.src.split(",");
+    const sources = SOURCES.filter((s) => picked.includes(s));
+    if (sources.length < SOURCES.length) filters.sources = sources;
+  }
+  return filters;
+}
+
+/** The query string for a set of filters (in a fixed order, defaults left out). */
+export function filterParams(filters: ChapterFilters): Record<string, string> {
+  const params: Record<string, string> = {};
+  if (filters.board) params.board = filters.board;
+  if (filters.year) params.year = String(filters.year);
+  if (filters.difficulty) params.diff = filters.difficulty;
+  if (filters.sources && filters.sources.length < SOURCES.length) params.src = filters.sources.join(",");
+  return params;
+}
+
+/** How many filters differ from "show everything". */
+export function activeFilters(filters: ChapterFilters): number {
+  return Object.keys(filterParams(filters)).length;
 }
 
 export const VISIBILITIES = ["public", "private"] as const;
@@ -176,6 +237,7 @@ export function parseQuestion(input: Input) {
     visibility: oneOf(input.visibility, VISIBILITIES) ?? "public",
     body,
     board,
+    difficulty: oneOf(input.difficulty, DIFFICULTIES) ?? "",
     year: parseYear(input, errors),
     source: text(input, "source", 120, errors),
     videoUrl: url(input, "videoUrl", errors, YOUTUBE),

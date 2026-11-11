@@ -111,7 +111,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           </form>
         </aside>
 
-        <div className="min-w-0">
+        <div className="flex min-w-0 flex-col">
           <header className="dash-topbar">
             <h1 className="min-w-0 truncate text-[21px]">{t.welcome(name)}</h1>
             <div className="ml-auto flex items-center gap-3">

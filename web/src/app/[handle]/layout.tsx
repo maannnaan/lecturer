@@ -137,7 +137,7 @@ export default async function TeacherSiteLayout({ children, params }: Props) {
           </div>
         </div>
       </header>
-      <div className="flex-1">{children}</div>
+      <div className="flex flex-1 flex-col">{children}</div>
       <footer className="site-footer">
         <div className="wrap flex flex-wrap items-center justify-between gap-3">
           <span>

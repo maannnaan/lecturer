@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Crumbs, SectionChips } from "@/components/bank-ui";
+import { toneFor } from "@/components/qbank/build";
+import { QbCrumbs } from "@/components/qbank/ui";
+import { type QbCtx, QbSubjectView, chapterChips, chapterSearch, pad2 } from "@/components/qbank/views";
 import { formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
-import { chapterLabel } from "@/lib/chapter-label";
+import { subjectAbbr } from "@/lib/bank-look";
 import { gradeName } from "@/lib/grades";
+import { getSiteSubjects } from "../../../data";
 import { getPageSubject } from "./data";
 
 export const instant = false;
@@ -35,57 +37,45 @@ export default async function SiteBankSubjectPage({ params }: { params: Params }
   const locale = await getLocale(teacher.locale);
   const d = getDictionary(locale);
   const b = d.site.bank;
+  const ctx: QbCtx = { d, locale, voice: d.site.chapter.qb, titleAs: "h1" };
+  const all = await getSiteSubjects(teacher.id);
   const home = `/${teacher.handle}`;
   const subjectPath = `${home}/bank/${grade}/${subject.number}`;
+  const grades = gradeName(grade, d);
 
   return (
-    <main>
-      <div className="wrap pb-20">
-        <Crumbs
+    <QbSubjectView
+      ctx={ctx}
+      crumbs={
+        <QbCrumbs
           label={d.common.breadcrumb}
           items={[
             { label: locale === "bn" ? teacher.nameBn : teacher.nameEn, href: home },
             { label: b.title, href: `${home}/bank` },
-            { label: gradeName(grade, d).label, href: `${home}/bank/${grade}` },
+            { label: grades.label, href: `${home}/bank/${grade}` },
             { label: subject.name },
           ]}
         />
-        <div className="ch-head mt-5">
-          <p className="ch-course">{gradeName(grade, d).label}</p>
-          <h1>{subject.name}</h1>
-          <p className="mt-2 text-[16.5px] text-ink-2">{b.chaptersLead}</p>
-        </div>
-
-        {subject.chapters.length === 0 ? (
-          <p className="card mt-6 p-6 text-ink-2">{b.empty}</p>
-        ) : (
-          <ul className="card ch-rows mt-6">
-            {node.chapters.map(({ chapter, counts, total }, i) => {
-              const path = `${subjectPath}/${chapter.number}`;
-              return (
-                <li key={chapter.id} className={total > 0 ? "ch-row" : "ch-row muted"}>
-                  <span className="min-w-0">
-                    <span className="ch-row-label">{chapterLabel(chapter, i, d, locale)}</span>
-                    <Link href={path} className="ch-row-title">
-                      {chapter.title}
-                    </Link>
-                  </span>
-                  <span className="ch-row-side">
-                    {total > 0 ? (
-                      <>
-                        <SectionChips counts={counts} d={d} locale={locale} href={(tab) => `${path}?tab=${tab}`} />
-                        <span className="ch-row-total">{b.questions(formatNumber(total, locale))}</span>
-                      </>
-                    ) : (
-                      <span className="badge">{b.soon}</span>
-                    )}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
-    </main>
+      }
+      name={subject.name}
+      abbr={subjectAbbr(subject.name)}
+      tone={toneFor(subject, all)}
+      facts={[
+        grades.label,
+        subject.group ? (subject.group === "common" ? d.qbank.forAllGroups : d.qbank.groupOf(d.bankGroups[subject.group as keyof typeof d.bankGroups])) : null,
+        subject.chapters.length > 0 ? b.chapters(formatNumber(subject.chapters.length, locale)) : null,
+        node.total > 0 ? b.questions(formatNumber(node.total, locale)) : null,
+      ].filter((f): f is string => Boolean(f))}
+      rows={node.chapters.map(({ chapter, counts }, i) => ({
+        id: chapter.id,
+        href: `${subjectPath}/${chapter.number}`,
+        number: pad2(i + 1, locale),
+        title: chapter.title,
+        note: chapter.label || undefined,
+        chips: chapterChips(counts, ctx),
+        search: chapterSearch([chapter.title, chapter.label, i + 1], locale),
+      }))}
+      empty={<p className="m-0 rounded-2xl border border-qb-line bg-qb-surface p-6 text-qb-muted">{b.empty}</p>}
+    />
   );
 }

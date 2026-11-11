@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { Field, FormMessages, SelectField, SubmitButton, TextAreaField, emptyForm } from "@/components/form";
 import type { Dictionary } from "@/i18n";
+import { SUBJECT_GROUPS } from "@/lib/bank";
 import { GRADES, gradeLine, isGrade } from "@/lib/grades";
 import { addChaptersAction, createSubjectAction, deleteSubjectAction, updateBankChapterAction, updateSubjectAction } from "./actions";
 
@@ -21,17 +22,25 @@ export function SubjectForm({
   t,
   c,
   grades,
+  groups,
 }: {
-  subject?: { id: string; grade: string; name: string };
+  subject?: { id: string; grade: string; group: string; name: string };
   courses?: { id: string; title: string }[];
   defaultGrade?: string;
   heading?: string;
   t: Bank["subjectForm"];
   c: Common;
   grades: Dictionary["grades"];
+  groups: Dictionary["bankGroups"];
 }) {
   const [state, action] = useActionState(subject ? updateSubjectAction : createSubjectAction, emptyForm);
-  const initial: Record<string, string> = { grade: subject?.grade ?? defaultGrade, name: subject?.name ?? "", chapters: "", copyFrom: "" };
+  const initial: Record<string, string> = {
+    grade: subject?.grade ?? defaultGrade,
+    group: subject?.group ?? "",
+    name: subject?.name ?? "",
+    chapters: "",
+    copyFrom: "",
+  };
   const v = (name: string) => state.values?.[name] ?? initial[name] ?? "";
   // The name suggestions follow the class picked; the select itself stays uncontrolled.
   const [grade, setGrade] = useState(v("grade") || "other");
@@ -69,6 +78,13 @@ export function SubjectForm({
             <option key={s} value={s} />
           ))}
         </datalist>
+        <SelectField
+          name="group"
+          label={t.group}
+          hint={t.groupHint}
+          defaultValue={v("group")}
+          options={[{ value: "", label: t.groupNone }, ...SUBJECT_GROUPS.map((g) => ({ value: g, label: groups[g] }))]}
+        />
       </div>
 
       {!subject && (

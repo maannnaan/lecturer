@@ -160,6 +160,51 @@
   --shadow-float: var(--lb-shadow-float);
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────────────────────
+   The question bank's own look (the QBank design, qbank-handoff/), the same in every theme:
+   bg-qb-page, text-qb-ink, border-qb-line, font-qb-display… Pages opt in with class="qb".
+   ───────────────────────────────────────────────────────────────────────────────────────────── */
+@theme {
+  --color-qb-page: #f6f5f1;
+  --color-qb-surface: #ffffff;
+  --color-qb-surface-alt: #fafaf7;
+  --color-qb-ink: #17191c;
+  --color-qb-ink-soft: #2a2d33;
+  --color-qb-muted: #4e535b;
+  --color-qb-subtle: #5b6068;
+  --color-qb-faint: #8a8f97;
+  --color-qb-line: #e3e1da;
+  --color-qb-divider: #eeece6;
+  --color-qb-field: #d5d2c8;
+  --color-qb-chip: #f3f2ee;
+  --color-qb-footer: #c9ccd1;
+  --color-qb-accent: #0b6b4f;
+  --color-qb-accent-hover: #08513c;
+  --color-qb-accent-soft: #e3f1ea;
+  --color-qb-answer: #eef6f2;
+  --color-qb-answer-ink: #1f3a30;
+  --color-qb-cq: #1d4ed8;
+  --color-qb-cq-soft: #e6eefb;
+  --color-qb-mcq: #0b6b4f;
+  --color-qb-mcq-soft: #e3f1ea;
+  --color-qb-sq: #9a4a12;
+  --color-qb-sq-soft: #fcebdd;
+  --color-qb-board: #6b5300;
+  --color-qb-board-soft: #fff3cc;
+  --color-qb-board-cta: #f2b53a;
+  --color-qb-purple: #5b2bb5;
+  --color-qb-purple-soft: #efe8fb;
+  --color-qb-rose: #a3245e;
+  --color-qb-rose-soft: #fbe8f0;
+  --color-qb-wrong: #b4361f;
+  --color-qb-wrong-soft: #fce8e4;
+  --shadow-qb-search: 0 8px 24px rgba(23, 25, 28, 0.06);
+}
+@theme inline {
+  --font-qb: var(--ff-hind), system-ui, sans-serif;
+  --font-qb-display: var(--ff-grotesk), var(--ff-hind), sans-serif;
+}
+
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
@@ -579,39 +624,13 @@
   .math-display .katex-display { margin: 0.4em 0; }
   .katex { font-size: 1.06em; }
 
-  /* ── Questions: chapter pages (from the Phase 0 chapter mockup) and the bank ── */
+  /* ── Questions in the bank's editors: the trail, a question row, and the editor's live preview.
+     (The browsing pages use the QBank design: .qb, below.) ── */
   .crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 22px; font-size: 14px; color: var(--lb-muted); }
   .crumbs svg { width: 14px; height: 14px; }
   .crumbs b { font-weight: 600; color: var(--lb-ink-2); }
-  .ch-layout { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 30px; align-items: start; padding: 20px 0 80px; }
-  .ch-nav { position: sticky; top: 96px; display: flex; flex-direction: column; padding: 14px; max-height: calc(100dvh - 120px); overflow-y: auto; }
-  .ch-nav-title { padding: 6px 10px 10px; font-size: 13px; font-weight: 700; color: var(--lb-muted); }
-  .ch-nav a { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px 10px; border-radius: var(--lb-r-sm); font-size: 14.5px; line-height: 1.45; color: var(--lb-ink-2); }
-  .ch-nav a .n { font-family: var(--lb-font-num); font-size: 13.5px; color: var(--lb-muted); }
-  .ch-nav a.on { background: var(--lb-primary-soft); color: var(--lb-primary-text); font-weight: 600; }
-  .ch-nav a.on .n { color: var(--lb-primary-text); }
-  .ch-nav a .tick { color: var(--lb-ok); }
-  .ch-nav a .tick svg { width: 16px; height: 16px; }
-  .ch-head { padding: 26px 28px; border-radius: var(--lb-r-lg); background: var(--lb-hero-bg); border: 1px solid var(--lb-line); }
-  .ch-course { font-size: 14px; font-weight: 600; color: var(--lb-muted); }
-  .ch-head h1 { margin-top: 4px; font-size: clamp(28px, 3.4vw, 40px); }
-  .ch-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 20px; margin-top: 10px; font-size: 14.5px; color: var(--lb-ink-2); }
-  .ch-stats > span { display: inline-flex; align-items: center; gap: 7px; }
-  .ch-stats svg { width: 16px; height: 16px; color: var(--lb-primary-text); }
-  .tabs { display: flex; gap: 2px; margin-top: 22px; border-bottom: 1px solid var(--lb-line); overflow-x: auto; scrollbar-width: none; }
-  .tabs::-webkit-scrollbar { display: none; }
-  .tab { display: inline-flex; align-items: center; gap: 8px; height: 50px; margin-bottom: -1px; padding: 0 15px; border-bottom: 2px solid transparent; font-size: 15px; font-weight: 600; color: var(--lb-muted); white-space: nowrap; }
-  .tab .count { padding: 3px 8px; border-radius: 99px; background: var(--lb-surface-2); color: var(--lb-ink-2); font-size: 12px; font-weight: 700; line-height: 1; }
-  .tab.on { color: var(--lb-primary-text); border-color: var(--lb-primary); }
-  .tab.on .count { background: var(--lb-primary); color: var(--lb-on-primary); }
-  .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 18px; }
-  .filters .select { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 6px 0 14px; border-radius: var(--lb-r-btn); border: 1px solid var(--lb-line-strong); background: var(--lb-surface); font-size: 14px; color: var(--lb-muted); white-space: nowrap; }
-  .filters .select select { height: 36px; border: 0; background: transparent; font: inherit; font-weight: 600; color: var(--lb-ink); cursor: pointer; }
-
-  .q-list { display: flex; flex-direction: column; gap: 18px; margin-top: 18px; }
   .q-card { position: relative; padding: 22px 24px; border-radius: var(--lb-r-lg); background: var(--lb-surface); border: 1px solid var(--lb-line); box-shadow: var(--lb-shadow-card); }
   .q-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
-  .q-no { margin-right: 4px; font-family: var(--lb-font-num); font-size: 17px; font-weight: 700; color: var(--lb-ink); }
   .tag { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 2px 10px; border-radius: 999px; background: var(--lb-surface-2); color: var(--lb-ink-2); font-size: 12.5px; font-weight: 600; line-height: 1.3; }
   .tag svg { width: 13px; height: 13px; }
   .tag.board { background: var(--lb-accent-soft); color: var(--lb-accent-ink); }
@@ -635,7 +654,6 @@
   .opt.wrong .mark { color: var(--lb-bad); }
   .explain { margin-top: 14px; padding: 14px 18px; border-radius: var(--lb-r-md); background: var(--lb-surface-2); border-left: 3px solid var(--lb-primary); font-size: 15.5px; line-height: 1.85; color: var(--lb-ink-2); }
   .explain b { color: var(--lb-ink); }
-  .q-foot { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 14px; font-size: 14px; color: var(--lb-muted); }
   .stem { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 280px); gap: 22px; align-items: center; padding: 18px 20px; border-radius: var(--lb-r-md); background: var(--lb-bg); border: 1px solid var(--lb-line); }
   .stem.stem-plain { grid-template-columns: minmax(0, 1fr); }
   .stem .q-figure { margin: 0; }
@@ -647,46 +665,10 @@
   .part .marks { display: grid; place-items: center; min-width: 30px; height: 28px; padding: 0 8px; border-radius: 999px; background: var(--lb-surface-2); font-size: 13px; font-weight: 700; color: var(--lb-ink-2); }
   .sol-btn { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--lb-primary-text); cursor: pointer; }
   .sol-btn svg { width: 15px; height: 15px; transition: transform 0.15s; }
-  .q-reveal > summary { list-style: none; }
-  .q-reveal > summary::-webkit-details-marker { display: none; }
-  .q-reveal[open] > summary svg { transform: rotate(180deg); }
   .tl-link { color: var(--lb-ink); text-decoration: underline; text-decoration-color: var(--lb-line-strong); text-underline-offset: 3px; }
   .tl-link:hover { text-decoration-color: var(--lb-primary); }
   .bank-stem { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 16px; line-height: 1.75; }
-  .q-reveals { display: flex; flex-wrap: wrap; column-gap: 24px; }
-  .q-reveals > .q-reveal[open] { flex-basis: 100%; }
-
-  /* ── The question bank's class › subject › chapter pages (dashboard and website) ── */
-  .bank-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 14px; }
-  .bank-grid > li { display: flex; }
-  .bank-card { display: flex; flex: 1; flex-direction: column; gap: 6px; min-width: 0; padding: 18px 20px; border-radius: var(--lb-r-lg); background: var(--lb-surface); border: 1px solid var(--lb-line); box-shadow: var(--lb-shadow-card); color: var(--lb-ink); transition: border-color 0.15s; }
-  a.bank-card:hover { border-color: var(--lb-primary); }
-  .bank-card-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-family: var(--lb-font-head); font-size: 21px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
-  .bank-card-title svg { width: 18px; height: 18px; flex: none; color: var(--lb-primary-text); }
-  .bank-card-detail { font-size: 14px; color: var(--lb-muted); }
-  .bank-card-meta { padding-top: 4px; font-size: 14px; color: var(--lb-ink-2); }
-  .bank-subject { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: start; gap: 14px; }
-  .bank-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: var(--lb-r-md); background: var(--lb-primary-soft); color: var(--lb-primary-text); }
-  .bank-icon svg { width: 24px; height: 24px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
   a.tag:hover { background: var(--lb-primary-soft); color: var(--lb-primary-text); }
-  .ch-rows { display: flex; flex-direction: column; padding: 4px 0; }
-  .ch-rows > li + li { border-top: 1px solid var(--lb-line); }
-  .ch-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 18px; padding: 14px 20px; color: var(--lb-ink); }
-  a.ch-row:hover { background: var(--lb-surface-2); }
-  .ch-rows > li:first-child > a.ch-row { border-radius: var(--lb-r-lg) var(--lb-r-lg) 0 0; }
-  .ch-rows > li:last-child > a.ch-row { border-radius: 0 0 var(--lb-r-lg) var(--lb-r-lg); }
-  .ch-row-label { display: block; font-size: 13px; font-weight: 700; color: var(--lb-muted); }
-  .ch-row-title { display: block; font-size: 16.5px; font-weight: 600; line-height: 1.5; color: var(--lb-ink); }
-  a.ch-row-title:hover { color: var(--lb-primary-text); }
-  .ch-row.muted .ch-row-title { font-weight: 500; color: var(--lb-ink-2); }
-  .ch-row-side { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 12px; }
-  .ch-row-side .chips { margin-top: 0; justify-content: flex-end; }
-  .ch-row-total { font-size: 13.5px; color: var(--lb-muted); white-space: nowrap; }
-  @media (max-width: 640px) {
-    .ch-row { grid-template-columns: minmax(0, 1fr); padding: 14px 16px; }
-    .ch-row-side, .ch-row-side .chips { justify-content: flex-start; }
-  }
 
   /* ── Loading: the bar across the top, page placeholders, and buttons whose form is being sent ── */
   .nav-progress { position: fixed; inset: 0 0 auto 0; z-index: 100; height: 3px; pointer-events: none; background: var(--lb-primary); transform-origin: left center; transform: scaleX(0); opacity: 0; }
@@ -710,19 +692,11 @@
   .dash-menu > summary::-webkit-details-marker { display: none; }
   .dash-menu-panel { position: absolute; left: 0; right: 0; top: 100%; z-index: 40; display: flex; flex-direction: column; gap: 2px; max-height: calc(100dvh - 60px); overflow-y: auto; padding: 10px 12px 24px; background: var(--lb-side-bg); color: var(--lb-side-ink); border-bottom: 1px solid var(--lb-side-line); box-shadow: var(--lb-shadow-float); }
 
-  @media (max-width: 980px) {
-    .ch-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; padding-top: 14px; }
-    .ch-nav { position: static; flex-direction: row; gap: 6px; max-height: none; overflow-x: auto; padding: 8px; scrollbar-width: thin; }
-    .ch-nav-title { display: none; }
-    .ch-nav a { grid-template-columns: auto auto auto; flex: none; white-space: nowrap; }
-  }
   @media (max-width: 640px) {
-    .ch-head { padding: 20px; }
     .q-card { padding: 18px 16px; }
     .q-text { font-size: 16.5px; }
     .options { grid-template-columns: minmax(0, 1fr); }
     .stem { grid-template-columns: minmax(0, 1fr); padding: 16px; }
-    .filters .select { flex: 1; }
   }
 
   /* ── Dashboard editor pieces ── */
@@ -747,4 +721,36 @@
     .bottom-nav { display: grid; }
     .dash-content { padding: 18px 16px 100px; gap: 18px; }
   }
+
+  /* ── The question bank's pages (class="qb"): the QBank design in every theme ── */
+  .qb {
+    background: var(--color-qb-page);
+    color: var(--color-qb-ink);
+    font-family: var(--ff-hind), system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+  .qb :is(h1, h2, h3, h4) { font-family: inherit; font-weight: 700; letter-spacing: normal; line-height: inherit; color: inherit; text-wrap: wrap; }
+  /* Plain links are green and underlined, as in the design; cards and buttons set their own look. */
+  .qb a:not([class]) { color: var(--color-qb-accent); text-decoration: underline; }
+  .qb a:not([class]):hover { color: var(--color-qb-accent-hover); }
+  .qb :focus-visible { outline: 2px solid var(--color-qb-accent); outline-offset: 2px; }
+  .qb .on-dark :focus-visible { outline-color: var(--color-qb-board-cta); }
+  /* The page container, lined up with the website's header (.wrap) so the bank sits in the site. */
+  .qb-x { width: 100%; max-width: 1180px; margin-inline: auto; padding-inline: 28px; }
+  @media (max-width: 640px) { .qb-x { padding-inline: 16px; } }
+  .qb-scroll { scrollbar-width: none; }
+  .qb-scroll::-webkit-scrollbar { display: none; }
+  .qb-figure { display: block; max-width: 100%; max-height: 320px; margin-top: 12px; border-radius: 10px; border: 1px solid var(--color-qb-line); background: #fff; object-fit: contain; }
+  .qb [aria-busy="true"] { opacity: 0.55; transition: opacity 0.15s; }
+  .qb-flash { animation: qb-flash 1.8s ease-out; }
+  @keyframes qb-flash { 0%, 35% { box-shadow: 0 0 0 3px var(--color-qb-board-cta); } 100% { box-shadow: 0 0 0 3px transparent; } }
+  @media (prefers-reduced-motion: reduce) { .qb-flash { animation: none; } }
+}
+
+/* Printing a question bank sheet: only the sheet, without the site's or dashboard's frame. */
+@media print {
+  .dash { display: block; }
+  .dash-side, .dash-topbar, .dash-mobile-top, .bottom-nav, .site-header, .site-footer, .nav-progress, [data-print-hide] { display: none !important; }
+  .qb { background: #fff; }
 }

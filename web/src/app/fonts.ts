@@ -8,6 +8,7 @@ import {
   Noto_Sans_Bengali,
   Noto_Serif_Bengali,
   Nunito_Sans,
+  Space_Grotesk,
 } from "next/font/google";
 
 // Every face the three themes use. None is preloaded: a page only downloads the faces its theme
@@ -39,6 +40,14 @@ const notoSansBengali = Noto_Sans_Bengali({
 });
 const balooDa = Baloo_Da_2({ subsets: ["bengali", "latin"], variable: "--ff-baloo", display: "swap", preload: false });
 const nunitoSans = Nunito_Sans({ subsets: ["latin"], variable: "--ff-nunito", display: "swap", preload: false });
+// The question bank's headings and numbers (the QBank design), with Hind Siliguri for its text.
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--ff-grotesk",
+  display: "swap",
+  preload: false,
+});
 
 /** Class names that define every font variable; set once on <html>. */
 export const fontVariables = [
@@ -51,6 +60,7 @@ export const fontVariables = [
   notoSansBengali,
   balooDa,
   nunitoSans,
+  spaceGrotesk,
 ]
   .map((font) => font.variable)
   .join(" ");

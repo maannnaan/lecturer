@@ -9,6 +9,7 @@ import {
   BOARDS,
   CREATIVE_PART_COUNT,
   DEFAULT_PART_MARKS,
+  DIFFICULTIES,
   MAX_STATEMENTS,
   MIN_STATEMENTS,
   OPTION_COUNT,
@@ -23,7 +24,17 @@ import { createQuestionAction, deleteQuestionAction, updateQuestionAction } from
 type FormText = Dictionary["dashboard"]["bank"]["form"];
 type QuestionText = Pick<
   Dictionary["questions"],
-  "types" | "optionKeys" | "partKeys" | "statementKeys" | "defaultPrompt" | "boards" | "stemLabel" | "explanation" | "answer" | "solution"
+  | "types"
+  | "optionKeys"
+  | "partKeys"
+  | "statementKeys"
+  | "defaultPrompt"
+  | "boards"
+  | "stemLabel"
+  | "explanation"
+  | "answer"
+  | "solution"
+  | "difficulties"
 >;
 type Common = Pick<Dictionary["common"], "save" | "saving" | "saved" | "optional">;
 type UploadErrors = { type: string; size: string; unavailable: string };
@@ -39,6 +50,7 @@ export type QuestionData = {
   body: QuestionBody;
   board: string;
   year: number | null;
+  difficulty: string;
   source: string;
   videoUrl: string;
 };
@@ -53,6 +65,7 @@ function initialFields(question: QuestionData | undefined, defaults: { subjectId
     visibility: question?.visibility ?? "public",
     board: question?.board ?? "",
     year: question?.year ? String(question.year) : "",
+    difficulty: question?.difficulty ?? "",
     source: question?.source ?? "",
     videoUrl: question?.videoUrl ?? "",
     explanation: body?.explanation ?? "",
@@ -271,6 +284,12 @@ export function QuestionForm({
             />
             <Field name="year" label={t.year} inputMode="numeric" placeholder="2024" defaultValue={v("year")} error={e.year} />
           </div>
+          <SelectField
+            name="difficulty"
+            label={t.difficulty}
+            defaultValue={v("difficulty")}
+            options={[{ value: "", label: t.noDifficulty }, ...DIFFICULTIES.map((k) => ({ value: k, label: q.difficulties[k] }))]}
+          />
           <Field name="source" label={t.source} labelNote={c.optional} placeholder={t.sourcePlaceholder} defaultValue={v("source")} error={e.source} />
           <Field
             name="videoUrl"

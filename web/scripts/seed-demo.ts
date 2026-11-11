@@ -12,6 +12,7 @@ import { getDb } from "@/server/db";
 import { upsertAdmin } from "@/server/admins";
 import { notices as noticesTable, type TeacherSite } from "@/server/db/schema";
 import { databaseUrl } from "@/server/db/url";
+import type { SubjectGroup } from "@/lib/bank";
 import type { Grade } from "@/lib/grades";
 import { parseQuestion } from "@/lib/questions";
 import type { ThemeName } from "@/lib/themes";
@@ -46,6 +47,7 @@ type DemoCourse = {
 /** A subject of the question bank, which is separate from the courses. */
 type DemoSubject = {
   grade: Grade;
+  group?: SubjectGroup;
   name: string;
   chapters: string[];
   /** Questions by chapter index (0 = the first chapter). */
@@ -60,6 +62,7 @@ const NEWTONIAN_MECHANICS: DemoQuestion[] = [
     type: "mcq",
     board: "dhaka",
     year: "2023",
+    difficulty: "easy",
     stem: String.raw`$2\,\text{kg}$ ভরের একটি বস্তুর উপর $10\,\text{N}$ বল প্রয়োগ করলে বস্তুটির ত্বরণ কত হবে?`,
     option0: String.raw`$2\,\text{m s}^{-2}$`,
     option1: String.raw`$5\,\text{m s}^{-2}$`,
@@ -85,6 +88,7 @@ const NEWTONIAN_MECHANICS: DemoQuestion[] = [
     type: "mcq_multi",
     board: "rajshahi",
     year: "2022",
+    difficulty: "hard",
     stem: "ভরবেগ সম্পর্কে নিচের তথ্যগুলো লক্ষ কর—",
     statement0: "ভরবেগ একটি ভেক্টর রাশি",
     statement1: String.raw`ভরবেগের একক $\text{kg m s}^{-1}$`,
@@ -100,6 +104,7 @@ const NEWTONIAN_MECHANICS: DemoQuestion[] = [
     type: "creative",
     board: "dhaka",
     year: "2023",
+    difficulty: "hard",
     stem: String.raw`$5\,\text{kg}$ ভরের একটি বাক্সকে অনুভূমিকের সাথে $30^\circ$ কোণে আনত একটি তলের উপর রাখা হলো। তল ও বাক্সের মধ্যে গতীয় ঘর্ষণ সহগ $\mu_k = 0.2$ এবং $g = 9.8\,\text{m s}^{-2}$।`,
     part0: "নিউটনের গতির প্রথম সূত্রটি লিখ।",
     part1: "ঘর্ষণ বল কেন সবসময় আপেক্ষিক গতির বিপরীতে ক্রিয়া করে? ব্যাখ্যা কর।",
@@ -126,6 +131,7 @@ $$\begin{aligned} f_k &= \mu_k R = 0.2 \times 42.43 \\ &\approx 8.49\ \text{N} \
   },
   {
     type: "practice",
+    difficulty: "easy",
     stem: String.raw`$5\,\text{kg}$ ভরের একটি বস্তুর উপর $20\,\text{N}$ বল $4\,\text{s}$ ধরে ক্রিয়া করে। বস্তুটির ভরবেগের পরিবর্তন কত?`,
     finalAnswer: String.raw`$80\,\text{kg m s}^{-1}$`,
     solution: String.raw`ভরবেগের পরিবর্তন = বলের ঘাত $= Ft = 20 \times 4 = 80\,\text{kg m s}^{-1}$`,
@@ -333,11 +339,12 @@ const DEMO: DemoTeacher[] = [
     bank: [
       {
         grade: "hsc",
+        group: "science",
         name: "পদার্থবিজ্ঞান ১ম পত্র",
         chapters: titles(HSC_PHYSICS_1),
         questions: { 2: KINEMATICS, 3: NEWTONIAN_MECHANICS },
       },
-      { grade: "ssc", name: "পদার্থবিজ্ঞান", chapters: titles(SSC_PHYSICS), questions: { 1: SSC_MOTION } },
+      { grade: "ssc", group: "science", name: "পদার্থবিজ্ঞান", chapters: titles(SSC_PHYSICS), questions: { 1: SSC_MOTION } },
     ],
     notices: [
       { title: "এ সপ্তাহে শুক্রবারের ক্লাস রবিবার বিকেল ৪টায় হবে।", pinned: true, daysAgo: 2 },
@@ -478,7 +485,7 @@ async function main() {
         }
       }
       for (const b of t.bank ?? []) {
-        const created = await createSubject(db, id, { grade: b.grade, name: b.name }, b.chapters);
+        const created = await createSubject(db, id, { grade: b.grade, group: b.group ?? "", name: b.name }, b.chapters);
         const subject = (await getSubject(db, id, created.id))!;
         for (const [index, list] of Object.entries(b.questions ?? {})) {
           for (const fields of list) {

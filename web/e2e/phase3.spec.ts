@@ -31,48 +31,50 @@ test.describe.configure({ mode: "serial" });
 
 let editUrl = "";
 
-test("a chapter page shows its public questions, typeset, and MCQ practice works", async ({ page }) => {
+/** A chapter page's tabs (links in the "প্রশ্নের ধরন" nav), and the one that is open. */
+const tabs = (page: Page) => page.getByRole("navigation", { name: "প্রশ্নের ধরন" }).getByRole("link");
+const openTab = (page: Page) => page.getByRole("navigation", { name: "প্রশ্নের ধরন" }).locator('[aria-current="page"]');
+
+test("a chapter page shows its public questions, typeset; answers open and MCQs are checked", async ({ page }) => {
   await page.goto(SUBJECT);
-  await page.getByRole("link", { name: "নিউটনিয়ান বলবিদ্যা", exact: true }).click();
+  await page.getByRole("list", { name: "অধ্যায়" }).getByRole("link").filter({ hasText: "নিউটনিয়ান বলবিদ্যা" }).click();
   await expect(page).toHaveURL(new RegExp(`${CHAPTER_4}$`));
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("নিউটনিয়ান বলবিদ্যা");
-  await expect(page.locator(".ch-stats")).toContainText("৮টি প্রশ্ন");
-  // The first section with questions opens: the textbook problems.
-  await expect(page.locator(".tabs .tab.on")).toHaveText(/^পাঠ্যবইয়ের সমস্যা/);
-  await expect(page.locator(".q-card .katex").first()).toBeVisible();
+  // The first tab with questions opens: the textbook problems.
+  await expect(openTab(page)).toContainText("পাঠ্যবইয়ের সমস্যা");
+  await expect(page.getByRole("article").first().locator(".katex").first()).toBeVisible();
 
-  await page.getByRole("link", { name: /^MCQ/ }).click();
+  await tabs(page).filter({ hasText: "MCQ" }).click();
   await expect(page).toHaveURL(/tab=mcq/);
-  const first = page.locator(".q-card:visible").first();
-  await first.getByRole("button", { name: /খ/ }).click();
-  await expect(first.locator(".opt.correct")).toContainText("তোমার উত্তর সঠিক");
-  await expect(first.locator(".explain")).toContainText("নিউটনের দ্বিতীয় সূত্র");
+  const first = page.getByRole("article", { name: "MCQ ১" });
+  await first.getByRole("button", { name: /^খ/ }).click();
+  await expect(first.getByRole("button", { name: /\(সঠিক উত্তর\)/ })).toHaveCount(1);
+  await expect(first.getByText("নিউটনের দ্বিতীয় সূত্র")).toBeVisible();
 
-  const second = page.locator(".q-card:visible").nth(1);
-  await second.getByRole("button", { name: /গ/ }).click();
-  await expect(second.locator(".opt.wrong")).toContainText("তোমার উত্তর");
-  await expect(second.locator(".opt.correct")).toContainText("সঠিক উত্তর");
-  await second.getByRole("button", { name: "আবার চেষ্টা করো" }).click();
-  await expect(second.locator(".opt.wrong")).toHaveCount(0);
+  const second = page.getByRole("article", { name: "MCQ ২" });
+  await second.getByRole("button", { name: /^গ/ }).click();
+  await expect(second.getByRole("button", { name: /বেছে নেওয়া উত্তর, ভুল/ })).toHaveCount(1);
+  await expect(second.getByRole("button", { name: /\(সঠিক উত্তর\)/ })).toHaveCount(1);
+  // A checked question stays locked; "start again" clears every answer.
+  await second.getByRole("button", { name: /^ক/ }).click({ force: true });
+  await expect(second.getByRole("button", { name: /বেছে নেওয়া উত্তর, ভুল/ })).toHaveText(/^গ/);
+  await page.getByRole("button", { name: "আবার শুরু করো" }).click();
+  await expect(second.getByRole("button", { name: /ভুল|সঠিক উত্তর/ })).toHaveCount(0);
   await shot(page, "site-chapter-ink-1280");
 
-  await page.getByRole("link", { name: /^CQ/ }).click();
+  await tabs(page).filter({ hasText: /^CQ/ }).click();
   await expect(page).toHaveURL(/tab=cq/);
   await expect(page.getByText("সুতরাং গতীয় ঘর্ষণ বল")).toBeHidden();
-  await page.getByText("সমাধান দেখো").first().click();
+  await page.getByRole("article", { name: "CQ ১" }).getByRole("button", { name: "উত্তর দেখো" }).click();
   await expect(page.getByText("সুতরাং গতীয় ঘর্ষণ বল")).toBeVisible();
 
-  // Board questions are a filter in each section.
-  await page.getByRole("link", { name: /^MCQ/ }).click();
-  await expect(page.locator(".tabs .tab.on")).toHaveText(/^MCQ/);
-  await page.getByLabel("বোর্ড:").selectOption({ label: "সব বোর্ড প্রশ্ন" });
-  await page.getByRole("button", { name: "দেখাও" }).click();
-  await expect(page).toHaveURL(/board=any/);
-  await expect(page.locator(".q-card:visible")).toHaveCount(3);
-  await page.getByLabel("সাল:").selectOption({ label: "২০২৪" });
-  await page.getByRole("button", { name: "দেখাও" }).click();
-  await expect(page.locator(".q-card:visible")).toHaveCount(1);
-  await expect(page.locator(".q-card:visible .tag.board")).toContainText("চট্টগ্রাম বোর্ড ২০২৪");
+  // Board and year are filters on every tab.
+  await tabs(page).filter({ hasText: "MCQ" }).click();
+  await expect(openTab(page)).toContainText("MCQ");
+  await page.getByRole("combobox", { name: "সাল" }).selectOption({ label: "২০২৪" });
+  await expect(page).toHaveURL(/year=2024/);
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await expect(page.getByRole("article")).toContainText("চট্টগ্রাম বোর্ড · ২০২৪");
 });
 
 test("private questions never reach the website", async ({ request }) => {
@@ -128,7 +130,7 @@ test("a teacher writes an MCQ with maths, fixes a mistake, and adds the next", a
 
   const chapter5 = await (await request.get(`${SUBJECT}/5`)).text();
   expect(chapter5).toContain("হলে কাজ কত?");
-  expect(chapter5).toContain("বরিশাল বোর্ড ২০২৫");
+  expect(chapter5).toContain("বরিশাল বোর্ড · ২০২৫");
 });
 
 test("a private creative question with a diagram stays in the bank", async ({ page, request }) => {
@@ -155,7 +157,7 @@ test("a private creative question with a diagram stays in the bank", async ({ pa
   await page.getByRole("button", { name: "প্রশ্ন যোগ করুন" }).click();
   // Saved: back on its chapter in the bank, on the CQ section.
   await expect(page).toHaveURL(/\/dashboard\/bank\/subject\/[0-9a-f-]{36}\/[0-9a-f-]{36}\?tab=cq$/);
-  const item = page.locator("main li:visible").filter({ hasText: "স্প্রিং ধ্রুবক" });
+  const item = page.getByRole("article").filter({ hasText: "স্প্রিং ধ্রুবক" });
   await expect(item.getByText("শুধু আপনি")).toBeVisible();
   editUrl = (await item.getByRole("link", { name: "সম্পাদনা" }).getAttribute("href")) ?? "";
   expect(editUrl).toMatch(/^\/dashboard\/bank\/[0-9a-f-]{36}$/);
