@@ -18,9 +18,9 @@
   --lb-accent: #b0822f; --lb-accent-soft: #f4ead3; --lb-accent-ink: #7e5a17;
   --lb-ok: #2e7550; --lb-ok-soft: #e3f1e7; --lb-bad: #a8423a; --lb-bad-soft: #f8e6e2;
 
-  --lb-font-head: var(--ff-newsreader), var(--ff-noto-serif-bn), Georgia, serif;
-  --lb-font-body: var(--ff-inter), var(--ff-hind), system-ui, sans-serif;
-  --lb-font-num: var(--ff-newsreader), var(--ff-noto-serif-bn), Georgia, serif;
+  --lb-font-head: var(--ff-kalpurush), var(--ff-newsreader), Georgia, serif;
+  --lb-font-body: var(--ff-kalpurush), var(--ff-inter), system-ui, sans-serif;
+  --lb-font-num: var(--ff-kalpurush), var(--ff-newsreader), Georgia, serif;
   --lb-head-weight: 600; --lb-head-tracking: -0.005em;
 
   --lb-r-sm: 6px; --lb-r-md: 8px; --lb-r-lg: 12px; --lb-r-btn: 8px; --lb-r-mark: 8px;
@@ -55,9 +55,9 @@
   --lb-accent: #3e9c9e; --lb-accent-soft: #e0f2f1; --lb-accent-ink: #1e6c6e;
   --lb-ok: #23794f; --lb-ok-soft: #e2f4ea; --lb-bad: #a63e39; --lb-bad-soft: #fbe9e7;
 
-  --lb-font-head: var(--ff-manrope), var(--ff-anek), system-ui, sans-serif;
-  --lb-font-body: var(--ff-inter), var(--ff-noto-sans-bn), system-ui, sans-serif;
-  --lb-font-num: var(--ff-manrope), var(--ff-anek), system-ui, sans-serif;
+  --lb-font-head: var(--ff-kalpurush), var(--ff-manrope), system-ui, sans-serif;
+  --lb-font-body: var(--ff-kalpurush), var(--ff-inter), system-ui, sans-serif;
+  --lb-font-num: var(--ff-kalpurush), var(--ff-manrope), system-ui, sans-serif;
   --lb-head-weight: 700; --lb-head-tracking: -0.015em;
 
   --lb-r-sm: 8px; --lb-r-md: 12px; --lb-r-lg: 18px; --lb-r-btn: 12px; --lb-r-mark: 12px;
@@ -94,9 +94,9 @@
   --lb-accent: #d49a4e; --lb-accent-soft: #f8ecd9; --lb-accent-ink: #8a5c1b;
   --lb-ok: #2f7a4e; --lb-ok-soft: #e3f2e8; --lb-bad: #a64a3a; --lb-bad-soft: #f9e8e3;
 
-  --lb-font-head: var(--ff-baloo), var(--ff-hind), system-ui, sans-serif;
-  --lb-font-body: var(--ff-nunito), var(--ff-hind), system-ui, sans-serif;
-  --lb-font-num: var(--ff-baloo), system-ui, sans-serif;
+  --lb-font-head: var(--ff-kalpurush), var(--ff-baloo), system-ui, sans-serif;
+  --lb-font-body: var(--ff-kalpurush), var(--ff-nunito), system-ui, sans-serif;
+  --lb-font-num: var(--ff-kalpurush), var(--ff-baloo), system-ui, sans-serif;
   --lb-head-weight: 600; --lb-head-tracking: 0;
 
   --lb-r-sm: 12px; --lb-r-md: 16px; --lb-r-lg: 24px; --lb-r-btn: 999px; --lb-r-mark: 16px;
@@ -200,9 +200,11 @@
   --color-qb-wrong-soft: #fce8e4;
   --shadow-qb-search: 0 8px 24px rgba(23, 25, 28, 0.06);
 }
+/* Bangla in Kalpurush everywhere (it answers only for Bangla characters, so it can come first);
+   Latin in the face after it. */
 @theme inline {
-  --font-qb: var(--ff-hind), system-ui, sans-serif;
-  --font-qb-display: var(--ff-grotesk), var(--ff-hind), sans-serif;
+  --font-qb: var(--ff-kalpurush), var(--ff-hind), system-ui, sans-serif;
+  --font-qb-display: var(--ff-kalpurush), var(--ff-grotesk), var(--ff-hind), sans-serif;
 }
 
 @layer base {
@@ -726,7 +728,7 @@
   .qb {
     background: var(--color-qb-page);
     color: var(--color-qb-ink);
-    font-family: var(--ff-hind), system-ui, sans-serif;
+    font-family: var(--ff-kalpurush), var(--ff-hind), system-ui, sans-serif;
     font-size: 16px;
     line-height: 1.55;
   }
