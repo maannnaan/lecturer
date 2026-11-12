@@ -102,6 +102,7 @@ export default async function NewQuestionPage({ searchParams }: { searchParams: 
         t={t.form}
         q={d.questions}
         c={d.common}
+        editor={d.editor}
         uploadErrors={{ type: d.errors.uploadType, size: d.errors.uploadSize, unavailable: d.errors.uploadOff }}
       />
     </main>

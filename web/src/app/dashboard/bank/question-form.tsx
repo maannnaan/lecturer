@@ -1,9 +1,10 @@
 "use client";
 
-import { type FormEvent, useActionState, useDeferredValue, useRef, useState, useTransition } from "react";
-import { ImagePlus, Trash2 } from "lucide-react";
-import { Field, FormMessages, PendingButton, SelectField, SubmitButton, TextAreaField, emptyForm } from "@/components/form";
-import { MathPreviewText, useKatex } from "@/components/math-preview";
+import { useActionState, useDeferredValue, useRef, useState } from "react";
+import { Field, FormMessages, PendingButton, SelectField, SubmitButton, emptyForm } from "@/components/form";
+import { useKatex } from "@/components/math-preview";
+import { type EditorText, RichEditor, type UploadErrors } from "@/components/rich-editor/rich-editor";
+import { type MathRenderer, RichView } from "@/components/rich-view";
 import type { Dictionary } from "@/i18n";
 import {
   BOARDS,
@@ -17,7 +18,7 @@ import {
   isMcq,
   isProblem,
 } from "@/lib/questions";
-import { uploadImage } from "@/lib/shrink-image";
+import { type RichText, richFromField, richToDoc } from "@/lib/rich-text";
 import type { QuestionBody } from "@/server/db/schema";
 import { createQuestionAction, deleteQuestionAction, updateQuestionAction } from "./actions";
 
@@ -37,7 +38,6 @@ type QuestionText = Pick<
   | "difficulties"
 >;
 type Common = Pick<Dictionary["common"], "save" | "saving" | "saved" | "optional">;
-type UploadErrors = { type: string; size: string; unavailable: string };
 
 /** A bank subject the question can be filed under; `group` is its class, for grouping the menu. */
 export type SubjectChoice = { id: string; name: string; group: string; chapters: { id: string; label: string }[] };
@@ -55,13 +55,24 @@ export type QuestionData = {
   videoUrl: string;
 };
 
-/** The form's fields as strings, from a saved question (or the defaults for a new one). */
+/**
+ * The stem as the editor opens it. A question from before pictures went into the text kept one
+ * picture beside its stem: it moves into the stem, at the end, and is saved there.
+ */
+function stemWithPicture(body: QuestionBody | undefined): RichText {
+  if (!body) return "";
+  if (!body.image) return body.stem;
+  const doc = richToDoc(body.stem);
+  return { type: "doc", content: [...doc.content, { type: "image", attrs: { src: body.image.url, mediaId: body.image.mediaId } }] };
+}
+
+/** The form's fields, from a saved question (or the defaults for a new one). Text fields are rich text. */
 function initialFields(question: QuestionData | undefined, defaults: { subjectId: string; chapterId: string }) {
   const body = question?.body;
-  const f: Record<string, string> = {
+  const f: Record<string, RichText> = {
     subjectId: question?.subjectId ?? defaults.subjectId,
     chapterId: question ? (question.chapterId ?? "") : defaults.chapterId,
-    stem: body?.stem ?? "",
+    stem: stemWithPicture(body),
     visibility: question?.visibility ?? "public",
     board: question?.board ?? "",
     year: question?.year ? String(question.year) : "",
@@ -85,6 +96,14 @@ function initialFields(question: QuestionData | undefined, defaults: { subjectId
   return f;
 }
 
+/** The form's values as posted, for the preview: every field, rich ones as JSON or plain text. */
+function readForm(form: HTMLFormElement | null): Record<string, string> {
+  const values: Record<string, string> = {};
+  if (!form) return values;
+  for (const [key, value] of new FormData(form).entries()) if (typeof value === "string") values[key] = value;
+  return values;
+}
+
 export function QuestionForm({
   question,
   type,
@@ -93,6 +112,7 @@ export function QuestionForm({
   t,
   q,
   c,
+  editor,
   uploadErrors,
 }: {
   question?: QuestionData;
@@ -102,41 +122,43 @@ export function QuestionForm({
   t: FormText;
   q: QuestionText;
   c: Common;
+  editor: EditorText;
   uploadErrors: UploadErrors;
 }) {
   const [state, action] = useActionState(question ? updateQuestionAction : createQuestionAction, emptyForm);
   const initial = initialFields(question, defaults);
-  const v = (name: string) => state.values?.[name] ?? initial[name] ?? "";
+  /** A field's value: what a refused form posted, else what's saved. */
+  const v = (name: string): RichText => state.values?.[name] ?? initial[name] ?? "";
+  const s = (name: string): string => {
+    const value = v(name);
+    return typeof value === "string" ? value : "";
+  };
   const e = state.errors;
 
-  const [subjectId, setSubjectId] = useState(v("subjectId") || subjects[0]?.id || "");
+  const [subjectId, setSubjectId] = useState(s("subjectId") || subjects[0]?.id || "");
   const chapters = subjects.find((subject) => subject.id === subjectId)?.chapters ?? [];
-  const [image, setImage] = useState(question?.body.image ? { id: question.body.image.mediaId, url: question.body.image.url } : null);
 
-  // What the preview shows: the form's current values, read on every edit.
-  const [snapshot, setSnapshot] = useState<Record<string, string>>(initial);
+  // What the preview shows: the form's current values, read after every edit.
+  const form = useRef<HTMLFormElement>(null);
+  const [snapshot, setSnapshot] = useState<Record<string, string> | null>(null);
   const preview = useDeferredValue(snapshot);
-  const readForm = (event: FormEvent<HTMLFormElement>) => {
-    const values: Record<string, string> = {};
-    for (const [key, value] of new FormData(event.currentTarget).entries()) if (typeof value === "string") values[key] = value;
-    setSnapshot(values);
-  };
+  const refresh = () => setSnapshot(readForm(form.current));
 
   const mcq = isMcq(type);
   const stemLabel = type === "creative" ? t.stemCreative : t.stem;
+  const rich = { t: editor, uploadErrors, onChange: refresh };
 
   return (
     <div className="grid items-start gap-6 2xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-      <form action={action} onChange={readForm} className="card flex min-w-0 flex-col gap-5 p-5" noValidate>
+      <form ref={form} action={action} onChange={refresh} className="card flex min-w-0 flex-col gap-5 p-5" noValidate>
         <input type="hidden" name="type" value={type} />
         {question && <input type="hidden" name="questionId" value={question.id} />}
-        <input type="hidden" name="imageId" value={image?.id ?? ""} />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <SelectField
             name="subjectId"
             label={t.subject}
-            defaultValue={v("subjectId") || subjects[0]?.id || ""}
+            defaultValue={s("subjectId") || subjects[0]?.id || ""}
             onChange={(event) => setSubjectId(event.target.value)}
             options={subjects.map((subject) => ({ value: subject.id, label: subject.name, group: subject.group }))}
             error={e.subjectId}
@@ -145,39 +167,32 @@ export function QuestionForm({
             key={subjectId}
             name="chapterId"
             label={t.chapter}
-            defaultValue={subjectId === v("subjectId") ? v("chapterId") : ""}
+            defaultValue={subjectId === s("subjectId") ? s("chapterId") : ""}
             options={[{ value: "", label: t.noChapter }, ...chapters.map((ch) => ({ value: ch.id, label: ch.label }))]}
             error={e.chapterId}
           />
         </div>
 
-        <TextAreaField
-          name="stem"
-          label={stemLabel}
-          rows={type === "creative" ? 5 : 3}
-          defaultValue={v("stem")}
-          error={e.stem}
-          hint={t.mathHint}
-          required
-        />
-
-        <ImagePicker image={image} onChange={setImage} t={t} uploadErrors={uploadErrors} error={e.imageId} />
+        <RichEditor name="stem" label={stemLabel} rows={type === "creative" ? 5 : 3} defaultValue={v("stem")} error={e.stem} hint={t.mathHint} {...rich} />
 
         {type === "mcq_multi" && (
           <fieldset className="flex flex-col gap-3">
             <legend className="field-label mb-1">{t.statements}</legend>
             {Array.from({ length: MAX_STATEMENTS }, (_, i) => (
-              <Field
+              <RichEditor
                 key={i}
                 name={`statement${i}`}
                 label={`${t.statement} ${q.statementKeys[i]}`}
                 labelNote={i >= MIN_STATEMENTS ? c.optional : undefined}
+                mode="inline"
+                rows={1}
                 defaultValue={v(`statement${i}`)}
                 error={e[`statement${i}`]}
+                {...rich}
               />
             ))}
             <p className="field-hint">{t.statementsHint}</p>
-            <Field name="prompt" label={t.prompt} placeholder={q.defaultPrompt} defaultValue={v("prompt")} error={e.prompt} />
+            <Field name="prompt" label={t.prompt} placeholder={q.defaultPrompt} defaultValue={s("prompt")} error={e.prompt} />
           </fieldset>
         )}
 
@@ -186,16 +201,18 @@ export function QuestionForm({
             <legend className="field-label mb-1">{t.options}</legend>
             {Array.from({ length: OPTION_COUNT }, (_, i) => (
               <div key={i} className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3">
-                <label className="choice mt-[3px] !px-3 !py-2.5" title={`${t.correct}: ${q.optionKeys[i]}`}>
-                  <input type="radio" name="answer" value={i} defaultChecked={v("answer") === String(i)} aria-label={`${t.correct}: ${q.optionKeys[i]}`} />
+                <label className="choice mt-[30px] !px-3 !py-2.5" title={`${t.correct}: ${q.optionKeys[i]}`}>
+                  <input type="radio" name="answer" value={i} defaultChecked={s("answer") === String(i)} aria-label={`${t.correct}: ${q.optionKeys[i]}`} />
                   <span className="font-semibold">{q.optionKeys[i]}</span>
                 </label>
-                <Field
+                <RichEditor
                   name={`option${i}`}
                   label={`${t.option} ${q.optionKeys[i]}`}
+                  mode="inline"
+                  rows={1}
                   defaultValue={v(`option${i}`)}
                   error={e[`option${i}`]}
-                  required
+                  {...rich}
                 />
               </div>
             ))}
@@ -207,12 +224,10 @@ export function QuestionForm({
           </fieldset>
         )}
 
-        {mcq && (
-          <TextAreaField name="explanation" label={t.explanation} labelNote={c.optional} rows={3} defaultValue={v("explanation")} error={e.explanation} />
-        )}
+        {mcq && <RichEditor name="explanation" label={t.explanation} labelNote={c.optional} rows={2} defaultValue={v("explanation")} error={e.explanation} {...rich} />}
 
         {type === "short" && (
-          <TextAreaField name="modelAnswer" label={t.modelAnswer} labelNote={c.optional} rows={4} defaultValue={v("modelAnswer")} error={e.modelAnswer} />
+          <RichEditor name="modelAnswer" label={t.modelAnswer} labelNote={c.optional} rows={3} defaultValue={v("modelAnswer")} error={e.modelAnswer} {...rich} />
         )}
 
         {type === "creative" && (
@@ -221,20 +236,13 @@ export function QuestionForm({
             {Array.from({ length: CREATIVE_PART_COUNT }, (_, i) => (
               <div key={i} className="flex flex-col gap-3 rounded-lg border border-line p-3">
                 <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_7rem]">
-                  <TextAreaField
-                    name={`part${i}`}
-                    label={`${t.part} ${q.partKeys[i]}`}
-                    rows={2}
-                    defaultValue={v(`part${i}`)}
-                    error={e[`part${i}`]}
-                    required
-                  />
+                  <RichEditor name={`part${i}`} label={`${t.part} ${q.partKeys[i]}`} rows={1} defaultValue={v(`part${i}`)} error={e[`part${i}`]} {...rich} />
                   <Field
                     name={`marks${i}`}
                     label={`${t.marks} (${q.partKeys[i]})`}
                     inputMode="numeric"
                     placeholder={String(DEFAULT_PART_MARKS[i])}
-                    defaultValue={v(`marks${i}`)}
+                    defaultValue={s(`marks${i}`)}
                     error={e[`marks${i}`]}
                   />
                 </div>
@@ -243,13 +251,14 @@ export function QuestionForm({
                     {t.partSolution} ({q.partKeys[i]})
                   </summary>
                   <div className="mt-2">
-                    <TextAreaField
+                    <RichEditor
                       name={`solution${i}`}
                       label={`${t.partSolution} ${q.partKeys[i]}`}
                       labelNote={c.optional}
-                      rows={4}
+                      rows={3}
                       defaultValue={v(`solution${i}`)}
                       error={e[`solution${i}`]}
+                      {...rich}
                     />
                   </div>
                 </details>
@@ -260,15 +269,18 @@ export function QuestionForm({
 
         {isProblem(type) && (
           <>
-            <Field
+            <RichEditor
               name="finalAnswer"
               label={t.finalAnswer}
               labelNote={c.optional}
               hint={t.finalAnswerHint}
+              mode="inline"
+              rows={1}
               defaultValue={v("finalAnswer")}
               error={e.finalAnswer}
+              {...rich}
             />
-            <TextAreaField name="solution" label={t.solution} labelNote={c.optional} rows={6} defaultValue={v("solution")} error={e.solution} />
+            <RichEditor name="solution" label={t.solution} labelNote={c.optional} rows={5} defaultValue={v("solution")} error={e.solution} {...rich} />
           </>
         )}
 
@@ -279,32 +291,32 @@ export function QuestionForm({
             <SelectField
               name="board"
               label={t.board}
-              defaultValue={v("board")}
+              defaultValue={s("board")}
               options={[{ value: "", label: t.noBoard }, ...BOARDS.map((b) => ({ value: b, label: q.boards[b] }))]}
             />
-            <Field name="year" label={t.year} inputMode="numeric" placeholder="2024" defaultValue={v("year")} error={e.year} />
+            <Field name="year" label={t.year} inputMode="numeric" placeholder="2024" defaultValue={s("year")} error={e.year} />
           </div>
           <SelectField
             name="difficulty"
             label={t.difficulty}
-            defaultValue={v("difficulty")}
+            defaultValue={s("difficulty")}
             options={[{ value: "", label: t.noDifficulty }, ...DIFFICULTIES.map((k) => ({ value: k, label: q.difficulties[k] }))]}
           />
-          <Field name="source" label={t.source} labelNote={c.optional} placeholder={t.sourcePlaceholder} defaultValue={v("source")} error={e.source} />
+          <Field name="source" label={t.source} labelNote={c.optional} placeholder={t.sourcePlaceholder} defaultValue={s("source")} error={e.source} />
           <Field
             name="videoUrl"
             label={t.videoUrl}
             labelNote={c.optional}
             inputMode="url"
             placeholder="https://youtu.be/…"
-            defaultValue={v("videoUrl")}
+            defaultValue={s("videoUrl")}
             error={e.videoUrl}
           />
           <div className="flex flex-col gap-2" role="radiogroup" aria-label={t.visibility}>
             <span className="field-label">{t.visibility}</span>
             {(["public", "private"] as const).map((option) => (
               <label key={option} className="choice">
-                <input type="radio" name="visibility" value={option} defaultChecked={(v("visibility") || "public") === option} />
+                <input type="radio" name="visibility" value={option} defaultChecked={(s("visibility") || "public") === option} />
                 <span>{t.visibilityOptions[option]}</span>
               </label>
             ))}
@@ -326,7 +338,7 @@ export function QuestionForm({
 
       <section className="min-w-0 2xl:sticky 2xl:top-24" aria-label={t.preview}>
         <p className="mb-2 text-[13px] font-semibold text-muted">{t.preview}</p>
-        <QuestionPreview type={type} values={preview} imageUrl={image?.url ?? null} q={q} />
+        <QuestionPreview type={type} read={(name) => (preview ? richFromField(preview[name]) : v(name))} q={q} />
       </section>
     </div>
   );
@@ -359,136 +371,53 @@ export function DeleteQuestionForm({
   );
 }
 
-function ImagePicker({
-  image,
-  onChange,
-  t,
-  uploadErrors,
-  error,
-}: {
-  image: { id: string; url: string } | null;
-  onChange: (image: { id: string; url: string } | null) => void;
-  t: FormText;
-  uploadErrors: UploadErrors;
-  error?: string;
-}) {
-  const input = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
-
-  async function upload(file: File) {
-    setBusy(true);
-    setFailed(null);
-    const result = await uploadImage(file);
-    if ("error" in result) {
-      setFailed(uploadErrors[result.error as keyof UploadErrors] ?? t.uploadFailed);
-    } else {
-      onChange(result);
-    }
-    setBusy(false);
-    if (input.current) input.current.value = "";
-  }
-
-  return (
-    <div className="field">
-      <span className="field-label">{t.image}</span>
-      <div className="flex flex-wrap items-center gap-3">
-        {image && (
-          // eslint-disable-next-line @next/next/no-img-element -- the teacher's own upload
-          <img src={image.url} alt="" className="max-h-28 rounded-md border border-line bg-white object-contain" />
-        )}
-        <input
-          ref={input}
-          id="question-image"
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-          className="sr-only"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) startTransition(() => upload(file));
-          }}
-        />
-        <label htmlFor="question-image" className="btn btn-ghost btn-sm cursor-pointer" aria-disabled={busy}>
-          <ImagePlus aria-hidden="true" />
-          {busy ? t.uploading : image ? t.imageChange : t.imageChoose}
-        </label>
-        {image && !busy && (
-          <button type="button" className="btn btn-danger btn-xs" onClick={() => onChange(null)}>
-            <Trash2 aria-hidden="true" />
-            {t.imageRemove}
-          </button>
-        )}
-      </div>
-      {(failed || error) && (
-        <p className="field-error" role="alert">
-          {failed ?? error}
-        </p>
-      )}
-    </div>
-  );
-}
-
 /** The question as students will see it, typeset as you type; the right answer is ringed. */
-function QuestionPreview({
-  type,
-  values,
-  imageUrl,
-  q,
-}: {
-  type: QuestionType;
-  values: Record<string, string>;
-  imageUrl: string | null;
-  q: QuestionText;
-}) {
+function QuestionPreview({ type, read, q }: { type: QuestionType; read: (name: string) => RichText; q: QuestionText }) {
   const katex = useKatex();
-  const text = (name: string) => values[name] ?? "";
-  const answer = values.answer === undefined || values.answer === "" ? -1 : Number(values.answer);
-  const figure = imageUrl && (
-    // eslint-disable-next-line @next/next/no-img-element -- the teacher's own upload
-    <img src={imageUrl} alt="" className="q-figure" />
-  );
+  const math: MathRenderer = katex
+    ? (tex, display) => katex.renderToString(tex, { displayMode: display, throwOnError: false, strict: "ignore", output: "htmlAndMathml", trust: false })
+    : null;
+  const plain = (name: string) => {
+    const value = read(name);
+    return typeof value === "string" ? value : "";
+  };
+  const view = (name: string, inline = false) => <RichView value={read(name)} math={math} inline={inline} />;
+  const answer = plain("answer") === "" ? -1 : Number(plain("answer"));
 
   return (
     <article className="q-card">
       <div className="q-top">
         <span className="tag">{q.types[type]}</span>
-        {text("board") && (
+        {plain("board") && (
           <span className="tag board">
-            {q.boards[text("board") as keyof QuestionText["boards"]]} {text("year")}
+            {q.boards[plain("board") as keyof QuestionText["boards"]]} {plain("year")}
           </span>
         )}
       </div>
       {type === "creative" ? (
-        <div className="stem">
-          <p className="q-text">
+        <div className="stem stem-plain">
+          <div className="q-text">
             <span className="stem-label">{q.stemLabel}</span>
-            <MathPreviewText text={text("stem")} katex={katex} />
-          </p>
-          {figure}
+            {view("stem")}
+          </div>
         </div>
       ) : (
-        <>
-          <p className="q-text">
-            <MathPreviewText text={text("stem")} katex={katex} />
-          </p>
-          {figure}
-        </>
+        <div className="q-text">{view("stem")}</div>
       )}
 
       {type === "mcq_multi" && (
         <>
           <ol className="stmts">
-            {Array.from({ length: MAX_STATEMENTS }, (_, i) => text(`statement${i}`))
-              .filter(Boolean)
-              .map((s, i) => (
-                <li key={i}>
+            {Array.from({ length: MAX_STATEMENTS }, (_, i) => `statement${i}`)
+              .filter((name) => read(name))
+              .map((name, i) => (
+                <li key={name}>
                   <span>{q.statementKeys[i]}.</span>
-                  <MathPreviewText text={s} katex={katex} />
+                  {view(name, true)}
                 </li>
               ))}
           </ol>
-          <p className="q-text">{text("prompt") || q.defaultPrompt}</p>
+          <p className="q-text">{plain("prompt") || q.defaultPrompt}</p>
         </>
       )}
 
@@ -498,21 +427,21 @@ function QuestionPreview({
             {Array.from({ length: OPTION_COUNT }, (_, i) => (
               <div key={i} className={i === answer ? "opt correct" : "opt"}>
                 <span className="k">{q.optionKeys[i]}</span>
-                <MathPreviewText text={text(`option${i}`)} katex={katex} />
+                {view(`option${i}`, true)}
               </div>
             ))}
           </div>
-          {text("explanation") && (
+          {read("explanation") && (
             <div className="explain">
-              <b>{q.explanation}</b> <MathPreviewText text={text("explanation")} katex={katex} />
+              <b>{q.explanation}</b> {view("explanation")}
             </div>
           )}
         </>
       )}
 
-      {type === "short" && text("modelAnswer") && (
+      {type === "short" && read("modelAnswer") && (
         <div className="explain">
-          <b>{q.answer}</b> <MathPreviewText text={text("modelAnswer")} katex={katex} />
+          <b>{q.answer}</b> {view("modelAnswer")}
         </div>
       )}
 
@@ -521,29 +450,29 @@ function QuestionPreview({
           {Array.from({ length: CREATIVE_PART_COUNT }, (_, i) => (
             <div key={i} className="part">
               <span className="pk">{q.partKeys[i]}.</span>
-              <span className="min-w-0">
-                <MathPreviewText text={text(`part${i}`)} katex={katex} />
-                {text(`solution${i}`) && (
-                  <span className="explain mt-2 block">
-                    <b>{q.solution}</b> <MathPreviewText text={text(`solution${i}`)} katex={katex} />
-                  </span>
+              <div className="min-w-0">
+                {view(`part${i}`)}
+                {read(`solution${i}`) && (
+                  <div className="explain mt-2">
+                    <b>{q.solution}</b> {view(`solution${i}`)}
+                  </div>
                 )}
-              </span>
-              <span className="marks">{text(`marks${i}`) || DEFAULT_PART_MARKS[i]}</span>
+              </div>
+              <span className="marks">{plain(`marks${i}`) || DEFAULT_PART_MARKS[i]}</span>
             </div>
           ))}
         </div>
       )}
 
-      {isProblem(type) && text("finalAnswer") && (
+      {isProblem(type) && read("finalAnswer") && (
         <div className="explain">
-          <b>{q.answer}</b> <MathPreviewText text={text("finalAnswer")} katex={katex} />
+          <b>{q.answer}</b> {view("finalAnswer", true)}
         </div>
       )}
 
-      {isProblem(type) && text("solution") && (
+      {isProblem(type) && read("solution") && (
         <div className="explain">
-          <b>{q.solution}</b> <MathPreviewText text={text("solution")} katex={katex} />
+          <b>{q.solution}</b> {view("solution")}
         </div>
       )}
     </article>

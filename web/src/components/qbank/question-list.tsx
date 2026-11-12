@@ -179,7 +179,7 @@ function QbCard({
                 <div className="flex items-baseline gap-3">
                   <span className="w-[14px] shrink-0 font-bold text-qb-cq">{part.key}.</span>
                   <div className="flex min-w-0 flex-auto flex-wrap items-baseline gap-x-3 gap-y-0.5">
-                    <span className="min-w-0 flex-[1_1_14rem]">{part.text}</span>
+                    <div className="min-w-0 flex-[1_1_14rem]">{part.text}</div>
                     <span className="ml-auto shrink-0 text-[13px] whitespace-nowrap text-qb-subtle">{part.meta}</span>
                   </div>
                 </div>
@@ -267,9 +267,9 @@ function QbCard({
             })}
           </div>
           {answered && card.explanation && (
-            <p className="m-0 text-[15px] text-qb-muted">
+            <div className="text-[15px] text-qb-muted">
               <strong className="text-qb-ink">{text.explanation}</strong> {card.explanation}
-            </p>
+            </div>
           )}
           {video && <div data-print-hide>{video}</div>}
         </div>

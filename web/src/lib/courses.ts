@@ -1,6 +1,7 @@
 import { asciiDigits } from "./digits";
 import { type FieldErrors, type Input, text } from "./form-input";
 import { GRADES } from "./grades";
+import { richColumns, richField } from "./rich-text";
 
 /** The icons a teacher can put on a course cover (lucide names). */
 export const COURSE_ICONS = [
@@ -48,7 +49,7 @@ export function parseCourse(input: Input) {
     title: text(input, "title", 120, errors, true),
     grade: oneOf(input.grade, GRADES, "other"),
     session: text(input, "session", 120, errors),
-    description: text(input, "description", 2000, errors),
+    ...richColumns(richField(input, "description", 2000, errors), "description", "descriptionRich"),
     icon: oneOf(input.icon, COURSE_ICONS, "book-open"),
     cover: Number.isInteger(cover) && cover >= 1 && cover <= 4 ? cover : 1,
     access,
@@ -91,7 +92,7 @@ export function parseNotice(input: Input) {
   const errors: FieldErrors = {};
   const notice = {
     title: text(input, "title", 160, errors, true),
-    body: text(input, "body", 3000, errors),
+    ...richColumns(richField(input, "body", 3000, errors), "body", "bodyRich"),
     pinned: input.pinned === "on" || input.pinned === "true",
   };
   return { notice, errors };

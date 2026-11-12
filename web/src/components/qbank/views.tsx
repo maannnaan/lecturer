@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { GraduationCap, Shapes } from "lucide-react";
 import { MathText } from "@/components/math-text";
+import { RichContent } from "@/components/rich-content";
 import { type Dictionary, type Locale, formatNumber, formatYear } from "@/i18n";
 import { type ClassLook, type Tone, classLook } from "@/lib/bank-look";
 import type { TabCounts } from "@/lib/bank-tree";
@@ -14,6 +15,7 @@ import {
   filterParams,
   tabOf,
 } from "@/lib/questions";
+import { type RichText, richPlain } from "@/lib/rich-text";
 import type { Question } from "@/server/questions";
 import { QbAutoPrint, QbPrintButton } from "./auto-print";
 import { type QbChapterRow, QbChapterList } from "./chapter-list";
@@ -83,14 +85,15 @@ export function qbListText({ d, voice }: QbCtx): QbListText {
 export function toCard(q: Question, number: number, { d, locale }: QbCtx, extra: Pick<QbCardData, "tools" | "privateLabel"> = {}): QbCardData {
   const tab = tabOf(q.type);
   const body = q.body;
-  const math = (text: string | undefined | null) => (text ? <MathText text={text} /> : null);
+  /** A text field drawn, or null when it's empty; `inline` for one that sits in a line. */
+  const rich = (value: RichText | undefined | null, inline = false) => (value ? <RichContent value={value} inline={inline} /> : null);
   const base = {
     id: q.id,
     anchor: `q-${q.id}`,
     tab,
     badge: `${d.questions.tabsShort[tab]} ${formatNumber(number, locale)}`,
     tags: q.board ? [boardTag(q, d, locale)] : q.source ? [q.source] : [],
-    stem: <MathText text={body.stem} />,
+    stem: <RichContent value={body.stem} />,
     image: body.image?.url ?? null,
     video: q.videoUrl || undefined,
     ...extra,
@@ -104,9 +107,9 @@ export function toCard(q: Question, number: number, { d, locale }: QbCtx, extra:
         marks: d.qbank.marks(formatNumber(parts.reduce((sum, p) => sum + p.marks, 0), locale)),
         parts: parts.map((part, i) => ({
           key: d.questions.partKeys[i] ?? String(i + 1),
-          text: <MathText text={part.text} />,
+          text: <RichContent value={part.text} />,
           meta: `${d.questions.partLevels[i] ?? ""} · ${formatNumber(part.marks, locale)}`,
-          answer: math(part.solution),
+          answer: rich(part.solution),
         })),
       };
     }
@@ -117,18 +120,20 @@ export function toCard(q: Question, number: number, { d, locale }: QbCtx, extra:
         ...base,
         kind: "mcq",
         statements:
-          q.type === "mcq_multi" ? (body.statements ?? []).map((s, i) => ({ key: d.questions.statementKeys[i] ?? String(i + 1), text: <MathText text={s} /> })) : undefined,
+          q.type === "mcq_multi"
+            ? (body.statements ?? []).map((s, i) => ({ key: d.questions.statementKeys[i] ?? String(i + 1), text: <RichContent value={s} inline /> }))
+            : undefined,
         prompt: q.type === "mcq_multi" ? body.prompt || d.questions.defaultPrompt : undefined,
-        options: (body.options ?? []).map((o, i) => ({ key: d.questions.optionKeys[i] ?? String(i + 1), text: <MathText text={o} /> })),
+        options: (body.options ?? []).map((o, i) => ({ key: d.questions.optionKeys[i] ?? String(i + 1), text: <RichContent value={o} inline /> })),
         answerIndex: answer,
         wrongText: d.qbank.wrong(d.questions.optionKeys[answer] ?? String(answer + 1)),
-        explanation: math(body.explanation),
+        explanation: rich(body.explanation),
       };
     }
     case "short":
-      return { ...base, kind: "sq", answer: math(body.modelAnswer) };
+      return { ...base, kind: "sq", answer: rich(body.modelAnswer) };
     default:
-      return { ...base, kind: "problem", answer: math(body.finalAnswer), solution: math(body.solution) };
+      return { ...base, kind: "problem", answer: rich(body.finalAnswer, true), solution: rich(body.solution) };
   }
 }
 
@@ -638,7 +643,8 @@ function BoardTab({
                     {d.questions.tabsShort[section]}
                   </QbBadge>
                   <span className="line-clamp-2 min-w-0 flex-[999_1_180px] @min-[640px]:line-clamp-1 @min-[640px]:flex-[999_1_300px]">
-                    <MathText text={q.body.stem} />
+                    {/* One line: the stem's words and maths, without its tables or pictures. */}
+                    <MathText text={richPlain(q.body.stem).replace(/\s+/g, " ")} />
                   </span>
                   <span className="shrink-0 rounded-md bg-qb-board-soft px-2.5 py-1 text-[13px] font-semibold text-qb-board">{shortBoardTag(q, d, locale)}</span>
                   <Link
@@ -680,11 +686,12 @@ export function QbPrintView({
 }) {
   const { d, locale } = ctx;
   const sections = SECTION_TABS.map((tab) => ({ tab, items: questions.filter((q) => tabOf(q.type) === tab) })).filter((s) => s.items.length > 0);
-  const answer = (label: string, text: string | undefined) =>
-    text ? (
-      <p className="m-0 mt-1 pl-4 text-[13px] text-qb-muted">
-        <b>{label}</b> <MathText text={text} />
-      </p>
+  /** A labelled answer under its question: the label, then the rich text (which may be several blocks). */
+  const answer = (label: string, value: RichText | undefined, inline = false) =>
+    value ? (
+      <div className="mt-1 pl-4 text-[13px] text-qb-muted">
+        <b>{label}</b> <RichContent value={value} inline={inline} />
+      </div>
     ) : null;
 
   return (
@@ -717,14 +724,18 @@ export function QbPrintView({
                         {d.questions.tabsShort[tab]} {formatNumber(i + 1, locale)}
                         {tags && <span className="font-normal"> · {tags}</span>}
                       </p>
-                      <p className="m-0 mt-1">
-                        <MathText text={body.stem} />
-                      </p>
+                      <div className="mt-1">
+                        <RichContent value={body.stem} />
+                        {body.image && (
+                          // eslint-disable-next-line @next/next/no-img-element -- the teacher's own upload
+                          <img src={body.image.url} alt="" className="rich-img mt-1 max-h-[260px]" />
+                        )}
+                      </div>
                       {q.type === "mcq_multi" && (
                         <>
                           {(body.statements ?? []).map((s, k) => (
                             <p key={k} className="m-0 pl-4">
-                              {d.questions.statementKeys[k]}. <MathText text={s} />
+                              {d.questions.statementKeys[k]}. <RichContent value={s} inline />
                             </p>
                           ))}
                           <p className="m-0">{body.prompt || d.questions.defaultPrompt}</p>
@@ -735,37 +746,35 @@ export function QbPrintView({
                           <div className="mt-1 grid grid-cols-2 gap-x-4">
                             {(body.options ?? []).map((o, k) => (
                               <span key={k}>
-                                {d.questions.optionKeys[k]}. <MathText text={o} />
+                                {d.questions.optionKeys[k]}. <RichContent value={o} inline />
                               </span>
                             ))}
                           </div>
                           <p className="m-0 mt-1 pl-4 text-[13px] text-qb-muted">
                             <b>{d.questions.answer}</b> {d.questions.optionKeys[body.answer ?? 0]}
-                            {body.explanation && (
-                              <>
-                                {" — "}
-                                <MathText text={body.explanation} />
-                              </>
-                            )}
                           </p>
+                          {answer(d.questions.explanation, body.explanation)}
                         </>
                       )}
                       {q.type === "creative" &&
                         (body.parts ?? []).map((part, k) => (
                           <div key={k} className="mt-1">
-                            <p className="m-0">
-                              {d.questions.partKeys[k]}. <MathText text={part.text} />{" "}
-                              <span className="text-qb-subtle">
+                            <div className="flex gap-1.5">
+                              <span>{d.questions.partKeys[k]}.</span>
+                              <div className="min-w-0 flex-1">
+                                <RichContent value={part.text} />
+                              </div>
+                              <span className="shrink-0 text-qb-subtle">
                                 ({d.questions.partLevels[k]} · {formatNumber(part.marks, locale)})
                               </span>
-                            </p>
+                            </div>
                             {answer(d.questions.answer, part.solution)}
                           </div>
                         ))}
                       {q.type === "short" && answer(d.questions.answer, body.modelAnswer)}
                       {(q.type === "textbook" || q.type === "practice") && (
                         <>
-                          {answer(d.questions.answer, body.finalAnswer)}
+                          {answer(d.questions.answer, body.finalAnswer, true)}
                           {answer(d.questions.solution, body.solution)}
                         </>
                       )}

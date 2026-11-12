@@ -47,9 +47,9 @@ const keep = (input: Input) => Object.fromEntries(Object.entries(input).map(([k,
 
 async function placementRefusal(reason: Exclude<SaveQuestionResult, { ok: true }>["reason"], input: Input): Promise<FormState> {
   const e = await errorTexts();
-  if (reason === "missing") return { errors: {}, formError: e.generic, values: keep(input) };
-  const field = reason === "image" ? "imageId" : reason === "subject" ? "subjectId" : "chapterId";
-  return { errors: { [field]: e.invalid }, values: keep(input) };
+  // A picture that isn't the teacher's own upload sits in the text, not in one field: say so for the form.
+  if (reason === "missing" || reason === "image") return { errors: {}, formError: e.generic, values: keep(input) };
+  return { errors: { [reason === "subject" ? "subjectId" : "chapterId"]: e.invalid }, values: keep(input) };
 }
 
 // ── Classes ──

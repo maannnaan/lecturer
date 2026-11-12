@@ -1,8 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import { Field, FormMessages, type FormState, SubmitButton, TextAreaField, emptyForm } from "@/components/form";
+import { Field, FormMessages, type FormState, SubmitButton, emptyForm } from "@/components/form";
+import { type EditorText, RichEditor, type UploadErrors } from "@/components/rich-editor/rich-editor";
 import type { Dictionary, Locale } from "@/i18n";
+import type { RichText } from "@/lib/rich-text";
 import { ROUTINE_SLOTS, STAT_SLOTS } from "@/lib/site";
 import type { TeacherSite } from "@/server/db/schema";
 import {
@@ -42,12 +44,25 @@ export type ProfileValues = {
   location?: string;
   admission?: string;
   tagline?: string;
-  about?: string;
+  /** The editor's document, or older plain text. */
+  about?: RichText;
 };
 
-export function ProfileForm({ saved, t, c }: { saved: ProfileValues; t: Website["profile"]; c: Common }) {
+export function ProfileForm({
+  saved,
+  t,
+  c,
+  editor,
+  uploadErrors,
+}: {
+  saved: ProfileValues;
+  t: Website["profile"];
+  c: Common;
+  editor: EditorText;
+  uploadErrors: UploadErrors;
+}) {
   const [state, action] = useActionState(saveProfileAction, emptyForm);
-  const v = (name: keyof ProfileValues) => valueOf(state, name, saved[name]);
+  const v = (name: Exclude<keyof ProfileValues, "about">) => valueOf(state, name, saved[name]);
   const e = state.errors;
   return (
     <form action={action} className="card flex flex-col gap-5 p-5" noValidate aria-labelledby="profile-title">
@@ -64,7 +79,17 @@ export function ProfileForm({ saved, t, c }: { saved: ProfileValues; t: Website[
       </div>
       <Field name="admission" label={t.admission} labelNote={c.optional} placeholder={t.admissionPlaceholder} defaultValue={v("admission")} error={e.admission} />
       <Field name="tagline" label={t.tagline} placeholder={t.taglinePlaceholder} defaultValue={v("tagline")} error={e.tagline} />
-      <TextAreaField name="about" label={t.about} hint={t.aboutHint} rows={7} defaultValue={v("about")} error={e.about} />
+      <RichEditor
+        name="about"
+        label={t.about}
+        hint={t.aboutHint}
+        rows={6}
+        dollars={false}
+        defaultValue={state.values?.about ?? saved.about ?? ""}
+        error={e.about}
+        t={editor}
+        uploadErrors={uploadErrors}
+      />
       <Footer state={state} c={c} />
     </form>
   );

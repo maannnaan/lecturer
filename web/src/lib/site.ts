@@ -1,6 +1,7 @@
 import type { RoutineRow, SiteContact, SiteStat, TeacherSite } from "@/server/db/schema";
 import { EMAIL, type FieldErrors, type Input, text, url } from "./form-input";
 import { normalizePhone } from "./phone";
+import { richColumns, richField } from "./rich-text";
 
 // Limits that keep each part of a teacher's website readable on a phone.
 export const STAT_SLOTS = 4;
@@ -15,12 +16,13 @@ export function parseProfile(input: Input) {
     subjects: text(input, "subjects", 120, errors),
     institution: text(input, "institution", 120, errors),
   };
+  const about = richField(input, "about", 3000, errors);
   const site: Partial<TeacherSite> = {
     designation: text(input, "designation", 80, errors),
     tagline: text(input, "tagline", 200, errors),
     location: text(input, "location", 80, errors),
     admission: text(input, "admission", 100, errors),
-    about: text(input, "about", 3000, errors),
+    ...richColumns(about, "about", "aboutRich"),
   };
   return { account, site, errors };
 }

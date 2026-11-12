@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import type { RichDoc, RichText } from "@/lib/rich-text";
 import {
   boolean,
   check,
@@ -56,8 +57,10 @@ export type TeacherSite = {
   designation?: string;
   /** One line under the name. */
   tagline?: string;
-  /** Plain paragraphs for now; becomes rich text with the Phase 3 editor. */
+  /** The "about me" text as plain text: older sites' only copy, and what page descriptions use. */
   about?: string;
+  /** The same text as the editor wrote it (src/lib/rich-text.ts); shown when present. */
+  aboutRich?: RichDoc | null;
   /** e.g. "মিরপুর-১০, ঢাকা" */
   location?: string;
   /** e.g. "ভর্তি চলছে: এইচএসসি ২০২৮" */
@@ -215,7 +218,10 @@ export const courses = pgTable(
     subject: text("subject").notNull().default(""),
     /** e.g. "এইচএসসি ২০২৮ ব্যাচ · সেপ্টেম্বর–ফেব্রুয়ারি" */
     session: text("session").notNull().default(""),
+    /** As plain text: older courses' only copy, and what page descriptions use. */
     description: text("description").notNull().default(""),
+    /** The description as the editor wrote it (src/lib/rich-text.ts); shown when present. */
+    descriptionRich: jsonb("description_rich").$type<RichDoc>(),
     /** One of COURSE_ICONS in src/lib/courses.ts. */
     icon: text("icon").notNull().default("book-open"),
     /** Which of the theme's four cover colours, 1–4. */
@@ -280,7 +286,10 @@ export const notices = pgTable(
       .notNull()
       .references(() => teachers.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
+    /** As plain text: older notices' only copy, and what previews use. */
     body: text("body").notNull().default(""),
+    /** The body as the editor wrote it (src/lib/rich-text.ts); shown when present. */
+    bodyRich: jsonb("body_rich").$type<RichDoc>(),
     pinned: boolean("pinned").notNull().default(false),
     publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: createdAt(),
@@ -381,11 +390,13 @@ export const questionVisibility = pgEnum("question_visibility", ["public", "priv
 
 export type QuestionImage = { mediaId: string; url: string };
 /** One part of a creative question (ক, খ, গ, ঘ) with its marks and, optionally, a worked answer. */
-export type CreativePart = { text: string; marks: number; solution: string };
+export type CreativePart = { text: RichText; marks: number; solution: RichText };
 
 /**
  * What a question says. Which fields are used depends on the question's type (validated in
- * src/lib/questions.ts); text may carry maths as $…$ or $$…$$.
+ * src/lib/questions.ts). Its text is rich text (src/lib/rich-text.ts): a document from the editor,
+ * or plain text written before it, with maths as $…$ or $$…$$. `image` is the one picture a
+ * question had before pictures went into the text; the editor moves it into the stem.
  *   mcq        stem, options[4], answer, explanation
  *   mcq_multi  stem, statements[2–4], prompt, options[4], answer, explanation
  *   short      stem, modelAnswer
@@ -394,19 +405,19 @@ export type CreativePart = { text: string; marks: number; solution: string };
  *   practice   stem, finalAnswer, solution   (an extra numerical problem to practise)
  */
 export type QuestionBody = {
-  stem: string;
+  stem: RichText;
   image?: QuestionImage | null;
-  statements?: string[];
+  statements?: RichText[];
   prompt?: string;
-  options?: string[];
+  options?: RichText[];
   /** Index of the correct option, 0–3. */
   answer?: number;
-  explanation?: string;
-  modelAnswer?: string;
+  explanation?: RichText;
+  modelAnswer?: RichText;
   parts?: CreativePart[];
   /** A problem's result on its own, e.g. "৫ m s⁻²". */
-  finalAnswer?: string;
-  solution?: string;
+  finalAnswer?: RichText;
+  solution?: RichText;
 };
 
 /**

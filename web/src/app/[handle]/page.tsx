@@ -4,7 +4,7 @@ import type { CSSProperties, ReactElement } from "react";
 import { ArrowRight, Award, BadgeCheck, Building2, Clock, Mail, MapPin, Phone, Sparkles } from "lucide-react";
 import { FacebookMark, WhatsappMark, YoutubeMark } from "@/components/brand-icons";
 import { initialOf } from "@/components/logo";
-import { Paragraphs } from "@/components/paragraphs";
+import { SiteText } from "@/components/site-text";
 import { type Dictionary, type Locale, formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import type { CourseWithChapters } from "@/server/courses";
@@ -42,7 +42,7 @@ export default async function TeacherHomePage({ params, searchParams }: Props) {
   const plan = planCourse(courses, asked);
   const contact = s.contact ?? {};
   const hasContact = Object.values(contact).some(Boolean) || (s.routine?.length ?? 0) > 0;
-  const nothingYet = courses.length === 0 && notices.length === 0 && !s.about && !hasContact;
+  const nothingYet = courses.length === 0 && notices.length === 0 && !s.about && !s.aboutRich && !hasContact;
 
   return (
     <main>
@@ -89,11 +89,11 @@ export default async function TeacherHomePage({ params, searchParams }: Props) {
         </section>
       )}
 
-      {s.about && (
+      {(s.about || s.aboutRich) && (
         <section className="section section-alt" aria-labelledby="about-title">
           <div className="wrap max-w-[860px]">
             <SectionHead id="about-title" eyebrow={d.site.aboutEyebrow} title={locale === "bn" ? teacher.nameBn : teacher.nameEn} />
-            <Paragraphs text={s.about} className="text-[17px] leading-[1.9] text-ink-2" />
+            <SiteText rich={s.aboutRich} plain={s.about ?? ""} className="text-[17px] leading-[1.9] text-ink-2" />
           </div>
         </section>
       )}

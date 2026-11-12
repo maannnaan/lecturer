@@ -1,6 +1,7 @@
 import type { QuestionBody } from "@/server/db/schema";
 import { asciiDigits } from "./digits";
 import { type FieldErrors, type Input, text, url } from "./form-input";
+import { type RichText, richField, richImageIds } from "./rich-text";
 
 /** The kinds of question a teacher can write, in the order the editor offers them. */
 export const QUESTION_TYPES = ["textbook", "practice", "mcq", "mcq_multi", "short", "creative"] as const;
@@ -170,16 +171,17 @@ function parseMarks(input: Input, i: number, errors: FieldErrors): number {
 }
 
 function parseOptions(input: Input, errors: FieldErrors) {
-  const options = Array.from({ length: OPTION_COUNT }, (_, i) => text(input, `option${i}`, 600, errors, true));
+  const options = Array.from({ length: OPTION_COUNT }, (_, i) => richField(input, `option${i}`, 600, errors, { required: true, mode: "inline" }));
   const answer = Number(input.answer);
   const valid = input.answer !== undefined && input.answer !== "" && Number.isInteger(answer) && answer >= 0 && answer < OPTION_COUNT;
   if (!valid) errors.answer = "pickAnswer";
-  return { options, answer: valid ? answer : 0, explanation: text(input, "explanation", 4000, errors) };
+  return { options, answer: valid ? answer : 0, explanation: richField(input, "explanation", 4000, errors) };
 }
 
 /**
- * Reads the question editor's fields. The subject and chapter ids are only checked for shape here;
- * the data layer checks they belong to the teacher.
+ * Reads the question editor's fields. Its text fields are rich text (src/lib/rich-text.ts): the
+ * editor's documents, or plain text. The subject and chapter ids, and the pictures' media ids,
+ * are only checked for shape here; the data layer checks they belong to the teacher.
  */
 export function parseQuestion(input: Input) {
   const errors: FieldErrors = {};
@@ -191,31 +193,31 @@ export function parseQuestion(input: Input) {
   if (!subjectId) errors.subjectId = "required";
   const chapterId = (input.chapterId ?? "").trim() || null;
 
-  const stem = text(input, "stem", 4000, errors, true);
+  const stem = richField(input, "stem", 4000, errors, { required: true });
   let body: QuestionBody;
   switch (kind) {
     case "mcq":
       body = { stem, ...parseOptions(input, errors) };
       break;
     case "mcq_multi": {
-      const statements: string[] = [];
+      const statements: RichText[] = [];
       for (let i = 0; i < MAX_STATEMENTS; i++) {
-        const value = text(input, `statement${i}`, 600, errors, i < MIN_STATEMENTS);
+        const value = richField(input, `statement${i}`, 600, errors, { required: i < MIN_STATEMENTS, mode: "inline" });
         if (value) statements.push(value);
       }
       body = { stem, statements, prompt: text(input, "prompt", 200, errors), ...parseOptions(input, errors) };
       break;
     }
     case "short":
-      body = { stem, modelAnswer: text(input, "modelAnswer", 4000, errors) };
+      body = { stem, modelAnswer: richField(input, "modelAnswer", 4000, errors) };
       break;
     case "creative":
       body = {
         stem,
         parts: Array.from({ length: CREATIVE_PART_COUNT }, (_, i) => ({
-          text: text(input, `part${i}`, 2000, errors, true),
+          text: richField(input, `part${i}`, 2000, errors, { required: true }),
           marks: parseMarks(input, i, errors),
-          solution: text(input, `solution${i}`, 6000, errors),
+          solution: richField(input, `solution${i}`, 6000, errors),
         })),
       };
       break;
@@ -223,8 +225,8 @@ export function parseQuestion(input: Input) {
     case "practice":
       body = {
         stem,
-        finalAnswer: text(input, "finalAnswer", 300, errors),
-        solution: text(input, "solution", 8000, errors),
+        finalAnswer: richField(input, "finalAnswer", 300, errors, { mode: "inline" }),
+        solution: richField(input, "solution", 8000, errors),
       };
       break;
   }
@@ -248,3 +250,26 @@ export function parseQuestion(input: Input) {
 }
 
 export type QuestionInput = ReturnType<typeof parseQuestion>["question"];
+
+/** Every rich text field of a question, changed by `fix` (the rest of the body stays as it is). */
+export function mapQuestionText(body: QuestionBody, fix: (value: RichText) => RichText): QuestionBody {
+  const out: QuestionBody = { ...body, stem: fix(body.stem) };
+  if (body.statements) out.statements = body.statements.map((value) => fix(value));
+  if (body.options) out.options = body.options.map((value) => fix(value));
+  if (body.explanation !== undefined) out.explanation = fix(body.explanation);
+  if (body.modelAnswer !== undefined) out.modelAnswer = fix(body.modelAnswer);
+  if (body.parts) out.parts = body.parts.map((part) => ({ ...part, text: fix(part.text), solution: fix(part.solution) }));
+  if (body.finalAnswer !== undefined) out.finalAnswer = fix(body.finalAnswer);
+  if (body.solution !== undefined) out.solution = fix(body.solution);
+  return out;
+}
+
+/** The media ids of every picture in a question's text. */
+export function questionImageIds(body: QuestionBody): string[] {
+  const ids: string[] = [];
+  mapQuestionText(body, (value) => {
+    ids.push(...richImageIds(value));
+    return value;
+  });
+  return ids;
+}

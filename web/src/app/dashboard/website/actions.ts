@@ -9,7 +9,7 @@ import { handleProblem, normalizeHandle } from "@/lib/handles";
 import { parseContact, parseHighlights, parseProfile, parseRoutine } from "@/lib/site";
 import { requireTeacher } from "@/server/auth/current";
 import { getDb } from "@/server/db";
-import { getMedia } from "@/server/media";
+import { docWithOwnImages, getMedia } from "@/server/media";
 import { setSiteLocale, updateProfile, updateSite } from "@/server/site";
 import { TakenError, changeHandle } from "@/server/teachers";
 import { refused } from "../form-state";
@@ -22,9 +22,13 @@ export async function saveProfileAction(_prev: FormState, formData: FormData): P
   const teacher = await requireTeacher();
   const input = formInput(formData);
   const { account, site, errors } = parseProfile(input);
+  const db = await getDb();
+  // Pictures in the "about me" text must be the teacher's own uploads.
+  const aboutRich = await docWithOwnImages(db, teacher.id, site.aboutRich);
+  if (aboutRich === false) errors.about = "invalid";
   const refusal = await refused(errors, input);
-  if (refusal) return refusal;
-  await updateProfile(await getDb(), teacher.id, account, site);
+  if (refusal || aboutRich === false) return refusal!;
+  await updateProfile(db, teacher.id, account, { ...site, aboutRich });
   refresh();
   return saved;
 }

@@ -134,6 +134,13 @@ describe("parseChapter", () => {
 describe("parseNotice", () => {
   it("needs a title", () => {
     expect(parseNotice({ title: "", body: "x" }).errors.title).toBe("required");
-    expect(parseNotice({ title: "ক্লাস বন্ধ", pinned: "on" }).notice).toEqual({ title: "ক্লাস বন্ধ", body: "", pinned: true });
+    expect(parseNotice({ title: "ক্লাস বন্ধ", pinned: "on" }).notice).toEqual({ title: "ক্লাস বন্ধ", body: "", bodyRich: null, pinned: true });
+  });
+
+  it("keeps the editor's document, and its plain text for previews", () => {
+    const doc = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "ক্লাস বন্ধ", marks: [{ type: "bold" }] }] }] };
+    expect(parseNotice({ title: "নোটিশ", body: JSON.stringify(doc) }).notice).toEqual({ title: "নোটিশ", body: "ক্লাস বন্ধ", bodyRich: doc, pinned: false });
+    expect(parseCourse({ title: "x", description: JSON.stringify(doc) }).course).toMatchObject({ description: "ক্লাস বন্ধ", descriptionRich: doc });
+    expect(parseProfile({ nameBn: "a", nameEn: "b", about: JSON.stringify(doc) }).site).toMatchObject({ about: "ক্লাস বন্ধ", aboutRich: doc });
   });
 });

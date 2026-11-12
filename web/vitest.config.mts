@@ -2,6 +2,8 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  // Components rendered in tests (rich text) use React's automatic JSX, as Next does.
+  oxc: { jsx: { runtime: "automatic", importSource: "react" } },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

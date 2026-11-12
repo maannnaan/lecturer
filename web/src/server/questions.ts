@@ -1,6 +1,6 @@
 import { type SQL, and, asc, count, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import type { Database } from "@/server/db";
-import { bankChapters, bankSubjects, questions } from "@/server/db/schema";
+import { type QuestionBody, bankChapters, bankSubjects, questions } from "@/server/db/schema";
 import { type CountRow, type TabCounts, emptyCounts } from "@/lib/bank-tree";
 import { isUuid } from "@/lib/ids";
 import {
@@ -10,10 +10,13 @@ import {
   type QuestionInput,
   type QuestionType,
   isMcq,
+  mapQuestionText,
+  questionImageIds,
   tabOf,
   tabTypes,
 } from "@/lib/questions";
-import { getMedia } from "./media";
+import { withImageUrls } from "@/lib/rich-text";
+import { getMedia, ownImageUrls } from "./media";
 import { renumber, swapped } from "./ordering";
 
 // Like courses, every function takes the teacher's id from the session and filters on it: another
@@ -85,6 +88,15 @@ async function resolveImage(db: Database, teacherId: string, imageId: string | n
   return found ? { mediaId: found.id, url: found.url } : false;
 }
 
+/**
+ * The body to store: every picture in its text checked to be the teacher's own upload and pointed
+ * at its stored file. False when one isn't the teacher's.
+ */
+async function bodyWithOwnImages(db: Database, teacherId: string, body: QuestionBody): Promise<QuestionBody | false> {
+  const urls = await ownImageUrls(db, teacherId, questionImageIds(body));
+  return urls ? mapQuestionText(body, (value) => withImageUrls(value, urls)) : false;
+}
+
 function columns(input: QuestionInput) {
   return {
     subjectId: input.subjectId,
@@ -115,6 +127,8 @@ export async function createQuestion(db: Database, teacherId: string, input: Que
   if (problem) return { ok: false, reason: problem };
   const image = await resolveImage(db, teacherId, input.imageId);
   if (image === false) return { ok: false, reason: "image" };
+  const body = await bodyWithOwnImages(db, teacherId, input.body);
+  if (!body) return { ok: false, reason: "image" };
   return db.transaction(async (tx) => {
     const [{ last }] = await tx
       .select({ last: sql<number>`coalesce(max(${questions.position}), -1)` })
@@ -122,7 +136,7 @@ export async function createQuestion(db: Database, teacherId: string, input: Que
       .where(sameGroup(teacherId, input.subjectId, input.chapterId));
     const [question] = await tx
       .insert(questions)
-      .values({ ...columns(input), teacherId, body: { ...input.body, image }, position: Number(last) + 1 })
+      .values({ ...columns(input), teacherId, body: { ...body, image }, position: Number(last) + 1 })
       .returning();
     return { ok: true as const, question };
   });
@@ -144,6 +158,8 @@ export async function updateQuestion(
       ? current.body.image
       : await resolveImage(db, teacherId, input.imageId);
   if (image === false) return { ok: false, reason: "image" };
+  const body = await bodyWithOwnImages(db, teacherId, input.body);
+  if (!body) return { ok: false, reason: "image" };
 
   return db.transaction(async (tx) => {
     let position = current.position;
@@ -156,7 +172,7 @@ export async function updateQuestion(
     }
     const [question] = await tx
       .update(questions)
-      .set({ ...columns(input), body: { ...input.body, image }, position })
+      .set({ ...columns(input), body: { ...body, image }, position })
       .where(and(eq(questions.id, questionId), eq(questions.teacherId, teacherId)))
       .returning();
     return { ok: true as const, question };

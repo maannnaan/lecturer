@@ -21,7 +21,13 @@ export default async function NewCoursePage() {
         {t.backToList}
       </Link>
       <h2 className="text-2xl">{t.newTitle}</h2>
-      <CourseForm t={t.form} c={d.common} grades={d.grades} />
+      <CourseForm
+        t={t.form}
+        c={d.common}
+        grades={d.grades}
+        editor={d.editor}
+        uploadErrors={{ type: d.errors.uploadType, size: d.errors.uploadSize, unavailable: d.errors.uploadOff }}
+      />
     </main>
   );
 }

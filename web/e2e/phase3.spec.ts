@@ -119,7 +119,8 @@ test("a teacher writes an MCQ with maths, fixes a mistake, and adds the next", a
   }
   await page.getByRole("button", { name: "প্রশ্ন যোগ করুন" }).click();
   await expect(page.locator("#answer-error:visible")).toHaveText("সঠিক উত্তরটি বেছে দিন");
-  await expect(field(page, "প্রশ্ন")).toHaveValue(/হলে কাজ কত\?/);
+  // Refused, the editor still holds what was written.
+  await expect(field(page, "প্রশ্ন")).toHaveText(/হলে কাজ কত\?/);
 
   await field(page, "সঠিক: ক").check();
   await field(page, "বোর্ড").selectOption({ label: "বরিশাল বোর্ড" });
@@ -128,7 +129,7 @@ test("a teacher writes an MCQ with maths, fixes a mistake, and adds the next", a
   await page.getByRole("button", { name: "যোগ করে পরেরটি লিখুন" }).click();
   await expect(page).toHaveURL(/\/dashboard\/bank\/new\?.*added=/);
   await expect(page.getByRole("status").filter({ hasText: "প্রশ্নটি যোগ হয়েছে" })).toHaveText("প্রশ্নটি যোগ হয়েছে। এবার পরেরটি লিখুন।");
-  await expect(field(page, "প্রশ্ন")).toHaveValue("");
+  await expect(field(page, "প্রশ্ন")).toHaveText("");
   await expect(field(page, "অধ্যায়")).toHaveValue(/.+/);
 
   const chapter5 = await (await request.get(`${SUBJECT}/5`)).text();
@@ -152,9 +153,12 @@ test("a private creative question with a diagram stays in the bank", async ({ pa
   );
   const png = await diagram.locator("svg").screenshot();
   await diagram.close();
-  await page.locator("#question-image").setInputFiles({ name: "spring.png", mimeType: "image/png", buffer: png });
-  await expect(page.getByRole("button", { name: "ছবি সরান" })).toBeVisible();
-  await expect(page.locator(".q-card img.q-figure")).toBeVisible();
+  // The diagram goes into the stimulus with its editor's picture button, at the cursor.
+  await field(page, "উদ্দীপক").click();
+  await page.keyboard.press("End");
+  await page.locator("#stem-image").setInputFiles({ name: "spring.png", mimeType: "image/png", buffer: png });
+  await expect(page.locator(".rich-input img.rich-img")).toBeVisible();
+  await expect(page.locator(".q-card img.rich-img")).toBeVisible();
 
   await field(page, "শুধু আপনি: পরীক্ষা আর প্রশ্নপত্রের জন্য রাখা").check();
   await page.getByRole("button", { name: "প্রশ্ন যোগ করুন" }).click();
@@ -172,12 +176,14 @@ test("a private creative question with a diagram stays in the bank", async ({ pa
 test("a question is edited, then deleted", async ({ page }) => {
   await login(page, "01710000001");
   await page.goto(editUrl);
-  await expect(page.locator("img.q-figure").first()).toBeVisible();
+  await expect(page.locator(".rich-input img.rich-img")).toBeVisible();
   await field(page, "অংশ ক").fill("হুকের সূত্রটি বিবৃত কর।");
   await page.getByRole("button", { name: "সংরক্ষণ করুন" }).click();
   await expect(page.getByRole("status").filter({ hasText: "সংরক্ষিত হয়েছে" })).toBeVisible();
   await page.reload();
-  await expect(field(page, "অংশ ক")).toHaveValue("হুকের সূত্রটি বিবৃত কর।");
+  await expect(field(page, "অংশ ক")).toHaveText("হুকের সূত্রটি বিবৃত কর।");
+  // The diagram is still in the stimulus.
+  await expect(page.locator(".rich-input img.rich-img")).toBeVisible();
 
   await page.getByRole("button", { name: "মুছে ফেলুন" }).click();
   await expect(page.getByText("মুছে ফেলার আগে নিশ্চিত করার ঘরে টিক দিন")).toBeVisible();

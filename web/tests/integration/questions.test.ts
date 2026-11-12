@@ -108,6 +108,32 @@ describe("questions", () => {
     expect(withImage.body.image).toEqual({ mediaId: mine.id, url: "/media/y.webp" });
   });
 
+  it("keep rich text as the editor wrote it, its pictures only the teacher's own uploads", async () => {
+    const { subject: s, ch1 } = await setup(owner);
+    const upload = async (teacherId: string, key: string) =>
+      (
+        await db
+          .insert(media)
+          .values({ teacherId, storage: "local", key, url: `/media/${key}`, contentType: "image/webp", bytes: 10 })
+          .returning()
+      )[0];
+    const mine = await upload(owner.id, "rich-mine.webp");
+    const theirs = await upload(stranger.id, "rich-theirs.webp");
+    const water = { type: "paragraph", content: [{ type: "text", text: "H" }, { type: "text", text: "2", marks: [{ type: "subscript" }] }, { type: "text", text: "O" }] };
+    const stem = (mediaId: string) => JSON.stringify({ type: "doc", content: [water, { type: "image", attrs: { src: "https://elsewhere.example/a.png", mediaId } }] });
+    const square = { type: "doc", content: [{ type: "paragraph", content: [{ type: "inlineMath", attrs: { latex: "x^2" } }] }] };
+
+    const q = await created(owner, input("mcq", s.id, ch1.id, { stem: stem(mine.id), option0: JSON.stringify(square) }));
+    // The picture points at the teacher's stored file, whatever the form said.
+    expect(q.body.stem).toEqual({ type: "doc", content: [water, { type: "image", attrs: { src: "/media/rich-mine.webp", mediaId: mine.id } }] });
+    expect(q.body.options?.[0]).toEqual(square);
+    // Another teacher's picture is refused, when written and when edited in.
+    expect(await createQuestion(db, owner.id, input("mcq", s.id, ch1.id, { stem: stem(theirs.id) }))).toEqual({ ok: false, reason: "image" });
+    expect(await updateQuestion(db, owner.id, q.id, input("mcq", s.id, ch1.id, { stem: stem(theirs.id) }))).toEqual({ ok: false, reason: "image" });
+    // Plain text from before the editor stays plain text.
+    expect((await created(owner, input("short", s.id, ch1.id, { stem: "আগের লেখা $x$" }))).body.stem).toBe("আগের লেখা $x$");
+  });
+
   it("keep their image on edit, and move to the end of a new chapter", async () => {
     const { subject: s, ch1, ch2 } = await setup(owner);
     const [img] = await db

@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import { cache } from "react";
 import { ChevronRight, Phone } from "lucide-react";
 import { CourseIconGlyph } from "@/components/course-icon";
-import { Paragraphs } from "@/components/paragraphs";
+import { SiteText } from "@/components/site-text";
 import { getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { gradeName, gradeOf } from "@/lib/grades";
@@ -84,8 +84,8 @@ export default async function CoursePage({ params }: { params: Params }) {
               </div>
             </div>
           </div>
-          {course.description && (
-            <Paragraphs text={course.description} className="mt-8 max-w-[46em] text-[17px] leading-[1.85] text-ink-2" />
+          {(course.description || course.descriptionRich) && (
+            <SiteText rich={course.descriptionRich} plain={course.description} className="mt-8 max-w-[46em] text-[17px] leading-[1.85] text-ink-2" />
           )}
         </div>
       </section>

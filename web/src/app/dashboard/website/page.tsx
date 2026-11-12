@@ -46,10 +46,12 @@ export default async function WebsiteSettingsPage() {
               location: s.location,
               admission: s.admission,
               tagline: s.tagline,
-              about: s.about,
+              about: s.aboutRich ?? s.about,
             }}
             t={w.profile}
             c={c}
+            editor={d.editor}
+            uploadErrors={{ type: d.errors.uploadType, size: d.errors.uploadSize, unavailable: d.errors.uploadOff }}
           />
           <HighlightsForm saved={{ highlight: s.highlight, stats: s.stats }} t={w.highlights} c={c} />
           <ContactForm saved={s.contact} t={w.contact} c={c} />

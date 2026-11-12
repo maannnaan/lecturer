@@ -19,6 +19,7 @@ export default async function NoticesPage() {
   const d = getDictionary(locale);
   const t = d.dashboard.notices;
   const notices = await listNotices(await getDb(), teacher.id);
+  const rich = { editor: d.editor, uploadErrors: { type: d.errors.uploadType, size: d.errors.uploadSize, unavailable: d.errors.uploadOff } };
 
   return (
     <main className="dash-content">
@@ -27,7 +28,7 @@ export default async function NoticesPage() {
         <p className="mt-1 text-ink-2">{t.lead}</p>
       </header>
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <NewNoticeForm t={t} c={d.common} />
+        <NewNoticeForm t={t} c={d.common} rich={rich} />
         <section className="card p-5" aria-labelledby="notice-list-title">
           <h3 id="notice-list-title" className="panel-title">
             {t.title}
@@ -52,7 +53,7 @@ export default async function NoticesPage() {
                       </span>
                     </summary>
                     <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4">
-                      <EditNoticeForm notice={notice} t={t} c={d.common} />
+                      <EditNoticeForm notice={notice} t={t} c={d.common} rich={rich} />
                       <form action={deleteNoticeAction}>
                         <input type="hidden" name="noticeId" value={notice.id} />
                         <PendingButton className="btn btn-danger btn-xs">

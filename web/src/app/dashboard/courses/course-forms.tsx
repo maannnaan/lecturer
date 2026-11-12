@@ -2,7 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { CourseIconGlyph } from "@/components/course-icon";
-import { Field, FormMessages, type FormState, SelectField, SubmitButton, TextAreaField, emptyForm } from "@/components/form";
+import { Field, FormMessages, type FormState, SelectField, SubmitButton, emptyForm } from "@/components/form";
+import { type EditorText, RichEditor, type UploadErrors } from "@/components/rich-editor/rich-editor";
 import type { Dictionary } from "@/i18n";
 import { CHAPTER_STATUSES, COURSE_ACCESS, COURSE_ICONS, PRICE_PERIODS } from "@/lib/courses";
 import { GRADES, gradeLine } from "@/lib/grades";
@@ -29,12 +30,16 @@ export function CourseForm({
   t,
   c,
   grades,
+  editor,
+  uploadErrors,
 }: {
   course?: Course;
   heading?: string;
   t: Courses["form"];
   c: Common;
   grades: Dictionary["grades"];
+  editor: EditorText;
+  uploadErrors: UploadErrors;
 }) {
   const [state, action] = useActionState(course ? updateCourseAction : createCourseAction, emptyForm);
   const v = (name: keyof Course) => valueOf(state, name, course?.[name] as string | number | undefined);
@@ -69,13 +74,16 @@ export function CourseForm({
         />
         <Field name="session" label={t.session} placeholder={t.sessionPlaceholder} defaultValue={v("session")} error={e.session} />
       </div>
-      <TextAreaField
+      <RichEditor
         name="description"
         label={t.description}
         labelNote={c.optional}
         rows={4}
-        defaultValue={v("description")}
+        dollars={false}
+        defaultValue={state.values?.description ?? course?.descriptionRich ?? course?.description ?? ""}
         error={e.description}
+        t={editor}
+        uploadErrors={uploadErrors}
       />
 
       <fieldset>

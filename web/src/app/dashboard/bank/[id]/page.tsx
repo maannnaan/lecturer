@@ -85,6 +85,7 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ i
         t={t.form}
         q={d.questions}
         c={d.common}
+        editor={d.editor}
         uploadErrors={{ type: d.errors.uploadType, size: d.errors.uploadSize, unavailable: d.errors.uploadOff }}
       />
       <DeleteQuestionForm questionId={question.id} t={t.remove} label={d.common.delete} />

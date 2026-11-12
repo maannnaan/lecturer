@@ -48,7 +48,15 @@ export default async function EditCoursePage({ params }: { params: Promise<{ id:
 
       <div className="grid items-start gap-6 xl:grid-cols-2">
         <div className="min-w-0">
-          <CourseForm course={course} heading={t.editTitle} t={t.form} c={d.common} grades={d.grades} />
+          <CourseForm
+            course={course}
+            heading={t.editTitle}
+            t={t.form}
+            c={d.common}
+            grades={d.grades}
+            editor={d.editor}
+            uploadErrors={{ type: d.errors.uploadType, size: d.errors.uploadSize, unavailable: d.errors.uploadOff }}
+          />
         </div>
 
         <section className="card flex min-w-0 flex-col gap-4 p-5" aria-labelledby="chapters-title">

@@ -626,6 +626,53 @@
   .math-display .katex-display { margin: 0.4em 0; }
   .katex { font-size: 1.06em; }
 
+  /* ── Rich text, as the editors write it and every page draws it ── */
+  .rich { overflow-wrap: anywhere; }
+  .rich > * + * { margin-top: 0.6em; }
+  .rich p { margin: 0; white-space: pre-wrap; }
+  .rich ul, .rich ol { margin: 0; padding-left: 1.6em; }
+  .rich ul { list-style: disc; }
+  .rich ol { list-style: decimal; }
+  .rich li > * + * { margin-top: 0.3em; }
+  .rich li + li { margin-top: 0.2em; }
+  .rich-inline { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .rich-table { max-width: 100%; overflow-x: auto; }
+  .rich table { border-collapse: collapse; font-size: 0.95em; }
+  .rich th, .rich td { min-width: 3em; padding: 6px 10px; border: 1px solid var(--rich-line, var(--lb-line-strong)); vertical-align: top; text-align: left; }
+  .rich th { background: var(--rich-head, var(--lb-surface-2)); font-weight: 700; }
+  .rich :is(th, td) > * + * { margin-top: 0.3em; }
+  .rich-img { display: block; max-width: 100%; height: auto; max-height: 420px; border-radius: 8px; border: 1px solid var(--rich-line, var(--lb-line)); background: #fff; object-fit: contain; }
+
+  /* The editor: a toolbar over the text, framed like the other fields. */
+  .rich-editor { border: 1px solid var(--lb-line-strong); border-radius: var(--lb-r-md); background: var(--lb-surface); color: var(--lb-ink); }
+  .rich-editor:focus-within { border-color: var(--lb-primary); box-shadow: 0 0 0 3px var(--lb-primary-soft); }
+  .rich-editor-invalid { border-color: var(--lb-bad); }
+  .rich-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 4px; border-bottom: 1px solid var(--lb-line); border-radius: var(--lb-r-md) var(--lb-r-md) 0 0; background: var(--lb-surface-2); }
+  .rich-tool { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; height: 36px; padding: 0 7px; border-radius: 6px; color: var(--lb-ink-2); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .rich-tool:hover:not(:disabled) { background: var(--lb-surface-3); color: var(--lb-ink); }
+  .rich-tool[aria-pressed="true"] { background: var(--lb-primary-soft); color: var(--lb-primary-text); }
+  .rich-tool:disabled { opacity: 0.45; cursor: default; }
+  .rich-tool[aria-busy="true"] { opacity: 0.6; cursor: progress; }
+  .rich-tool svg { width: 18px; height: 18px; }
+  .rich-tool-text { padding: 0 9px; white-space: nowrap; }
+  .rich-sep { width: 1px; align-self: stretch; margin: 6px 3px; background: var(--lb-line-strong); }
+  .rich-table-tools { display: inline-flex; flex-wrap: wrap; gap: 2px; margin-left: 4px; padding-left: 6px; border-left: 1px solid var(--lb-line-strong); }
+  .rich-input { padding: 10px 14px; font-size: 16px; line-height: 1.75; outline: none; }
+  .rich-input:focus { outline: none; }
+  .rich-input .rich-math { cursor: pointer; border-radius: 4px; }
+  .rich-input .rich-math:hover { background: var(--lb-primary-soft); }
+  .rich-input .rich-math-block { display: block; padding: 2px 0; text-align: center; }
+  .rich-input .ProseMirror-selectednode { outline: 2px solid var(--lb-primary); outline-offset: 1px; }
+  .rich-input .tableWrapper { max-width: 100%; overflow-x: auto; }
+  .rich-input .selectedCell { background: var(--lb-primary-soft); }
+  .rich-dialog { width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 22px; border: 1px solid var(--lb-line); border-radius: var(--lb-r-lg); background: var(--lb-surface); color: var(--lb-ink); box-shadow: var(--lb-shadow-float); }
+  .rich-dialog[open] { display: flex; flex-direction: column; gap: 14px; }
+  .rich-dialog::backdrop { background: rgb(20 30 35 / 0.45); }
+  .rich-dialog textarea.input { min-height: 0; }
+  .rich-snippets { display: flex; flex-wrap: wrap; gap: 4px; }
+  .rich-snippets .rich-tool { border: 1px solid var(--lb-line); background: var(--lb-surface-2); }
+  .rich-dialog-preview { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: var(--lb-r-md); background: var(--lb-bg); border: 1px dashed var(--lb-line-strong); overflow-x: auto; }
+
   /* ── Questions in the bank's editors: the trail, a question row, and the editor's live preview.
      (The browsing pages use the QBank design: .qb, below.) ── */
   .crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 22px; font-size: 14px; color: var(--lb-muted); }
@@ -731,6 +778,8 @@
     font-family: var(--ff-kalpurush), var(--ff-hind), system-ui, sans-serif;
     font-size: 16px;
     line-height: 1.55;
+    --rich-line: var(--color-qb-line);
+    --rich-head: var(--color-qb-page);
   }
   .qb :is(h1, h2, h3, h4) { font-family: inherit; font-weight: 700; letter-spacing: normal; line-height: inherit; color: inherit; text-wrap: wrap; }
   /* Plain links are green and underlined, as in the design; cards and buttons set their own look. */

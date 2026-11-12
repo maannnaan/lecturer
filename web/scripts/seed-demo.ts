@@ -465,7 +465,9 @@ async function main() {
           title: c.title,
           grade: c.grade,
           session: c.session ?? "",
+          // Plain text, as from before the editor; the site shows it as paragraphs.
           description: c.description ?? "",
+          descriptionRich: null,
           icon: c.icon as never,
           cover: c.cover,
           access: c.access,
@@ -501,7 +503,7 @@ async function main() {
         }
       }
       for (const n of t.notices) {
-        const notice = await createNotice(db, id, { title: n.title, body: n.body ?? "", pinned: n.pinned ?? false });
+        const notice = await createNotice(db, id, { title: n.title, body: n.body ?? "", bodyRich: null, pinned: n.pinned ?? false });
         const publishedAt = new Date(Date.now() - n.daysAgo * 86_400_000);
         await db.update(noticesTable).set({ publishedAt }).where(eq(noticesTable.id, notice.id));
       }

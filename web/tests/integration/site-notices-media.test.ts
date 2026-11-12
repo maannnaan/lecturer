@@ -4,7 +4,8 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { parseNotice } from "@/lib/courses";
 import type { Database } from "@/server/db";
-import { getMedia, saveImage } from "@/server/media";
+import { media } from "@/server/db/schema";
+import { docWithOwnImages, getMedia, saveImage } from "@/server/media";
 import { createNotice, deleteNotice, listNotices, updateNotice } from "@/server/notices";
 import { setSiteLocale, updateProfile, updateSite } from "@/server/site";
 import { findTeacherById } from "@/server/teachers";
@@ -64,6 +65,41 @@ describe("notices", () => {
     expect(await updateNotice(db, stranger.id, notice.id, parseNotice({ title: "x" }).notice)).toBeNull();
     expect(await deleteNotice(db, stranger.id, notice.id)).toBe(false);
     expect(await deleteNotice(db, owner.id, notice.id)).toBe(true);
+  });
+
+  it("keep the editor's document beside their plain text, its pictures only the teacher's own", async () => {
+    const t = await makeTeacher(db);
+    const other = await makeTeacher(db);
+    const upload = async (teacherId: string, key: string) =>
+      (
+        await db
+          .insert(media)
+          .values({ teacherId, storage: "local", key, url: `/media/${key}`, contentType: "image/webp", bytes: 10 })
+          .returning()
+      )[0];
+    const mine = await upload(t.id, "notice-mine.webp");
+    const theirs = await upload(other.id, "notice-theirs.webp");
+    const body = (mediaId: string) =>
+      JSON.stringify({
+        type: "doc",
+        content: [
+          { type: "paragraph", content: [{ type: "text", text: "ক্লাস ", marks: [{ type: "bold" }] }, { type: "text", text: "রবিবার" }] },
+          { type: "bulletList", content: [{ type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "বিকেল ৪টা" }] }] }] },
+          { type: "image", attrs: { src: "https://elsewhere.example/a.png", mediaId } },
+        ],
+      });
+
+    const { notice, errors } = parseNotice({ title: "ক্লাসের সময়", body: body(mine.id) });
+    expect(errors).toEqual({});
+    expect(notice.body).toBe("ক্লাস রবিবার\n\n• বিকেল ৪টা");
+    const checked = await docWithOwnImages(db, t.id, notice.bodyRich);
+    if (!checked) throw new Error("the teacher's own picture was refused");
+    expect(checked.content[2]).toEqual({ type: "image", attrs: { src: "/media/notice-mine.webp", mediaId: mine.id } });
+    const saved = await createNotice(db, t.id, { ...notice, bodyRich: checked });
+    expect(saved).toMatchObject({ body: notice.body, bodyRich: checked });
+
+    expect(await docWithOwnImages(db, t.id, parseNotice({ title: "x", body: body(theirs.id) }).notice.bodyRich)).toBe(false);
+    expect(await docWithOwnImages(db, t.id, null)).toBeNull();
   });
 });
 

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Check, Pin } from "lucide-react";
 import type { ReactNode } from "react";
 import { CourseIconGlyph } from "@/components/course-icon";
-import { Paragraphs } from "@/components/paragraphs";
+import { SiteText } from "@/components/site-text";
 import { chapterLabel } from "@/lib/chapter-label";
 import { gradeName, gradeOf } from "@/lib/grades";
 import { type Dictionary, type Locale, dayAndMonth, formatDayRange, formatNumber } from "@/i18n";
@@ -122,7 +122,7 @@ export function NoticeList({ notices, d, locale }: { notices: Notice[]; d: Dicti
                 {notice.pinned && <Pin className="mt-1 size-4 shrink-0 text-accent-ink" aria-label={d.dashboard.notices.pinnedBadge} />}
                 {notice.title}
               </p>
-              {notice.body && <Paragraphs text={notice.body} className="mt-1 text-[15px] text-ink-2" />}
+              {(notice.body || notice.bodyRich) && <SiteText rich={notice.bodyRich} plain={notice.body} className="mt-1 text-[15px] text-ink-2" />}
             </div>
           </li>
         );
