@@ -102,7 +102,15 @@ function blocks(content: RichBlock[], draw: Draw): ReactNode[] {
       case "image":
         return (
           // eslint-disable-next-line @next/next/no-img-element -- the teacher's own upload; its src is set by the server
-          <img key={i} src={block.attrs.src} alt={block.attrs.alt ?? ""} className="rich-img" loading="lazy" decoding="async" />
+          <img
+            key={i}
+            src={block.attrs.src}
+            alt={block.attrs.alt ?? ""}
+            width={block.attrs.width}
+            className={block.attrs.width ? "rich-img rich-img-sized" : "rich-img"}
+            loading="lazy"
+            decoding="async"
+          />
         );
       case "blockMath":
         return <div key={i}>{formula(block.attrs.latex, true, math)}</div>;

@@ -21,7 +21,7 @@ import {
   Underline,
 } from "lucide-react";
 import type { Dictionary } from "@/i18n";
-import { type RichMode, type RichText, richFromField, richToDoc, richToField } from "@/lib/rich-text";
+import { MIN_IMAGE_WIDTH, type RichMode, type RichText, richFromField, richToDoc, richToField } from "@/lib/rich-text";
 import { uploadImage } from "@/lib/shrink-image";
 import { EquationDialog } from "./equation-dialog";
 import { BlockMath, InlineMath, type MathEditRequest } from "./math";
@@ -46,7 +46,19 @@ const UploadedImage = Image.extend({
   parseHTML() {
     return [{ tag: "img[data-media-id]" }];
   },
-}).configure({ inline: false, allowBase64: false, HTMLAttributes: { class: "rich-img" } });
+}).configure({
+  inline: false,
+  allowBase64: false,
+  HTMLAttributes: { class: "rich-img" },
+  // Drag a corner to resize (mouse or finger). Only the width is kept; the picture keeps its shape.
+  resize: {
+    enabled: true,
+    directions: ["top-left", "top-right", "bottom-left", "bottom-right"],
+    minWidth: MIN_IMAGE_WIDTH,
+    minHeight: 20,
+    alwaysPreserveAspectRatio: true,
+  },
+});
 
 function extensionsFor(mode: RichMode, dollars: boolean, onEdit: (request: MathEditRequest) => void) {
   const inline = mode === "inline";

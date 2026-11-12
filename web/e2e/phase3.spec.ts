@@ -160,6 +160,20 @@ test("a private creative question with a diagram stays in the bank", async ({ pa
   await expect(page.locator(".rich-input img.rich-img")).toBeVisible();
   await expect(page.locator(".q-card img.rich-img")).toBeVisible();
 
+  // Dragging a corner makes it smaller; it keeps its shape, and the preview follows.
+  const picture = page.locator(".rich-input img.rich-img");
+  const before = (await picture.boundingBox())!;
+  await picture.hover();
+  const corner = (await page.locator('.rich-input [data-resize-handle="bottom-right"]').boundingBox())!;
+  await page.mouse.move(corner.x + corner.width / 2, corner.y + corner.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(corner.x + corner.width / 2 - before.width / 2, corner.y + corner.height / 2, { steps: 8 });
+  await page.mouse.up();
+  const after = (await picture.boundingBox())!;
+  expect(after.width).toBeLessThan(before.width * 0.6);
+  expect(after.height / after.width).toBeCloseTo(before.height / before.width, 1);
+  await expect(page.locator(".q-card img.rich-img-sized")).toHaveAttribute("width", String(Math.round(after.width)));
+
   await field(page, "শুধু আপনি: পরীক্ষা আর প্রশ্নপত্রের জন্য রাখা").check();
   await page.getByRole("button", { name: "প্রশ্ন যোগ করুন" }).click();
   // Saved: back on its chapter in the bank, on the CQ section.
@@ -182,8 +196,9 @@ test("a question is edited, then deleted", async ({ page }) => {
   await expect(page.getByRole("status").filter({ hasText: "সংরক্ষিত হয়েছে" })).toBeVisible();
   await page.reload();
   await expect(field(page, "অংশ ক")).toHaveText("হুকের সূত্রটি বিবৃত কর।");
-  // The diagram is still in the stimulus.
+  // The diagram is still in the stimulus, at the size it was dragged to.
   await expect(page.locator(".rich-input img.rich-img")).toBeVisible();
+  expect((await page.locator(".rich-input img.rich-img").boundingBox())!.width).toBeLessThan(200);
 
   await page.getByRole("button", { name: "মুছে ফেলুন" }).click();
   await expect(page.getByText("মুছে ফেলার আগে নিশ্চিত করার ঘরে টিক দিন")).toBeVisible();

@@ -35,6 +35,12 @@ describe("rich text on a page", () => {
     expect(out).toMatch(/class="math-inline"><span class="katex">/);
   });
 
+  it("draws a resized picture at its width, with no height, so it keeps its shape", () => {
+    const out = html({ value: doc({ type: "image", attrs: { src: "/media/t/1.jpg", mediaId: IMAGE, width: 240 } }) });
+    expect(out).toContain('<img src="/media/t/1.jpg" alt="" width="240" class="rich-img rich-img-sized"');
+    expect(out).not.toContain("height");
+  });
+
   it("escapes words, so nothing typed becomes HTML", () => {
     const out = html({ value: doc(p(text('<img src=x onerror="alert(1)">'))) });
     expect(out).toContain("&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");

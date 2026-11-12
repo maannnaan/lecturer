@@ -642,6 +642,8 @@
   .rich th { background: var(--rich-head, var(--lb-surface-2)); font-weight: 700; }
   .rich :is(th, td) > * + * { margin-top: 0.3em; }
   .rich-img { display: block; max-width: 100%; height: auto; max-height: 420px; border-radius: 8px; border: 1px solid var(--rich-line, var(--lb-line)); background: #fff; object-fit: contain; }
+  /* Resized by the teacher: that width (never wider than the page), and its own height. */
+  .rich-img-sized { max-height: none; }
 
   /* The editor: a toolbar over the text, framed like the other fields. */
   .rich-editor { border: 1px solid var(--lb-line-strong); border-radius: var(--lb-r-md); background: var(--lb-surface); color: var(--lb-ink); }
@@ -664,6 +666,21 @@
   .rich-input .rich-math-block { display: block; padding: 2px 0; text-align: center; }
   .rich-input .ProseMirror-selectednode { outline: 2px solid var(--lb-primary); outline-offset: 1px; }
   .rich-input .tableWrapper { max-width: 100%; overflow-x: auto; }
+  /* A picture in the editor: drag a corner to resize it. Only the width counts; the height
+     follows the picture, so it never stretches. */
+  .rich-input [data-resize-container] { max-width: 100%; margin: 4px 0; }
+  .rich-input [data-resize-wrapper] { max-width: 100%; }
+  .rich-input [data-resize-wrapper] > .rich-img { height: auto !important; }
+  .rich-input .rich-img[style*="width"] { max-height: none; }
+  .rich-input [data-resize-handle] { z-index: 1; width: 14px; height: 14px; margin: -5px; border: 2px solid #fff; border-radius: 3px; background: var(--lb-primary); box-shadow: 0 0 0 1px var(--lb-primary); opacity: 0; transition: opacity 0.12s; }
+  .rich-input [data-resize-handle="top-left"], .rich-input [data-resize-handle="bottom-right"] { cursor: nwse-resize; }
+  .rich-input [data-resize-handle="top-right"], .rich-input [data-resize-handle="bottom-left"] { cursor: nesw-resize; }
+  .rich-input [data-resize-container]:hover [data-resize-handle],
+  .rich-input .ProseMirror-selectednode [data-resize-handle],
+  .rich-input [data-resize-state="true"] [data-resize-handle] { opacity: 1; }
+  @media (pointer: coarse) {
+    .rich-input [data-resize-handle] { width: 22px; height: 22px; margin: -9px; touch-action: none; }
+  }
   .rich-input .selectedCell { background: var(--lb-primary-soft); }
   .rich-dialog { width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 22px; border: 1px solid var(--lb-line); border-radius: var(--lb-r-lg); background: var(--lb-surface); color: var(--lb-ink); box-shadow: var(--lb-shadow-float); }
   .rich-dialog[open] { display: flex; flex-direction: column; gap: 14px; }

@@ -57,11 +57,21 @@ describe("rich text from the editor", () => {
             { type: "tableRow", content: [{ type: "tableCell", attrs: { colspan: 2 }, content: [p(text("১০ N"))] }] },
           ],
         },
-        // Only what the page needs; the server points `src` at the stored file later.
-        { type: "image", attrs: { src: "https://anywhere.example/x.png", mediaId: IMAGE, alt: "চিত্র" } },
+        // Only what the page needs; the server points `src` at the stored file later. A width
+        // too small to see is raised to the smallest allowed.
+        { type: "image", attrs: { src: "https://anywhere.example/x.png", mediaId: IMAGE, alt: "চিত্র", width: 40 } },
         { type: "blockMath", attrs: { latex: "\\frac{a}{b}" } },
       ),
     );
+  });
+
+  it("keeps a resized picture's width, whole and within limits, but never its height", () => {
+    const picture = (attrs: Record<string, unknown>) => posted(doc({ type: "image", attrs: { src: "", mediaId: IMAGE, ...attrs } })).result as RichDoc;
+    expect(picture({ width: 320.6, height: 211 }).content[0]).toEqual({ type: "image", attrs: { src: "", mediaId: IMAGE, width: 321 } });
+    expect(picture({ width: 99999 }).content[0]).toMatchObject({ attrs: { width: 1200 } });
+    // Never resized: no width, so the page draws it at its own size.
+    expect(picture({ width: null, height: null }).content[0]).toEqual({ type: "image", attrs: { src: "", mediaId: IMAGE } });
+    expect(picture({ width: "300px" }).content[0]).toEqual({ type: "image", attrs: { src: "", mediaId: IMAGE } });
   });
 
   it("refuses anything the editor never writes", () => {
