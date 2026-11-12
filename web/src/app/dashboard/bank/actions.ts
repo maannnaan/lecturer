@@ -3,22 +3,26 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import type { FormState } from "@/components/form";
-import { chapterLines, parseBankChapter, parseBankClass, parseSubject, sameClassName } from "@/lib/bank";
+import { chapterLines, parseBankChapter, parseBankClass, parseBankTopic, parseSubject, sameClassName } from "@/lib/bank";
 import { type FieldErrors, formInput, type Input } from "@/lib/form-input";
 import { isUuid } from "@/lib/ids";
 import { parseQuestion } from "@/lib/questions";
 import { requireTeacher } from "@/server/auth/current";
 import {
   addBankChapters,
+  addBankTopics,
   createBankClass,
   createSubject,
   deleteBankChapter,
+  deleteBankTopic,
   deleteSubject,
   getSubject,
   listBankClasses,
   moveBankChapter,
+  moveBankTopic,
   removeBankClass,
   renameBankClass,
+  renameBankTopic,
   updateBankChapter,
   updateSubject,
 } from "@/server/bank";
@@ -49,7 +53,8 @@ async function placementRefusal(reason: Exclude<SaveQuestionResult, { ok: true }
   const e = await errorTexts();
   // A picture that isn't the teacher's own upload sits in the text, not in one field: say so for the form.
   if (reason === "missing" || reason === "image") return { errors: {}, formError: e.generic, values: keep(input) };
-  return { errors: { [reason === "subject" ? "subjectId" : "chapterId"]: e.invalid }, values: keep(input) };
+  const field = reason === "subject" ? "subjectId" : reason === "topic" ? "topicId" : "chapterId";
+  return { errors: { [field]: e.invalid }, values: keep(input) };
 }
 
 // ── Classes ──
@@ -169,6 +174,47 @@ export async function moveBankChapterAction(formData: FormData) {
   refresh();
 }
 
+// ── Sub-chapters ──
+
+/** Adds one or more sub-chapters at the end of a chapter, one per line (numbering dropped). */
+export async function addTopicsAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const teacher = await requireTeacher();
+  const input = formInput(formData);
+  const errors: FieldErrors = {};
+  const titles = chapterLines(input.topics ?? "", errors, "topics");
+  if (titles.length === 0 && !errors.topics) errors.topics = "required";
+  const refusal = await refused(errors, input);
+  if (refusal) return refusal;
+  const added = await addBankTopics(await getDb(), teacher.id, String(input.chapterId ?? ""), titles);
+  if (!added) return { errors: {}, formError: (await errorTexts()).generic };
+  refresh();
+  return saved;
+}
+
+export async function renameTopicAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const teacher = await requireTeacher();
+  const input = formInput(formData);
+  const { title, errors } = parseBankTopic(input);
+  const refusal = await refused(errors, input);
+  if (refusal) return refusal;
+  const renamed = await renameBankTopic(await getDb(), teacher.id, String(input.topicId ?? ""), title);
+  if (!renamed) return { errors: {}, formError: (await errorTexts()).generic };
+  refresh();
+  return saved;
+}
+
+export async function deleteTopicAction(formData: FormData) {
+  const teacher = await requireTeacher();
+  await deleteBankTopic(await getDb(), teacher.id, String(formData.get("topicId") ?? ""));
+  refresh();
+}
+
+export async function moveTopicAction(formData: FormData) {
+  const teacher = await requireTeacher();
+  await moveBankTopic(await getDb(), teacher.id, String(formData.get("topicId") ?? ""), direction(formData.get("direction")));
+  refresh();
+}
+
 // ── Questions ──
 
 export async function createQuestionAction(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -183,6 +229,8 @@ export async function createQuestionAction(_prev: FormState, formData: FormData)
   if (formData.get("next") === "another") {
     const query = new URLSearchParams({ type: question.type, subject: question.subjectId, added: result.question.id });
     if (question.chapterId) query.set("chapter", question.chapterId);
+    // The next one goes in the same sub-chapter.
+    if (result.question.topicId) query.set("topic", result.question.topicId);
     redirect(`/dashboard/bank/new?${query}`);
   }
   redirect(bankHref(result.question));

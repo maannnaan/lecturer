@@ -8,8 +8,10 @@ import { cx, qbButton } from "./ui";
 
 export type QbFilterText = {
   filters: string;
-  /** "১টি চালু" … for 0–4 filters in use, written out on the server in the page's digits. */
+  /** "১টি চালু" … for 0–5 filters in use, written out on the server in the page's digits. */
   filtersOn: string[];
+  topic: string;
+  allTopics: string;
   reset: string;
   source: string;
   sources: Record<Source, string>;
@@ -32,7 +34,8 @@ const box = "size-[18px] shrink-0 accent-qb-accent my-[3px] mr-[3px] ml-1";
 const radio = "size-[18px] shrink-0 accent-qb-accent mt-[3px] mr-[3px] ml-[5px]";
 
 /**
- * The chapter page's filter sidebar: source, board, year and difficulty, for every tab. A change
+ * The chapter page's filter sidebar: sub-chapter (when the chapter has any), source, board, year and
+ * difficulty, for every tab. A change
  * reloads the questions in place (the list dims meanwhile); the boxes show the new choice at once.
  * Where the sidebar sits above the questions (narrow screens) it folds into a "Filters" button.
  */
@@ -40,6 +43,7 @@ export function QbFilters({
   path,
   tab,
   filters,
+  topics,
   boards,
   years,
   pdfHref,
@@ -49,6 +53,8 @@ export function QbFilters({
   path: string;
   tab: string;
   filters: ChapterFilters;
+  /** The chapter's sub-chapters, "৪.১ বল ও গতির সূত্র", by number. */
+  topics: { number: number; label: string }[];
   boards: { key: string; label: string }[];
   years: { value: number; label: string }[];
   pdfHref: string;
@@ -116,6 +122,27 @@ export function QbFilters({
       </div>
 
       <div id="qb-filters-body" className={cx("flex-col gap-[22px]", open ? "flex" : "hidden @min-[848px]:flex")}>
+        {topics.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <label htmlFor="qb-topic" className={caption}>
+              {text.topic}
+            </label>
+            <select
+              id="qb-topic"
+              className={field}
+              value={state.topic ? String(state.topic) : ""}
+              onChange={(e) => apply({ ...state, topic: e.target.value ? Number(e.target.value) : undefined })}
+            >
+              <option value="">{text.allTopics}</option>
+              {topics.map((t) => (
+                <option key={t.number} value={t.number}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <fieldset className="m-0 flex flex-col gap-2 border-none p-0">
           <legend className={cx(caption, "mb-2")}>{text.source}</legend>
           {SOURCES.map((s) => (

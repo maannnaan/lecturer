@@ -40,12 +40,18 @@ type QuestionText = Pick<
 type Common = Pick<Dictionary["common"], "save" | "saving" | "saved" | "optional">;
 
 /** A bank subject the question can be filed under; `group` is its class, for grouping the menu. */
-export type SubjectChoice = { id: string; name: string; group: string; chapters: { id: string; label: string }[] };
+export type SubjectChoice = {
+  id: string;
+  name: string;
+  group: string;
+  chapters: { id: string; label: string; topics: { id: string; label: string }[] }[];
+};
 export type QuestionData = {
   id: string;
   type: QuestionType;
   subjectId: string;
   chapterId: string | null;
+  topicId: string | null;
   visibility: "public" | "private";
   body: QuestionBody;
   board: string;
@@ -54,6 +60,9 @@ export type QuestionData = {
   source: string;
   videoUrl: string;
 };
+
+/** Where a new question goes, from the page the teacher came from. */
+export type QuestionDefaults = { subjectId: string; chapterId: string; topicId?: string };
 
 /**
  * The stem as the editor opens it. A question from before pictures went into the text kept one
@@ -67,11 +76,12 @@ function stemWithPicture(body: QuestionBody | undefined): RichText {
 }
 
 /** The form's fields, from a saved question (or the defaults for a new one). Text fields are rich text. */
-function initialFields(question: QuestionData | undefined, defaults: { subjectId: string; chapterId: string }) {
+function initialFields(question: QuestionData | undefined, defaults: QuestionDefaults) {
   const body = question?.body;
   const f: Record<string, RichText> = {
     subjectId: question?.subjectId ?? defaults.subjectId,
     chapterId: question ? (question.chapterId ?? "") : defaults.chapterId,
+    topicId: question ? (question.topicId ?? "") : (defaults.topicId ?? ""),
     stem: stemWithPicture(body),
     visibility: question?.visibility ?? "public",
     board: question?.board ?? "",
@@ -118,7 +128,7 @@ export function QuestionForm({
   question?: QuestionData;
   type: QuestionType;
   subjects: SubjectChoice[];
-  defaults: { subjectId: string; chapterId: string };
+  defaults: QuestionDefaults;
   t: FormText;
   q: QuestionText;
   c: Common;
@@ -135,8 +145,12 @@ export function QuestionForm({
   };
   const e = state.errors;
 
+  // The chapter menu follows the subject picked, and the sub-chapter menu the chapter; the selects
+  // themselves stay uncontrolled (each starts afresh when the one above it changes).
   const [subjectId, setSubjectId] = useState(s("subjectId") || subjects[0]?.id || "");
   const chapters = subjects.find((subject) => subject.id === subjectId)?.chapters ?? [];
+  const [chapterId, setChapterId] = useState(subjectId === s("subjectId") ? s("chapterId") : "");
+  const topics = chapters.find((ch) => ch.id === chapterId)?.topics ?? [];
 
   // What the preview shows: the form's current values, read after every edit.
   const form = useRef<HTMLFormElement>(null);
@@ -159,7 +173,11 @@ export function QuestionForm({
             name="subjectId"
             label={t.subject}
             defaultValue={s("subjectId") || subjects[0]?.id || ""}
-            onChange={(event) => setSubjectId(event.target.value)}
+            onChange={(event) => {
+              setSubjectId(event.target.value);
+              // The chapter menu starts afresh at the chapter it will show.
+              setChapterId(event.target.value === s("subjectId") ? s("chapterId") : "");
+            }}
             options={subjects.map((subject) => ({ value: subject.id, label: subject.name, group: subject.group }))}
             error={e.subjectId}
           />
@@ -168,9 +186,22 @@ export function QuestionForm({
             name="chapterId"
             label={t.chapter}
             defaultValue={subjectId === s("subjectId") ? s("chapterId") : ""}
+            onChange={(event) => setChapterId(event.target.value)}
             options={[{ value: "", label: t.noChapter }, ...chapters.map((ch) => ({ value: ch.id, label: ch.label }))]}
             error={e.chapterId}
           />
+          {topics.length > 0 && (
+            <div className="sm:col-span-2">
+              <SelectField
+                key={chapterId}
+                name="topicId"
+                label={t.topic}
+                defaultValue={chapterId === s("chapterId") ? s("topicId") : ""}
+                options={[{ value: "", label: t.noTopic }, ...topics.map((topic) => ({ value: topic.id, label: topic.label }))]}
+                error={e.topicId}
+              />
+            </div>
+          )}
         </div>
 
         <RichEditor name="stem" label={stemLabel} rows={type === "creative" ? 5 : 3} defaultValue={v("stem")} error={e.stem} hint={t.mathHint} {...rich} />

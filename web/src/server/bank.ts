@@ -1,6 +1,6 @@
 import { and, asc, eq, notExists, sql } from "drizzle-orm";
 import type { Database } from "@/server/db";
-import { bankChapters, bankClasses, bankSubjects, teachers } from "@/server/db/schema";
+import { bankChapters, bankClasses, bankSubjects, bankTopics, teachers } from "@/server/db/schema";
 import type { BankChapterInput, BankClassInput, SubjectInput } from "@/lib/bank";
 import { sortClasses } from "@/lib/bank-look";
 import { isGrade } from "@/lib/grades";
@@ -14,10 +14,19 @@ import { type Tx, renumber, swapped } from "./ordering";
 export type BankClass = typeof bankClasses.$inferSelect;
 export type Subject = typeof bankSubjects.$inferSelect;
 export type BankChapter = typeof bankChapters.$inferSelect;
-export type SubjectWithChapters = Subject & { chapters: BankChapter[] };
+export type BankTopic = typeof bankTopics.$inferSelect;
+/** A chapter with its sub-chapters in order. */
+export type ChapterWithTopics = BankChapter & { topics: BankTopic[] };
+export type SubjectWithChapters = Subject & { chapters: ChapterWithTopics[] };
 
 const subjectOrder = [asc(bankSubjects.position), asc(bankSubjects.number)];
 const chapterOrder = [asc(bankChapters.position), asc(bankChapters.number)];
+const topicOrder = [asc(bankTopics.position), asc(bankTopics.number)];
+
+/** Each chapter with its own sub-chapters, from one list of the teacher's (or a subject's) sub-chapters. */
+function attachTopics(chapters: BankChapter[], topics: BankTopic[]): ChapterWithTopics[] {
+  return chapters.map((chapter) => ({ ...chapter, topics: topics.filter((topic) => topic.chapterId === chapter.id) }));
+}
 
 /** The teacher's classes in the bank's order: by the class each name reads as, then as added. */
 export async function listBankClasses(db: Database, teacherId: string): Promise<BankClass[]> {
@@ -114,21 +123,30 @@ export async function listSubjects(db: Database, teacherId: string): Promise<Sub
 
 /** Every subject of the teacher, in order, each with its chapters in order. */
 export async function listSubjectsWithChapters(db: Database, teacherId: string): Promise<SubjectWithChapters[]> {
-  const [list, all] = await Promise.all([
+  const [list, all, topics] = await Promise.all([
     listSubjects(db, teacherId),
     db.select().from(bankChapters).where(eq(bankChapters.teacherId, teacherId)).orderBy(...chapterOrder),
+    db.select().from(bankTopics).where(eq(bankTopics.teacherId, teacherId)).orderBy(...topicOrder),
   ]);
-  return list.map((subject) => ({ ...subject, chapters: all.filter((ch) => ch.subjectId === subject.id) }));
+  return list.map((subject) => ({ ...subject, chapters: attachTopics(all.filter((ch) => ch.subjectId === subject.id), topics) }));
 }
 
 async function withChapters(db: Database, teacherId: string, subject: Subject | undefined): Promise<SubjectWithChapters | null> {
   if (!subject) return null;
-  const chapters = await db
-    .select()
-    .from(bankChapters)
-    .where(and(eq(bankChapters.subjectId, subject.id), eq(bankChapters.teacherId, teacherId)))
-    .orderBy(...chapterOrder);
-  return { ...subject, chapters };
+  const [chapters, topics] = await Promise.all([
+    db
+      .select()
+      .from(bankChapters)
+      .where(and(eq(bankChapters.subjectId, subject.id), eq(bankChapters.teacherId, teacherId)))
+      .orderBy(...chapterOrder),
+    db
+      .select({ topic: bankTopics })
+      .from(bankTopics)
+      .innerJoin(bankChapters, eq(bankChapters.id, bankTopics.chapterId))
+      .where(and(eq(bankChapters.subjectId, subject.id), eq(bankTopics.teacherId, teacherId)))
+      .orderBy(...topicOrder),
+  ]);
+  return { ...subject, chapters: attachTopics(chapters, topics.map((row) => row.topic)) };
 }
 
 export async function getSubject(db: Database, teacherId: string, subjectId: string): Promise<SubjectWithChapters | null> {
@@ -291,6 +309,75 @@ export async function moveBankChapter(db: Database, teacherId: string, chapterId
   if (!order) return false;
   await renumber(db, order, (tx, id, position) =>
     tx.update(bankChapters).set({ position }).where(and(eq(bankChapters.id, id), eq(bankChapters.teacherId, teacherId))),
+  );
+  return true;
+}
+
+// ── Sub-chapters ──
+
+/**
+ * Adds sub-chapters at the end of a chapter, numbered on from its last-ever sub-chapter number.
+ * Null when the chapter isn't this teacher's.
+ */
+export async function addBankTopics(db: Database, teacherId: string, chapterId: string, titles: string[]): Promise<BankTopic[] | null> {
+  if (!isUuid(chapterId)) return null;
+  return db.transaction(async (tx) => {
+    const [chapter] = await tx
+      .update(bankChapters)
+      .set({ topicCounter: sql`${bankChapters.topicCounter} + ${titles.length}` })
+      .where(and(eq(bankChapters.id, chapterId), eq(bankChapters.teacherId, teacherId)))
+      .returning({ last: bankChapters.topicCounter });
+    if (!chapter) return null;
+    if (titles.length === 0) return [];
+    const [{ last }] = await tx
+      .select({ last: sql<number>`coalesce(max(${bankTopics.position}), -1)` })
+      .from(bankTopics)
+      .where(eq(bankTopics.chapterId, chapterId));
+    const first = chapter.last - titles.length + 1;
+    return tx
+      .insert(bankTopics)
+      .values(titles.map((title, i) => ({ teacherId, chapterId, number: first + i, position: Number(last) + 1 + i, title })))
+      .returning();
+  });
+}
+
+export async function renameBankTopic(db: Database, teacherId: string, topicId: string, title: string): Promise<BankTopic | null> {
+  if (!isUuid(topicId)) return null;
+  const [row] = await db
+    .update(bankTopics)
+    .set({ title })
+    .where(and(eq(bankTopics.id, topicId), eq(bankTopics.teacherId, teacherId)))
+    .returning();
+  return row ?? null;
+}
+
+/** Deletes a sub-chapter; its questions stay in the chapter, under no sub-chapter. */
+export async function deleteBankTopic(db: Database, teacherId: string, topicId: string): Promise<boolean> {
+  if (!isUuid(topicId)) return false;
+  const gone = await db
+    .delete(bankTopics)
+    .where(and(eq(bankTopics.id, topicId), eq(bankTopics.teacherId, teacherId)))
+    .returning({ id: bankTopics.id });
+  return gone.length > 0;
+}
+
+export async function moveBankTopic(db: Database, teacherId: string, topicId: string, direction: "up" | "down"): Promise<boolean> {
+  if (!isUuid(topicId)) return false;
+  const [topic] = await db
+    .select({ chapterId: bankTopics.chapterId })
+    .from(bankTopics)
+    .where(and(eq(bankTopics.id, topicId), eq(bankTopics.teacherId, teacherId)))
+    .limit(1);
+  if (!topic) return false;
+  const siblings = await db
+    .select({ id: bankTopics.id, position: bankTopics.position })
+    .from(bankTopics)
+    .where(and(eq(bankTopics.chapterId, topic.chapterId), eq(bankTopics.teacherId, teacherId)))
+    .orderBy(...topicOrder);
+  const order = swapped(siblings, topicId, direction);
+  if (!order) return false;
+  await renumber(db, order, (tx, id, position) =>
+    tx.update(bankTopics).set({ position }).where(and(eq(bankTopics.id, id), eq(bankTopics.teacherId, teacherId))),
   );
   return true;
 }

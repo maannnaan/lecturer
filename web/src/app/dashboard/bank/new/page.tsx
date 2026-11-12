@@ -15,7 +15,7 @@ export const instant = false;
 
 export const metadata: Metadata = { title: "নতুন প্রশ্ন" };
 
-type Search = { type?: string; subject?: string; chapter?: string; added?: string };
+type Search = { type?: string; subject?: string; chapter?: string; topic?: string; added?: string };
 
 export default async function NewQuestionPage({ searchParams }: { searchParams: Promise<Search> }) {
   const teacher = await requireTeacher();
@@ -51,8 +51,10 @@ export default async function NewQuestionPage({ searchParams }: { searchParams: 
 
   const subject = asked ?? subjects[0];
   const chapterId = askedChapter?.id ?? "";
+  const topicId = askedChapter?.topics.find((x) => x.id === s.topic)?.id ?? "";
   const place = new URLSearchParams({ subject: subject.id });
   if (chapterId) place.set("chapter", chapterId);
+  if (topicId) place.set("topic", topicId);
 
   if (!type) {
     return (
@@ -98,7 +100,7 @@ export default async function NewQuestionPage({ searchParams }: { searchParams: 
         key={s.added ?? "new"}
         type={type}
         subjects={subjectChoices(subjects, classes, d, locale)}
-        defaults={{ subjectId: subject.id, chapterId }}
+        defaults={{ subjectId: subject.id, chapterId, topicId }}
         t={t.form}
         q={d.questions}
         c={d.common}

@@ -7,22 +7,32 @@ import { formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { classKey } from "@/lib/bank-look";
 import { subjectNode } from "@/lib/bank-tree";
-import { chapterLabel } from "@/lib/chapter-label";
+import { chapterLabel, topicNumber } from "@/lib/chapter-label";
 import { requireTeacher } from "@/server/auth/current";
 import { getSubject, listBankClasses } from "@/server/bank";
 import { getDb } from "@/server/db";
 import { bankCounts } from "@/server/questions";
-import { deleteBankChapterAction, moveBankChapterAction } from "../../../actions";
-import { AddChaptersForm, DeleteSubjectForm, EditBankChapterForm, SubjectForm } from "../../../subject-forms";
+import { deleteBankChapterAction, deleteTopicAction, moveBankChapterAction, moveTopicAction } from "../../../actions";
+import { AddChaptersForm, AddTopicsForm, DeleteSubjectForm, EditBankChapterForm, RenameTopicForm, SubjectForm } from "../../../subject-forms";
 
 export const instant = false;
 
 export const metadata: Metadata = { title: "বিষয় সম্পাদনা" };
 
-/** A bank subject's class and name, its chapters (add, rename, reorder, delete), and deleting it. */
-export default async function EditSubjectPage({ params }: { params: Promise<{ subjectId: string }> }) {
+/**
+ * A bank subject's class and name, its chapters and each chapter's sub-chapters (add, rename,
+ * reorder, delete), and deleting it. `?chapter=<id>` opens that chapter's panel.
+ */
+export default async function EditSubjectPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ subjectId: string }>;
+  searchParams: Promise<{ chapter?: string }>;
+}) {
   const teacher = await requireTeacher();
   const { subjectId } = await params;
+  const openChapter = (await searchParams).chapter;
   const db = await getDb();
   const subject = await getSubject(db, teacher.id, subjectId);
   if (!subject) notFound();
@@ -70,10 +80,13 @@ export default async function EditSubjectPage({ params }: { params: Promise<{ su
           {subject.chapters.length === 0 && <p className="text-[15px] text-muted">{t.chaptersEditor.empty}</p>}
           <ol className="flex flex-col gap-2">
             {subject.chapters.map((chapter, i) => (
-              <li key={chapter.id} className="flex items-start gap-2 rounded-lg border border-line p-3">
-                <details className="min-w-0 flex-1">
+              <li key={chapter.id} id={`chapter-${chapter.id}`} className="flex scroll-mt-24 items-start gap-2 rounded-lg border border-line p-3">
+                <details className="min-w-0 flex-1" open={chapter.id === openChapter}>
                   <summary className="cursor-pointer list-none">
-                    <span className="block text-[13px] font-semibold text-muted">{chapterLabel(chapter, i, d, locale)}</span>
+                    <span className="block text-[13px] font-semibold text-muted">
+                      {chapterLabel(chapter, i, d, locale)}
+                      {chapter.topics.length > 0 && ` · ${t.topicCount(formatNumber(chapter.topics.length, locale))}`}
+                    </span>
                     <span className="font-semibold text-ink">{chapter.title}</span>
                   </summary>
                   <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4">
@@ -90,6 +103,49 @@ export default async function EditSubjectPage({ params }: { params: Promise<{ su
                         {d.common.delete}
                       </PendingButton>
                     </form>
+
+                    <section className="flex flex-col gap-3 border-t border-line pt-4" aria-labelledby={`topics-${chapter.id}`}>
+                      <div>
+                        <h4 id={`topics-${chapter.id}`} className="font-semibold text-ink">
+                          {t.chaptersEditor.topics}
+                        </h4>
+                        <p className="text-[14px] text-muted">{t.chaptersEditor.topicsLead}</p>
+                      </div>
+                      {chapter.topics.length > 0 && (
+                        <ol className="flex flex-col gap-2">
+                          {chapter.topics.map((topic, k) => {
+                            const number = topicNumber(i, k, locale);
+                            return (
+                              <li key={topic.id} className="flex flex-wrap items-end gap-2 rounded-lg bg-surface-2 p-2.5">
+                                <RenameTopicForm topic={{ id: topic.id, title: topic.title }} number={number} t={t.chaptersEditor} c={d.common} />
+                                <div className="row-actions shrink-0">
+                                  {(["up", "down"] as const).map((dir) => (
+                                    <form key={dir} action={moveTopicAction}>
+                                      <input type="hidden" name="topicId" value={topic.id} />
+                                      <input type="hidden" name="direction" value={dir} />
+                                      <PendingButton
+                                        className="icon-btn"
+                                        disabled={dir === "up" ? k === 0 : k === chapter.topics.length - 1}
+                                        aria-label={`${dir === "up" ? d.common.moveUp : d.common.moveDown}: ${number} ${topic.title}`}
+                                      >
+                                        {dir === "up" ? <ChevronUp aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
+                                      </PendingButton>
+                                    </form>
+                                  ))}
+                                  <form action={deleteTopicAction}>
+                                    <input type="hidden" name="topicId" value={topic.id} />
+                                    <PendingButton className="icon-btn" aria-label={`${d.common.delete}: ${number} ${topic.title}`}>
+                                      <Trash2 aria-hidden="true" />
+                                    </PendingButton>
+                                  </form>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ol>
+                      )}
+                      <AddTopicsForm chapterId={chapter.id} t={t.chaptersEditor} c={d.common} />
+                    </section>
                   </div>
                 </details>
                 <div className="row-actions shrink-0">

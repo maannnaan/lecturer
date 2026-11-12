@@ -62,16 +62,19 @@ describe("chapter filters", () => {
     });
     expect(filtersFromParams({ board: "any" }).board).toBe("any");
     expect(filtersFromParams({ board: "nowhere", year: "24", diff: "brutal" })).toEqual({});
+    // A sub-chapter by its number, in either script; anything else is ignored.
+    expect(filtersFromParams({ sub: "৩" })).toEqual({ topic: 3 });
+    for (const sub of ["0", "-1", "x", "1.5", "1234567"]) expect(filtersFromParams({ sub })).toEqual({});
     // Every source ticked is the same as none chosen; none ticked shows nothing.
     expect(filtersFromParams({ src: "own,board,school" }).sources).toBeUndefined();
     expect(filtersFromParams({ src: "" }).sources).toEqual([]);
   });
 
   it("write the address back in a fixed order, leaving out what shows everything", () => {
-    const filters = { sources: ["board" as const, "school" as const], difficulty: "easy" as const, year: 2023, board: "sylhet" };
-    expect(filterParams(filters)).toEqual({ board: "sylhet", year: "2023", diff: "easy", src: "board,school" });
+    const filters = { sources: ["board" as const, "school" as const], difficulty: "easy" as const, year: 2023, board: "sylhet", topic: 2 };
+    expect(filterParams(filters)).toEqual({ sub: "2", board: "sylhet", year: "2023", diff: "easy", src: "board,school" });
     expect(filtersFromParams(filterParams(filters))).toEqual(filters);
-    expect(activeFilters(filters)).toBe(4);
+    expect(activeFilters(filters)).toBe(5);
     expect(filterParams({ sources: ["board", "school", "own"] })).toEqual({});
     expect(activeFilters({})).toBe(0);
   });
@@ -204,6 +207,19 @@ describe("subjects and chapters", () => {
       // A number that isn't numbering stays.
       "3D জ্যামিতি",
     ]);
+    expect(errors).toEqual({});
+  });
+
+  it("take a pasted sub-chapter list, dropping its section numbers", () => {
+    const errors: FieldErrors = {};
+    expect(chapterLines("৪.১ বল ও গতির সূত্র\n4.2) Momentum\n৪.৩.১ ঘর্ষণ\n৪.৪: ঘাত", errors, "topics")).toEqual([
+      "বল ও গতির সূত্র",
+      "Momentum",
+      "ঘর্ষণ",
+      "ঘাত",
+    ]);
+    // A number joined to the word after it isn't numbering, so it stays.
+    expect(chapterLines("1.5V ব্যাটারি", {}, "topics")).toEqual(["1.5V ব্যাটারি"]);
     expect(errors).toEqual({});
   });
 

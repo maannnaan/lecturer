@@ -9,7 +9,7 @@ import { type QbCtx, QbChapterView, QbPrintView, pad2, printSubtitle, toCard } f
 import { type Dictionary, formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { subjectNode } from "@/lib/bank-tree";
-import { chapterLabel } from "@/lib/chapter-label";
+import { chapterLabel, topicLabels } from "@/lib/chapter-label";
 import { asciiDigits } from "@/lib/digits";
 import { SECTION_TABS, activeFilters, filtersFromParams, tabFromParam, tabTypes } from "@/lib/questions";
 import { requireTeacher } from "@/server/auth/current";
@@ -23,7 +23,7 @@ export const instant = false;
 export const metadata: Metadata = { title: "প্রশ্নব্যাংক" };
 
 type Params = Promise<{ subjectId: string; chapter: string }>;
-type Search = Promise<{ tab?: string; board?: string; year?: string; diff?: string; src?: string; page?: string; q?: string; print?: string }>;
+type Search = Promise<{ tab?: string; sub?: string; board?: string; year?: string; diff?: string; src?: string; page?: string; q?: string; print?: string }>;
 
 const tool =
   "inline-flex h-9 items-center gap-1.5 rounded-lg border border-qb-field bg-qb-surface px-3 text-[14px] font-semibold text-qb-ink no-underline hover:bg-qb-page hover:text-qb-ink disabled:opacity-40 [&_svg]:size-4";
@@ -85,6 +85,9 @@ export default async function BankChapterPage({ params, searchParams }: { params
   const path = `/dashboard/bank/subject/${subject.id}/${chapter?.id ?? "unfiled"}`;
   const place = { subjectId: subject.id, chapterId: chapter?.id ?? null };
   const filters = filtersFromParams(s);
+  const topics = chapter ? topicLabels(chapter, index, locale) : [];
+  const topicOf = new Map(topics.map((x) => [x.id, x.label]));
+  const pickedTopic = topics.find((x) => x.number === filters.topic);
 
   if (s.print === "chapter" || s.print === "board") {
     const boardOnly = s.print === "board";
@@ -94,7 +97,7 @@ export default async function BankChapterPage({ params, searchParams }: { params
         ctx={ctx}
         owner={locale === "bn" ? teacher.nameBn : teacher.nameEn}
         title={d.qbank.printTitle(subject.name, chapter ? `${label}: ${chapter.title}` : label)}
-        subtitle={printSubtitle(ctx, filters, boardOnly)}
+        subtitle={printSubtitle(ctx, filters, boardOnly, pickedTopic?.label)}
         questions={questions}
         cut={questions.length >= PRINT_LIMIT}
         back={`${path}?${new URLSearchParams({ tab: boardOnly ? "board" : (tabFromParam(s.tab) ?? "textbook") })}`}
@@ -116,6 +119,8 @@ export default async function BankChapterPage({ params, searchParams }: { params
   const newHref = (type: string) => {
     const query = new URLSearchParams({ type, subject: subject.id });
     if (chapter) query.set("chapter", chapter.id);
+    // Looking at one sub-chapter: the new question goes there.
+    if (pickedTopic) query.set("topic", pickedTopic.id);
     return `/dashboard/bank/new?${query}`;
   };
   const addButtons =
@@ -154,14 +159,22 @@ export default async function BankChapterPage({ params, searchParams }: { params
         next: next && { href: `${subjectPath}/${next.id}`, label: d.qbank.nextChapter(formatNumber(index + 2, locale)) },
       }}
       headActions={
-        onSite ? (
-          <Link href={onSite} className={cx(qbButton.outline, "h-[46px] px-3.5 text-[15px]")}>
-            {t.viewOnSite}
-          </Link>
-        ) : null
+        <>
+          {chapter && (
+            <Link href={`${subjectPath}/edit?chapter=${chapter.id}#chapter-${chapter.id}`} className={cx(qbButton.outline, "h-[46px] px-3.5 text-[15px]")}>
+              {t.chaptersEditor.manageTopics}
+            </Link>
+          )}
+          {onSite && (
+            <Link href={onSite} className={cx(qbButton.outline, "h-[46px] px-3.5 text-[15px]")}>
+              {t.viewOnSite}
+            </Link>
+          )}
+        </>
       }
       tab={tab}
       filters={filters}
+      topics={topics}
       list={list}
       allCounts={allCounts}
       pageSize={BANK_PAGE_SIZE}
@@ -170,6 +183,7 @@ export default async function BankChapterPage({ params, searchParams }: { params
           ? []
           : list.items.map((q, i) =>
               toCard(q, (list.page - 1) * BANK_PAGE_SIZE + i + 1, ctx, {
+                topic: q.topicId ? topicOf.get(q.topicId) : undefined,
                 privateLabel: q.visibility === "private" ? t.privateBadge : undefined,
                 tools: (
                   <Tools

@@ -16,7 +16,7 @@ import type { SubjectGroup } from "@/lib/bank";
 import type { Grade } from "@/lib/grades";
 import { parseQuestion } from "@/lib/questions";
 import type { ThemeName } from "@/lib/themes";
-import { createBankClass, createSubject, getSubject } from "@/server/bank";
+import { addBankTopics, createBankClass, createSubject, getSubject } from "@/server/bank";
 import { addChapter, createCourse, listCourses } from "@/server/courses";
 import { createNotice } from "@/server/notices";
 import { createQuestion } from "@/server/questions";
@@ -50,6 +50,8 @@ type DemoSubject = {
   group?: SubjectGroup;
   name: string;
   chapters: string[];
+  /** Sub-chapters by chapter index; a question picks one with `topic: "1"` (1 = the first). */
+  topics?: Record<number, string[]>;
   /** Questions by chapter index (0 = the first chapter). */
   questions?: Record<number, DemoQuestion[]>;
 };
@@ -63,6 +65,7 @@ const NEWTONIAN_MECHANICS: DemoQuestion[] = [
     board: "dhaka",
     year: "2023",
     difficulty: "easy",
+    topic: "1",
     stem: String.raw`$2\,\text{kg}$ ভরের একটি বস্তুর উপর $10\,\text{N}$ বল প্রয়োগ করলে বস্তুটির ত্বরণ কত হবে?`,
     option0: String.raw`$2\,\text{m s}^{-2}$`,
     option1: String.raw`$5\,\text{m s}^{-2}$`,
@@ -75,6 +78,7 @@ const NEWTONIAN_MECHANICS: DemoQuestion[] = [
     type: "mcq",
     board: "chattogram",
     year: "2024",
+    topic: "2",
     stem: String.raw`একটি রকেট প্রতি সেকেন্ডে $0.5\,\text{kg}$ গ্যাস রকেটের সাপেক্ষে $2000\,\text{m s}^{-1}$ বেগে নির্গত করে। রকেটের উপর ক্রিয়াশীল ঘাত বল কত?`,
     option0: String.raw`$250\,\text{N}$`,
     option1: String.raw`$1000\,\text{N}$`,
@@ -89,6 +93,7 @@ const NEWTONIAN_MECHANICS: DemoQuestion[] = [
     board: "rajshahi",
     year: "2022",
     difficulty: "hard",
+    topic: "2",
     stem: "ভরবেগ সম্পর্কে নিচের তথ্যগুলো লক্ষ কর—",
     statement0: "ভরবেগ একটি ভেক্টর রাশি",
     statement1: String.raw`ভরবেগের একক $\text{kg m s}^{-1}$`,
@@ -105,6 +110,7 @@ const NEWTONIAN_MECHANICS: DemoQuestion[] = [
     board: "dhaka",
     year: "2023",
     difficulty: "hard",
+    topic: "3",
     stem: String.raw`$5\,\text{kg}$ ভরের একটি বাক্সকে অনুভূমিকের সাথে $30^\circ$ কোণে আনত একটি তলের উপর রাখা হলো। তল ও বাক্সের মধ্যে গতীয় ঘর্ষণ সহগ $\mu_k = 0.2$ এবং $g = 9.8\,\text{m s}^{-2}$।`,
     part0: "নিউটনের গতির প্রথম সূত্রটি লিখ।",
     part1: "ঘর্ষণ বল কেন সবসময় আপেক্ষিক গতির বিপরীতে ক্রিয়া করে? ব্যাখ্যা কর।",
@@ -118,12 +124,14 @@ $$\begin{aligned} f_k &= \mu_k R = 0.2 \times 42.43 \\ &\approx 8.49\ \text{N} \
   },
   {
     type: "short",
+    topic: "1",
     stem: "জড়তা কাকে বলে?",
     modelAnswer: "বস্তু যে অবস্থায় আছে সেই অবস্থায় থাকতে চাওয়ার প্রবণতাকে জড়তা বলে। জড়তা দুই প্রকার: স্থিতি জড়তা ও গতি জড়তা।",
   },
   {
     type: "textbook",
     source: "মূল বই, অনুশীলনী ৪.৩",
+    topic: "1",
     stem: String.raw`$1000\,\text{kg}$ ভরের একটি গাড়ি $20\,\text{m s}^{-1}$ বেগে চলছে। $5\,\text{s}$-এ গাড়িটি থামাতে কত বল প্রয়োগ করতে হবে?`,
     finalAnswer: String.raw`$4000\,\text{N}$, গতির বিপরীত দিকে`,
     solution: String.raw`মন্দন $a = \dfrac{0 - 20}{5} = -4\,\text{m s}^{-2}$।
@@ -132,12 +140,14 @@ $$\begin{aligned} f_k &= \mu_k R = 0.2 \times 42.43 \\ &\approx 8.49\ \text{N} \
   {
     type: "practice",
     difficulty: "easy",
+    topic: "2",
     stem: String.raw`$5\,\text{kg}$ ভরের একটি বস্তুর উপর $20\,\text{N}$ বল $4\,\text{s}$ ধরে ক্রিয়া করে। বস্তুটির ভরবেগের পরিবর্তন কত?`,
     finalAnswer: String.raw`$80\,\text{kg m s}^{-1}$`,
     solution: String.raw`ভরবেগের পরিবর্তন = বলের ঘাত $= Ft = 20 \times 4 = 80\,\text{kg m s}^{-1}$`,
   },
   {
     type: "practice",
+    topic: "1",
     stem: String.raw`একটি লিফট $2\,\text{m s}^{-2}$ ত্বরণে উপরে উঠছে। লিফটে দাঁড়ানো $60\,\text{kg}$ ভরের একজন মানুষের আপাত ওজন কত? ($g = 9.8\,\text{m s}^{-2}$)`,
     finalAnswer: String.raw`$708\,\text{N}$`,
   },
@@ -342,6 +352,7 @@ const DEMO: DemoTeacher[] = [
         group: "science",
         name: "পদার্থবিজ্ঞান ১ম পত্র",
         chapters: titles(HSC_PHYSICS_1),
+        topics: { 3: ["নিউটনের গতিসূত্র ও বল", "ভরবেগ ও বলের ঘাত", "ঘর্ষণ"] },
         questions: { 2: KINEMATICS, 3: NEWTONIAN_MECHANICS },
       },
       { className: "এসএসসি", group: "science", name: "পদার্থবিজ্ঞান", chapters: titles(SSC_PHYSICS), questions: { 1: SSC_MOTION } },
@@ -492,10 +503,16 @@ async function main() {
         const classId = classIds.get(b.className) ?? (await createBankClass(db, id, { name: b.className })).id;
         classIds.set(b.className, classId);
         const created = await createSubject(db, id, { classId, group: b.group ?? "", name: b.name }, b.chapters);
+        const before = (await getSubject(db, id, created!.id))!;
+        for (const [index, topics] of Object.entries(b.topics ?? {})) {
+          await addBankTopics(db, id, before.chapters[Number(index)].id, topics);
+        }
         const subject = (await getSubject(db, id, created!.id))!;
         for (const [index, list] of Object.entries(b.questions ?? {})) {
-          for (const fields of list) {
-            const { question, errors } = parseQuestion({ ...fields, subjectId: subject.id, chapterId: subject.chapters[Number(index)].id });
+          const chapter = subject.chapters[Number(index)];
+          for (const { topic, ...fields } of list) {
+            const topicId = topic ? chapter.topics[Number(topic) - 1].id : "";
+            const { question, errors } = parseQuestion({ ...fields, subjectId: subject.id, chapterId: chapter.id, topicId });
             if (Object.keys(errors).length > 0) throw new Error(`Demo question refused: ${JSON.stringify(errors)}`);
             const result = await createQuestion(db, id, question);
             if (!result.ok) throw new Error(`Demo question not saved: ${result.reason}`);

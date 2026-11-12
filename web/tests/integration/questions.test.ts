@@ -1,7 +1,17 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { parseSubject } from "@/lib/bank";
 import { parseQuestion } from "@/lib/questions";
-import { createBankClass, createSubject, deleteBankChapter, deleteSubject, getSubject } from "@/server/bank";
+import {
+  addBankTopics,
+  createBankClass,
+  createSubject,
+  deleteBankChapter,
+  deleteBankTopic,
+  deleteSubject,
+  getSubject,
+  moveBankTopic,
+  renameBankTopic,
+} from "@/server/bank";
 import type { Database } from "@/server/db";
 import { media } from "@/server/db/schema";
 import {
@@ -295,5 +305,71 @@ describe("questions", () => {
     expect((await listChapterForPrint(db, t.id, place, { boardOnly: true })).map((q) => q.body.stem)).toEqual(["বোর্ড"]);
     expect((await listChapterForPrint(db, t.id, place, { filters: { difficulty: "hard" } })).map((q) => q.body.stem)).toEqual(["টেস্ট", "সৃজনশীল"]);
     expect(await listChapterForPrint(db, stranger.id, place, {})).toEqual([]);
+  });
+});
+
+describe("sub-chapters", () => {
+  it("are numbered on, never reused, come with their chapter in order, and move and rename", async () => {
+    const t = await makeTeacher(db);
+    const { subject: s, ch1 } = await setup(t);
+    const first = (await addBankTopics(db, t.id, ch1.id, ["বল", "ভরবেগ"]))!;
+    expect(first.map((x) => [x.number, x.position, x.title])).toEqual([
+      [1, 0, "বল"],
+      [2, 1, "ভরবেগ"],
+    ]);
+    await deleteBankTopic(db, t.id, first[1].id);
+    const more = (await addBankTopics(db, t.id, ch1.id, ["ঘর্ষণ"]))!;
+    // Number 2 was handed out once already: links that used it don't land on another sub-chapter.
+    expect(more[0].number).toBe(3);
+
+    await moveBankTopic(db, t.id, more[0].id, "up");
+    await renameBankTopic(db, t.id, first[0].id, "বল ও গতি");
+    const subject = (await getSubject(db, t.id, s.id))!;
+    expect(subject.chapters[0].topics.map((x) => x.title)).toEqual(["ঘর্ষণ", "বল ও গতি"]);
+    expect(subject.chapters[1].topics).toEqual([]);
+  });
+
+  it("belong to the teacher and their own chapter", async () => {
+    const t = await makeTeacher(db);
+    const { subject: s, ch1, ch2 } = await setup(t);
+    const [topic] = (await addBankTopics(db, t.id, ch1.id, ["বল"]))!;
+    expect(await addBankTopics(db, stranger.id, ch1.id, ["অন্যের"])).toBeNull();
+    expect(await renameBankTopic(db, stranger.id, topic.id, "x")).toBeNull();
+    expect(await deleteBankTopic(db, stranger.id, topic.id)).toBe(false);
+
+    // A question can't be filed under a sub-chapter of another chapter.
+    const elsewhere = await createQuestion(db, t.id, input("mcq", s.id, ch2.id, { topicId: topic.id }));
+    expect(elsewhere).toEqual({ ok: false, reason: "topic" });
+    // Without a chapter, a sub-chapter is ignored.
+    expect(input("mcq", s.id, null, { topicId: topic.id }).topicId).toBeNull();
+    const q = await created(t, input("mcq", s.id, ch1.id, { topicId: topic.id }));
+    expect(q.topicId).toBe(topic.id);
+    // Moved to another chapter, the edit must drop it.
+    expect(await updateQuestion(db, t.id, q.id, input("mcq", s.id, ch2.id, { topicId: topic.id }))).toEqual({ ok: false, reason: "topic" });
+    expect((await duplicateQuestion(db, t.id, q.id))?.topicId).toBe(topic.id);
+  });
+
+  it("filter a chapter's tabs, and leave their questions in the chapter when deleted", async () => {
+    const t = await makeTeacher(db);
+    const { subject: s, ch1 } = await setup(t);
+    const [force, momentum] = (await addBankTopics(db, t.id, ch1.id, ["বল", "ভরবেগ"]))!;
+    await created(t, input("mcq", s.id, ch1.id, { stem: "বলের প্রশ্ন", topicId: force.id }));
+    await created(t, input("mcq", s.id, ch1.id, { stem: "ভরবেগের প্রশ্ন", topicId: momentum.id }));
+    await created(t, input("creative", s.id, ch1.id, { stem: "বলের সৃজনশীল", topicId: force.id }));
+    await created(t, input("mcq", s.id, ch1.id, { stem: "কোনোটিতে নয়" }));
+    const place = { subjectId: s.id, chapterId: ch1.id };
+    const mcqs = async (topic?: number) => (await listChapterQuestions(db, t.id, place, { tab: "mcq", filters: { topic } })).items.map((q) => q.body.stem);
+
+    expect(await mcqs()).toEqual(["বলের প্রশ্ন", "ভরবেগের প্রশ্ন", "কোনোটিতে নয়"]);
+    expect(await mcqs(force.number)).toEqual(["বলের প্রশ্ন"]);
+    const byForce = await listChapterQuestions(db, t.id, place, { tab: "mcq", filters: { topic: force.number } });
+    expect([byForce.counts.mcq, byForce.counts.cq]).toEqual([1, 1]);
+    // A number this chapter doesn't have shows nothing, rather than everything.
+    expect(await mcqs(99)).toEqual([]);
+    expect((await listChapterForPrint(db, t.id, place, { filters: { topic: momentum.number } })).map((q) => q.body.stem)).toEqual(["ভরবেগের প্রশ্ন"]);
+
+    await deleteBankTopic(db, t.id, force.id);
+    expect(await mcqs()).toEqual(["বলের প্রশ্ন", "ভরবেগের প্রশ্ন", "কোনোটিতে নয়"]);
+    expect((await listQuestions(db, t.id, { search: "বলের প্রশ্ন" })).items[0].topicId).toBeNull();
   });
 });

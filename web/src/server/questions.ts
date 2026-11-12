@@ -1,6 +1,6 @@
 import { type SQL, and, asc, count, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import type { Database } from "@/server/db";
-import { type QuestionBody, bankChapters, bankSubjects, questions } from "@/server/db/schema";
+import { type QuestionBody, bankChapters, bankSubjects, bankTopics, questions } from "@/server/db/schema";
 import { type CountRow, type TabCounts, emptyCounts } from "@/lib/bank-tree";
 import { isUuid } from "@/lib/ids";
 import {
@@ -42,7 +42,7 @@ export const CHAPTER_PAGE_SIZE = 20;
 
 export type SaveQuestionResult =
   | { ok: true; question: Question }
-  | { ok: false; reason: "missing" | "subject" | "chapter" | "image" };
+  | { ok: false; reason: "missing" | "subject" | "chapter" | "topic" | "image" };
 
 /** A LIKE pattern that matches `term` literally. */
 function contains(term: string): string {
@@ -57,13 +57,14 @@ function sameGroup(teacherId: string, subjectId: string, chapterId: string | nul
   )!;
 }
 
-/** Whether the subject, and the chapter if given, are this teacher's and belong together. */
+/** Whether the subject, and the chapter and sub-chapter if given, are this teacher's and belong together. */
 async function placementProblem(
   db: Database,
   teacherId: string,
   subjectId: string,
   chapterId: string | null,
-): Promise<"subject" | "chapter" | null> {
+  topicId: string | null = null,
+): Promise<"subject" | "chapter" | "topic" | null> {
   if (!isUuid(subjectId)) return "subject";
   const [subject] = await db
     .select({ id: bankSubjects.id })
@@ -78,7 +79,15 @@ async function placementProblem(
     .from(bankChapters)
     .where(and(eq(bankChapters.id, chapterId), eq(bankChapters.subjectId, subjectId), eq(bankChapters.teacherId, teacherId)))
     .limit(1);
-  return chapter ? null : "chapter";
+  if (!chapter) return "chapter";
+  if (topicId === null) return null;
+  if (!isUuid(topicId)) return "topic";
+  const [topic] = await db
+    .select({ id: bankTopics.id })
+    .from(bankTopics)
+    .where(and(eq(bankTopics.id, topicId), eq(bankTopics.chapterId, chapterId), eq(bankTopics.teacherId, teacherId)))
+    .limit(1);
+  return topic ? null : "topic";
 }
 
 /** The image to store for a media id: null for none, false when it isn't this teacher's. */
@@ -101,6 +110,7 @@ function columns(input: QuestionInput) {
   return {
     subjectId: input.subjectId,
     chapterId: input.chapterId,
+    topicId: input.chapterId ? input.topicId : null,
     type: input.type,
     visibility: input.visibility,
     board: input.board,
@@ -123,7 +133,7 @@ export async function getQuestion(db: Database, teacherId: string, questionId: s
 
 /** Adds a question at the end of its chapter (or of the subject's unfiled questions). */
 export async function createQuestion(db: Database, teacherId: string, input: QuestionInput): Promise<SaveQuestionResult> {
-  const problem = await placementProblem(db, teacherId, input.subjectId, input.chapterId);
+  const problem = await placementProblem(db, teacherId, input.subjectId, input.chapterId, input.topicId);
   if (problem) return { ok: false, reason: problem };
   const image = await resolveImage(db, teacherId, input.imageId);
   if (image === false) return { ok: false, reason: "image" };
@@ -151,7 +161,7 @@ export async function updateQuestion(
 ): Promise<SaveQuestionResult> {
   const current = await getQuestion(db, teacherId, questionId);
   if (!current) return { ok: false, reason: "missing" };
-  const problem = await placementProblem(db, teacherId, input.subjectId, input.chapterId);
+  const problem = await placementProblem(db, teacherId, input.subjectId, input.chapterId, input.topicId);
   if (problem) return { ok: false, reason: problem };
   const image =
     input.imageId && input.imageId === current.body.image?.mediaId
@@ -203,6 +213,7 @@ export async function duplicateQuestion(db: Database, teacherId: string, questio
         teacherId,
         subjectId: source.subjectId,
         chapterId: source.chapterId,
+        topicId: source.topicId,
         type: source.type,
         visibility: source.visibility,
         body: source.body,
@@ -315,9 +326,17 @@ export async function bankCounts(db: Database, teacherId: string, options: { pub
   return rows.map((row) => ({ ...row, board: Boolean(row.board), n: Number(row.n) }));
 }
 
-/** The conditions a chapter page's filters add (see ChapterFilters). */
-function filterConditions(filters: ChapterFilters): SQL[] {
+/** The conditions a chapter page's filters add (see ChapterFilters). A sub-chapter is the chapter's own, by number. */
+function filterConditions(filters: ChapterFilters, chapterId: string | null): SQL[] {
   const conditions: SQL[] = [];
+  if (filters.topic && chapterId) {
+    conditions.push(
+      inArray(
+        questions.topicId,
+        sql`(select ${bankTopics.id} from ${bankTopics} where ${bankTopics.chapterId} = ${chapterId} and ${bankTopics.number} = ${filters.topic})`,
+      ),
+    );
+  }
   if (filters.board === "any") conditions.push(ne(questions.board, ""));
   else if (filters.board) conditions.push(eq(questions.board, filters.board));
   if (filters.year) conditions.push(eq(questions.year, filters.year));
@@ -341,7 +360,7 @@ function chapterConditions(
   const inChapter: SQL[] = [sameGroup(teacherId, place.subjectId, place.chapterId)];
   if (!options.includePrivate) inChapter.push(eq(questions.visibility, "public"));
   const chapter = and(...inChapter)!;
-  return { chapter, filtered: and(chapter, ...filterConditions(options.filters ?? {}))! };
+  return { chapter, filtered: and(chapter, ...filterConditions(options.filters ?? {}, place.chapterId))! };
 }
 
 const validPlace = (place: { subjectId: string; chapterId: string | null }) =>

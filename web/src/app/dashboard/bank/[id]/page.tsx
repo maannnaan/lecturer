@@ -71,6 +71,7 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ i
           type: question.type,
           subjectId: question.subjectId,
           chapterId: question.chapterId,
+          topicId: question.topicId,
           visibility: question.visibility,
           body: question.body,
           board: question.board,

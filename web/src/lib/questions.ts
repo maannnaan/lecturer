@@ -75,6 +75,8 @@ export function sourceOf(question: { board: string; source: string }): Source {
 
 /** The filters a chapter page applies to every tab; empty means "all". */
 export type ChapterFilters = {
+  /** A sub-chapter's number within the chapter. */
+  topic?: number;
   /** A board key, or "any" for every board question. */
   board?: string;
   year?: number;
@@ -83,9 +85,11 @@ export type ChapterFilters = {
   sources?: Source[];
 };
 
-/** Reads a chapter page's filter parameters (`board`, `year`, `diff`, `src`), ignoring nonsense. */
-export function filtersFromParams(params: { board?: string; year?: string; diff?: string; src?: string }): ChapterFilters {
+/** Reads a chapter page's filter parameters (`sub`, `board`, `year`, `diff`, `src`), ignoring nonsense. */
+export function filtersFromParams(params: { sub?: string; board?: string; year?: string; diff?: string; src?: string }): ChapterFilters {
   const filters: ChapterFilters = {};
+  const sub = asciiDigits(params.sub ?? "");
+  if (/^\d{1,6}$/.test(sub) && Number(sub) > 0) filters.topic = Number(sub);
   if (params.board === "any" || (BOARDS as readonly string[]).includes(params.board ?? "")) filters.board = params.board;
   const year = asciiDigits(params.year ?? "");
   if (/^\d{4}$/.test(year)) filters.year = Number(year);
@@ -101,6 +105,7 @@ export function filtersFromParams(params: { board?: string; year?: string; diff?
 /** The query string for a set of filters (in a fixed order, defaults left out). */
 export function filterParams(filters: ChapterFilters): Record<string, string> {
   const params: Record<string, string> = {};
+  if (filters.topic) params.sub = String(filters.topic);
   if (filters.board) params.board = filters.board;
   if (filters.year) params.year = String(filters.year);
   if (filters.difficulty) params.diff = filters.difficulty;
@@ -192,6 +197,8 @@ export function parseQuestion(input: Input) {
   const subjectId = (input.subjectId ?? "").trim();
   if (!subjectId) errors.subjectId = "required";
   const chapterId = (input.chapterId ?? "").trim() || null;
+  // A sub-chapter only within a chapter.
+  const topicId = (chapterId && (input.topicId ?? "").trim()) || null;
 
   const stem = richField(input, "stem", 4000, errors, { required: true });
   let body: QuestionBody;
@@ -236,6 +243,7 @@ export function parseQuestion(input: Input) {
     type: kind,
     subjectId,
     chapterId,
+    topicId,
     visibility: oneOf(input.visibility, VISIBILITIES) ?? "public",
     body,
     board,

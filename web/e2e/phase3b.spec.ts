@@ -221,9 +221,10 @@ test("students reach a chapter's sections through the website's question bank", 
   await expect(card.getByText("উত্তর:")).toBeHidden();
   await card.getByRole("button", { name: "উত্তর দেখো" }).click();
   await expect(card.getByText("উত্তর:")).toBeVisible();
-  await expect(card.getByText("বলের ঘাত")).toBeHidden();
+  // (The solution's words, not the sub-chapter tag "৪.২ ভরবেগ ও বলের ঘাত".)
+  await expect(card.getByText("ভরবেগের পরিবর্তন = বলের ঘাত")).toBeHidden();
   await card.getByRole("button", { name: "সমাধান দেখো" }).click();
-  await expect(card.getByText("বলের ঘাত")).toBeVisible();
+  await expect(card.getByText("ভরবেগের পরিবর্তন = বলের ঘাত")).toBeVisible();
 
   // The course page advertises the course; it no longer links into the bank.
   await page.goto("/tanvir/courses/1");

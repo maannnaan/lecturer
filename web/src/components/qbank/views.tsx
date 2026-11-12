@@ -81,8 +81,16 @@ export function qbListText({ d, voice }: QbCtx): QbListText {
   };
 }
 
-/** A question as a card: its text typeset, its labels in the page's language. */
-export function toCard(q: Question, number: number, { d, locale }: QbCtx, extra: Pick<QbCardData, "tools" | "privateLabel"> = {}): QbCardData {
+/**
+ * A question as a card: its text typeset, its labels in the page's language. `topic` is its
+ * sub-chapter's label ("৪.১ বল ও গতির সূত্র"), shown first among its tags.
+ */
+export function toCard(
+  q: Question,
+  number: number,
+  { d, locale }: QbCtx,
+  { topic, ...extra }: Pick<QbCardData, "tools" | "privateLabel"> & { topic?: string } = {},
+): QbCardData {
   const tab = tabOf(q.type);
   const body = q.body;
   /** A text field drawn, or null when it's empty; `inline` for one that sits in a line. */
@@ -92,7 +100,7 @@ export function toCard(q: Question, number: number, { d, locale }: QbCtx, extra:
     anchor: `q-${q.id}`,
     tab,
     badge: `${d.questions.tabsShort[tab]} ${formatNumber(number, locale)}`,
-    tags: q.board ? [boardTag(q, d, locale)] : q.source ? [q.source] : [],
+    tags: [...(topic ? [topic] : []), ...(q.board ? [boardTag(q, d, locale)] : q.source ? [q.source] : [])],
     stem: <RichContent value={body.stem} />,
     image: body.image?.url ?? null,
     video: q.videoUrl || undefined,
@@ -387,7 +395,9 @@ export type QbChapterLinks = {
 export function qbFilterText({ d, locale }: QbCtx, pdf: string): QbFilterText {
   return {
     filters: d.qbank.filters,
-    filtersOn: [0, 1, 2, 3, 4].map((n) => d.qbank.filtersOn(formatNumber(n, locale))),
+    filtersOn: [0, 1, 2, 3, 4, 5].map((n) => d.qbank.filtersOn(formatNumber(n, locale))),
+    topic: d.qbank.topic,
+    allTopics: d.qbank.allTopics,
     reset: d.qbank.reset,
     source: d.qbank.source,
     sources: d.qbank.sources,
@@ -413,6 +423,7 @@ export function QbChapterView({
   headActions,
   tab,
   filters,
+  topics = [],
   list,
   allCounts,
   pageSize,
@@ -421,6 +432,8 @@ export function QbChapterView({
   emptyActions,
 }: {
   ctx: QbCtx;
+  /** The chapter's sub-chapters, for the filter. */
+  topics?: { number: number; label: string }[];
   crumbs: ReactNode;
   /** "পদার্থবিজ্ঞান · অধ্যায় ০২" */
   eyebrow: string;
@@ -545,6 +558,7 @@ export function QbChapterView({
             path={links.path}
             tab={tab}
             filters={filters}
+            topics={topics}
             boards={list.boards.map((b) => ({ key: b, label: d.questions.boards[b as keyof Dictionary["questions"]["boards"]] ?? b }))}
             years={list.years.map((y) => ({ value: y, label: formatYear(y, locale) }))}
             pdfHref={href({ print: "chapter", ...filterQuery })}
@@ -791,9 +805,10 @@ export function QbPrintView({
   );
 }
 
-/** The printout's line under its title: what it holds and which filters made it. */
-export function printSubtitle({ d, locale }: QbCtx, filters: ChapterFilters, boardOnly: boolean): string {
+/** The printout's line under its title: what it holds and which filters made it (`topic`: the sub-chapter's label). */
+export function printSubtitle({ d, locale }: QbCtx, filters: ChapterFilters, boardOnly: boolean, topic?: string): string {
   const parts: string[] = [boardOnly ? d.qbank.printBoard : d.qbank.printAll];
+  if (topic) parts.push(topic);
   if (filters.sources) parts.push(filters.sources.map((s) => d.qbank.sources[s]).join(", ") || "—");
   if (filters.board && filters.board !== "any") parts.push(d.questions.boards[filters.board as keyof Dictionary["questions"]["boards"]] ?? filters.board);
   if (filters.year) parts.push(formatYear(filters.year, locale));

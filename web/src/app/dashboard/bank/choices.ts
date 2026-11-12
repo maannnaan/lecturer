@@ -1,6 +1,6 @@
 import "server-only";
 import type { Dictionary, Locale } from "@/i18n";
-import { chapterLabel } from "@/lib/chapter-label";
+import { chapterLabel, topicLabels } from "@/lib/chapter-label";
 import type { BankClass, SubjectWithChapters } from "@/server/bank";
 import type { SubjectChoice } from "./question-form";
 
@@ -17,6 +17,10 @@ export function subjectChoices(subjects: SubjectWithChapters[], classes: BankCla
     id: subject.id,
     name: subject.name,
     group: names.get(subject.classId) ?? "",
-    chapters: subject.chapters.map((ch, i) => ({ id: ch.id, label: `${chapterLabel(ch, i, d, locale)}: ${ch.title}` })),
+    chapters: subject.chapters.map((ch, i) => ({
+      id: ch.id,
+      label: `${chapterLabel(ch, i, d, locale)}: ${ch.title}`,
+      topics: topicLabels(ch, i, locale).map(({ id, label }) => ({ id, label })),
+    })),
   }));
 }

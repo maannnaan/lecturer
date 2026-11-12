@@ -64,6 +64,13 @@
       "when": 1794421129105,
       "tag": "0008_rich_text",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794505754711,
+      "tag": "0009_sub_chapters",
+      "breakpoints": true
     }
   ]
 }

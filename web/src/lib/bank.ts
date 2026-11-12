@@ -9,10 +9,10 @@ function oneOf<T extends string>(value: string | undefined, allowed: readonly T[
   return (allowed as readonly string[]).includes(value ?? "") ? (value as T) : fallback;
 }
 
-// "অধ্যায় ৪: ", "Chapter 3 – ", "৪. ", "3) ", "- ", "• ": numbering and bullets copied from a contents page.
+// "অধ্যায় ৪: ", "Chapter 3 – ", "৪.১ ", "4.2.1) ", "৪. ", "3) ", "- ", "• ": numbering and bullets copied from a contents page.
 // "য়" is written either as one character or as য + nukta, so "অধ্যায়" accepts both.
 const NUMBERING =
-  /^\s*(?:[-–—•*·]\s+|(?:অধ্যা(?:য়|য়)|chapter)\s*[0-9০-৯]+\s*[.:)\-–—।]?\s*|[0-9০-৯]+\s*[.:)\-–—।]\s*)/iu;
+  /^\s*(?:[-–—•*·]\s+|(?:অধ্যা(?:য়|য়)|chapter)\s*[0-9০-৯]+\s*[.:)\-–—।]?\s*|[0-9০-৯]+(?:\.[0-9০-৯]+)+\s*[.:)\-–—।]?\s+|[0-9০-৯]+\s*[.:)\-–—।](?![0-9০-৯])\s*)/iu;
 
 /**
  * Chapter titles from a pasted list, one per line, as a teacher would copy them from the
@@ -73,6 +73,13 @@ export function parseBankChapter(input: Input) {
   return { chapter, errors };
 }
 
-export type BankClassInput = ReturnType<typeof parseBankClass>["bankClass"];
+/** A sub-chapter's new name. */
+export function parseBankTopic(input: Input) {
+  const errors: FieldErrors = {};
+  const title = text(input, "title", CHAPTER_TITLE_MAX, errors, true);
+  return { title, errors };
+}
+
+export type BankClassInput =ReturnType<typeof parseBankClass>["bankClass"];
 export type SubjectInput = ReturnType<typeof parseSubject>["subject"];
 export type BankChapterInput = ReturnType<typeof parseBankChapter>["chapter"];

@@ -5,7 +5,15 @@ import { Field, FormMessages, SelectField, SubmitButton, TextAreaField, emptyFor
 import type { Dictionary } from "@/i18n";
 import { SUBJECT_GROUPS } from "@/lib/bank";
 import type { Grade } from "@/lib/grades";
-import { addChaptersAction, createSubjectAction, deleteSubjectAction, updateBankChapterAction, updateSubjectAction } from "./actions";
+import {
+  addChaptersAction,
+  addTopicsAction,
+  createSubjectAction,
+  deleteSubjectAction,
+  renameTopicAction,
+  updateBankChapterAction,
+  updateSubjectAction,
+} from "./actions";
 
 type Bank = Dictionary["dashboard"]["bank"];
 type Common = Pick<Dictionary["common"], "save" | "saving" | "saved" | "optional" | "delete">;
@@ -180,6 +188,55 @@ export function EditBankChapterForm({
         </SubmitButton>
         <FormMessages state={state} saved={c.saved} />
       </div>
+    </form>
+  );
+}
+
+/** Adds one or more sub-chapters at the end of a chapter, one per line. */
+export function AddTopicsForm({ chapterId, t, c }: { chapterId: string; t: Bank["chaptersEditor"]; c: Common }) {
+  const [state, action] = useActionState(addTopicsAction, emptyForm);
+  return (
+    <form action={action} className="flex flex-col gap-3 rounded-lg border border-dashed border-line-strong p-3" noValidate>
+      <input type="hidden" name="chapterId" value={chapterId} />
+      <TextAreaField
+        id={`new-topics-${chapterId}`}
+        name="topics"
+        label={t.addTopicsLabel}
+        hint={t.addTopicsHint}
+        rows={3}
+        defaultValue={state.values?.topics ?? ""}
+        error={state.errors.topics}
+      />
+      <div className="flex flex-wrap items-center gap-3">
+        <SubmitButton className="btn btn-primary btn-sm" pendingLabel={c.saving}>
+          {t.addTopics}
+        </SubmitButton>
+        <FormMessages state={state} saved={c.saved} />
+      </div>
+    </form>
+  );
+}
+
+/** A sub-chapter's name, with its number ("৪.১") as the field's label. */
+export function RenameTopicForm({ topic, number, t, c }: { topic: { id: string; title: string }; number: string; t: Bank["chaptersEditor"]; c: Common }) {
+  const [state, action] = useActionState(renameTopicAction, emptyForm);
+  return (
+    <form action={action} className="flex min-w-0 flex-1 flex-wrap items-end gap-2" noValidate>
+      <input type="hidden" name="topicId" value={topic.id} />
+      <div className="min-w-0 flex-[1_1_220px]">
+        <Field
+          id={`topic-${topic.id}`}
+          name="title"
+          label={`${number} · ${t.topicName}`}
+          defaultValue={state.values?.title ?? topic.title}
+          error={state.errors.title}
+          required
+        />
+      </div>
+      <SubmitButton className="btn btn-ghost btn-sm" pendingLabel={c.saving}>
+        {c.save}
+      </SubmitButton>
+      <FormMessages state={state} saved={c.saved} />
     </form>
   );
 }

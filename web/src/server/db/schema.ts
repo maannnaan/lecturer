@@ -375,12 +375,41 @@ export const bankChapters = pgTable(
     label: text("label").notNull().default(""),
     title: text("title").notNull(),
     position: integer("position").notNull().default(0),
+    /** The last sub-chapter number handed out in this chapter. */
+    topicCounter: integer("topic_counter").notNull().default(0),
     createdAt: createdAt(),
   },
   (t) => [
     uniqueIndex("bank_chapters_subject_number_key").on(t.subjectId, t.number),
     index("bank_chapters_subject_position_idx").on(t.subjectId, t.position),
     index("bank_chapters_teacher_idx").on(t.teacherId),
+  ],
+);
+
+/**
+ * A chapter's sub-chapters (৪.১ বল ও গতির সূত্র…), in the teacher's order. A question may be filed
+ * under one; the chapter page filters by it. `number` is never reused within the chapter, so
+ * `?sub=<number>` links keep working; what pages show ("৪.১") follows the order.
+ */
+export const bankTopics = pgTable(
+  "bank_topics",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => teachers.id, { onDelete: "cascade" }),
+    chapterId: uuid("chapter_id")
+      .notNull()
+      .references(() => bankChapters.id, { onDelete: "cascade" }),
+    number: integer("number").notNull(),
+    title: text("title").notNull(),
+    position: integer("position").notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("bank_topics_chapter_number_key").on(t.chapterId, t.number),
+    index("bank_topics_chapter_position_idx").on(t.chapterId, t.position),
+    index("bank_topics_teacher_idx").on(t.teacherId),
   ],
 );
 
@@ -436,6 +465,8 @@ export const questions = pgTable(
       .notNull()
       .references(() => bankSubjects.id, { onDelete: "cascade" }),
     chapterId: uuid("chapter_id").references(() => bankChapters.id, { onDelete: "set null" }),
+    /** A sub-chapter of its chapter, or null. Deleting the sub-chapter leaves the question in the chapter. */
+    topicId: uuid("topic_id").references(() => bankTopics.id, { onDelete: "set null" }),
     /** Unused since migration 0004 moved questions from courses to bank subjects; dropped in Phase 4. */
     courseId: uuid("course_id"),
     type: questionType("type").notNull(),
@@ -460,6 +491,7 @@ export const questions = pgTable(
     index("questions_teacher_subject_chapter_idx").on(t.teacherId, t.subjectId, t.chapterId, t.position),
     index("questions_teacher_type_idx").on(t.teacherId, t.type),
     index("questions_chapter_visibility_idx").on(t.chapterId, t.visibility),
+    index("questions_topic_idx").on(t.topicId),
   ],
 );
 

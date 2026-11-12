@@ -5,7 +5,7 @@ import { QbCrumbs } from "@/components/qbank/ui";
 import { type QbCtx, QbChapterView, QbPrintView, pad2, printSubtitle, toCard } from "@/components/qbank/views";
 import { formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
-import { chapterLabel } from "@/lib/chapter-label";
+import { chapterLabel, topicLabels } from "@/lib/chapter-label";
 import { asciiDigits } from "@/lib/digits";
 import { SECTION_TABS, filtersFromParams, tabFromParam } from "@/lib/questions";
 import { getDb } from "@/server/db";
@@ -16,7 +16,7 @@ import { getPageSubject } from "../data";
 export const instant = false;
 
 type Params = Promise<{ handle: string; classNo: string; subject: string; chapter: string }>;
-type Search = Promise<{ tab?: string; board?: string; year?: string; diff?: string; src?: string; page?: string; q?: string; print?: string }>;
+type Search = Promise<{ tab?: string; sub?: string; board?: string; year?: string; diff?: string; src?: string; page?: string; q?: string; print?: string }>;
 
 async function getPageChapter(handle: string, classNo: string, subject: string, chapterNumber: string) {
   const found = await getPageSubject(handle, classNo, subject);
@@ -62,6 +62,9 @@ export default async function SiteBankChapterPage({ params, searchParams }: { pa
   const place = { subjectId: subject.id, chapterId: chapter.id };
   const filters = filtersFromParams(s);
   const owner = locale === "bn" ? teacher.nameBn : teacher.nameEn;
+  const topics = topicLabels(chapter, index, locale);
+  const topicOf = new Map(topics.map((t) => [t.id, t.label]));
+  const pickedTopic = topics.find((t) => t.number === filters.topic)?.label;
 
   if (s.print === "chapter" || s.print === "board") {
     const boardOnly = s.print === "board";
@@ -71,7 +74,7 @@ export default async function SiteBankChapterPage({ params, searchParams }: { pa
         ctx={ctx}
         owner={owner}
         title={d.qbank.printTitle(subject.name, `${label}: ${chapter.title}`)}
-        subtitle={printSubtitle(ctx, filters, boardOnly)}
+        subtitle={printSubtitle(ctx, filters, boardOnly, pickedTopic)}
         questions={questions}
         cut={questions.length >= PRINT_LIMIT}
         back={`${path}?${new URLSearchParams({ tab: boardOnly ? "board" : (tabFromParam(s.tab) ?? "textbook") })}`}
@@ -114,10 +117,15 @@ export default async function SiteBankChapterPage({ params, searchParams }: { pa
       }}
       tab={tab}
       filters={filters}
+      topics={topics}
       list={list}
       allCounts={allCounts}
       pageSize={CHAPTER_PAGE_SIZE}
-      cards={tab === "board" ? [] : list.items.map((q, i) => toCard(q, (list.page - 1) * CHAPTER_PAGE_SIZE + i + 1, ctx))}
+      cards={
+        tab === "board"
+          ? []
+          : list.items.map((q, i) => toCard(q, (list.page - 1) * CHAPTER_PAGE_SIZE + i + 1, ctx, { topic: q.topicId ? topicOf.get(q.topicId) : undefined }))
+      }
     />
   );
 }
