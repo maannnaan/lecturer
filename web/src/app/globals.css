@@ -627,10 +627,12 @@
   .katex { font-size: 1.06em; }
 
   /* ── Rich text, as the editors write it and every page draws it ── */
-  .rich { overflow-wrap: anywhere; }
+  /* flow-root: a picture with text beside it never hangs out of its card. */
+  .rich { overflow-wrap: anywhere; display: flow-root; }
   .rich > * + * { margin-top: 0.6em; }
   .rich p { margin: 0; white-space: pre-wrap; }
-  .rich ul, .rich ol { margin: 0; padding-left: 1.6em; }
+  /* A list or table beside a picture sits next to it, rather than its bullets running under it. */
+  .rich ul, .rich ol { margin: 0; padding-left: 1.6em; display: flow-root; }
   .rich ul { list-style: disc; }
   .rich ol { list-style: decimal; }
   .rich li > * + * { margin-top: 0.3em; }
@@ -644,6 +646,11 @@
   .rich-img { display: block; max-width: 100%; height: auto; max-height: 420px; border-radius: 8px; border: 1px solid var(--rich-line, var(--lb-line)); background: #fff; object-fit: contain; }
   /* Resized by the teacher: that width (never wider than the page), and its own height. */
   .rich-img-sized { max-height: none; }
+  /* Placed by the teacher: left or right with the next text beside it (at most half the width,
+     to leave the text room), or centred alone. */
+  .rich .rich-img-left { float: left; max-width: 50%; margin: 0.3em 1em 0.5em 0; }
+  .rich .rich-img-right { float: right; max-width: 50%; margin: 0.3em 0 0.5em 1em; }
+  .rich .rich-img-center { margin-inline: auto; }
 
   /* The editor: a toolbar over the text, framed like the other fields. */
   .rich-editor { border: 1px solid var(--lb-line-strong); border-radius: var(--lb-r-md); background: var(--lb-surface); color: var(--lb-ink); }
@@ -672,6 +679,9 @@
   .rich-input [data-resize-wrapper] { max-width: 100%; }
   .rich-input [data-resize-wrapper] > .rich-img { height: auto !important; }
   .rich-input .rich-img[style*="width"] { max-height: none; }
+  .rich-input [data-resize-container]:has(img[data-align="left"]) { float: left; max-width: 50%; margin: 0.3em 1em 0.5em 0; }
+  .rich-input [data-resize-container]:has(img[data-align="right"]) { float: right; max-width: 50%; margin: 0.3em 0 0.5em 1em; }
+  .rich-input [data-resize-container]:has(img[data-align="center"]) { justify-content: center; }
   .rich-input [data-resize-handle] { z-index: 1; width: 14px; height: 14px; margin: -5px; border: 2px solid #fff; border-radius: 3px; background: var(--lb-primary); box-shadow: 0 0 0 1px var(--lb-primary); opacity: 0; transition: opacity 0.12s; }
   .rich-input [data-resize-handle="top-left"], .rich-input [data-resize-handle="bottom-right"] { cursor: nwse-resize; }
   .rich-input [data-resize-handle="top-right"], .rich-input [data-resize-handle="bottom-left"] { cursor: nesw-resize; }

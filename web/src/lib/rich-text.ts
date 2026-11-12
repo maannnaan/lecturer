@@ -24,7 +24,7 @@ export type RichBlock =
   | { type: "bulletList"; content: RichListItem[] }
   | { type: "orderedList"; attrs?: { start?: number }; content: RichListItem[] }
   | { type: "table"; content: RichRow[] }
-  | { type: "image"; attrs: { src: string; mediaId: string; alt?: string; width?: number } }
+  | { type: "image"; attrs: { src: string; mediaId: string; alt?: string; width?: number; align?: RichImageAlign } }
   | { type: "blockMath"; attrs: { latex: string } };
 export type RichDoc = { type: "doc"; content: RichBlock[] };
 /** A field's text: a rich document, or plain text from before the editors ("" when empty). */
@@ -49,6 +49,12 @@ const MAX_SPAN = 20;
 /** A resized picture's width, in CSS pixels: big enough to see, no wider than any page. */
 export const MIN_IMAGE_WIDTH = 40;
 export const MAX_IMAGE_WIDTH = 1200;
+/**
+ * Where a picture sits: on the left or right with the text that follows beside it, or centred on
+ * its own line. Without one it stands alone on the left.
+ */
+export const RICH_IMAGE_ALIGNS = ["left", "right", "center"] as const;
+export type RichImageAlign = (typeof RICH_IMAGE_ALIGNS)[number];
 const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
 
 class Refused extends Error {
@@ -191,6 +197,7 @@ function cleanBlocks(raw: unknown, budget: Budget, depth: number): RichBlock[] {
         // The width the teacher dragged it to, in CSS pixels. The height follows from the picture,
         // so it is never stored (a stored one would stretch it on a narrower screen).
         const width = typeof attrs.width === "number" && Number.isFinite(attrs.width) ? Math.round(attrs.width) : null;
+        const align = RICH_IMAGE_ALIGNS.find((value) => value === attrs.align);
         out.push({
           type: "image",
           attrs: {
@@ -198,6 +205,7 @@ function cleanBlocks(raw: unknown, budget: Budget, depth: number): RichBlock[] {
             mediaId: attrs.mediaId,
             ...(alt ? { alt } : {}),
             ...(width !== null ? { width: Math.min(Math.max(width, MIN_IMAGE_WIDTH), MAX_IMAGE_WIDTH) } : {}),
+            ...(align ? { align } : {}),
           },
         });
         break;

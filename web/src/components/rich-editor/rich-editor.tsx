@@ -21,7 +21,7 @@ import {
   Underline,
 } from "lucide-react";
 import type { Dictionary } from "@/i18n";
-import { MIN_IMAGE_WIDTH, type RichMode, type RichText, richFromField, richToDoc, richToField } from "@/lib/rich-text";
+import { MIN_IMAGE_WIDTH, type RichImageAlign, type RichMode, type RichText, richFromField, richToDoc, richToField } from "@/lib/rich-text";
 import { uploadImage } from "@/lib/shrink-image";
 import { EquationDialog } from "./equation-dialog";
 import { BlockMath, InlineMath, type MathEditRequest } from "./math";
@@ -40,6 +40,12 @@ const UploadedImage = Image.extend({
         default: null,
         parseHTML: (element) => element.getAttribute("data-media-id"),
         renderHTML: (attributes) => (attributes.mediaId ? { "data-media-id": attributes.mediaId } : {}),
+      },
+      // Where it sits: left or right with the text after it beside it, or centred (see RICH_IMAGE_ALIGNS).
+      align: {
+        default: null,
+        parseHTML: (element) => element.getAttribute("data-align"),
+        renderHTML: (attributes) => (attributes.align ? { "data-align": attributes.align } : {}),
       },
     };
   },
@@ -191,6 +197,8 @@ export function RichEditor({
         bulletList: current.isActive("bulletList"),
         orderedList: current.isActive("orderedList"),
         inTable: current.isActive("table"),
+        // A selected picture, and where it sits.
+        image: selection instanceof NodeSelection && selection.node.type.name === "image" ? { align: (selection.node.attrs.align ?? null) as RichImageAlign | null } : null,
         math: math ? { pos: math.from, latex: String(math.node.attrs.latex ?? ""), display: math.node.type.name === "blockMath" } : null,
       };
     },
@@ -283,6 +291,31 @@ export function RichEditor({
               {tableTool("delrow", t.deleteRow, (e) => e.chain().focus().deleteRow().run())}
               {tableTool("delcol", t.deleteColumn, (e) => e.chain().focus().deleteColumn().run())}
               {tableTool("deltable", t.deleteTable, (e) => e.chain().focus().deleteTable().run())}
+            </span>
+          )}
+          {block && state?.image && (
+            <span className="rich-table-tools" role="group" aria-label={t.imagePlace}>
+              {(
+                [
+                  [null, t.imageAlone, t.imageAloneHint],
+                  ["center", t.imageCenter, t.imageCenterHint],
+                  ["left", t.imageLeft, t.imageLeftHint],
+                  ["right", t.imageRight, t.imageRightHint],
+                ] as const
+              ).map(([align, text, hint]) => (
+                <button
+                  key={align ?? "alone"}
+                  type="button"
+                  className="rich-tool rich-tool-text"
+                  title={hint}
+                  aria-label={`${t.imagePlace}: ${hint}`}
+                  aria-pressed={state.image?.align === align}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={run((e) => e.chain().focus().updateAttributes("image", { align }).run())}
+                >
+                  {text}
+                </button>
+              ))}
             </span>
           )}
         </div>

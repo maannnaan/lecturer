@@ -174,6 +174,28 @@ test("a private creative question with a diagram stays in the bank", async ({ pa
   expect(after.height / after.width).toBeCloseTo(before.height / before.width, 1);
   await expect(page.locator(".q-card img.rich-img-sized")).toHaveAttribute("width", String(Math.round(after.width)));
 
+  // Put on the left, the words after it sit on its right, in the editor and in the preview.
+  await picture.click();
+  const place = page.getByRole("group", { name: "ছবির জায়গা" }).filter({ visible: true });
+  await place.getByRole("button", { name: /ছবি বাঁয়ে/ }).click();
+  await expect(place.getByRole("button", { name: /ছবি বাঁয়ে/ })).toHaveAttribute("aria-pressed", "true");
+  // The editor keeps an empty line after a picture at the end: the arrow key goes into it.
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.type("চিত্রে একটি স্প্রিং ও একটি ভর।");
+  // Where the words themselves are drawn (a paragraph's own box spans the whole width).
+  const words = await field(page, "উদ্দীপক")
+    .getByText("চিত্রে একটি স্প্রিং")
+    .evaluate((el) => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const box = range.getClientRects()[0];
+      return { x: box.x, y: box.y };
+    });
+  const pictureBox = (await picture.boundingBox())!;
+  expect(words.x).toBeGreaterThanOrEqual(pictureBox.x + pictureBox.width);
+  expect(words.y).toBeLessThan(pictureBox.y + pictureBox.height);
+  await expect(page.locator(".q-card img.rich-img-left")).toBeVisible();
+
   await field(page, "শুধু আপনি: পরীক্ষা আর প্রশ্নপত্রের জন্য রাখা").check();
   await page.getByRole("button", { name: "প্রশ্ন যোগ করুন" }).click();
   // Saved: back on its chapter in the bank, on the CQ section.

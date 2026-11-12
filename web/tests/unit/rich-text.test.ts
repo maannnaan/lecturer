@@ -74,6 +74,16 @@ describe("rich text from the editor", () => {
     expect(picture({ width: "300px" }).content[0]).toEqual({ type: "image", attrs: { src: "", mediaId: IMAGE } });
   });
 
+  it("keeps where a picture sits, and only the known places", () => {
+    const picture = (attrs: Record<string, unknown>) => posted(doc({ type: "image", attrs: { src: "", mediaId: IMAGE, ...attrs } })).result as RichDoc;
+    expect(picture({ align: "left", width: 200 }).content[0]).toEqual({ type: "image", attrs: { src: "", mediaId: IMAGE, width: 200, align: "left" } });
+    expect(picture({ align: "right" }).content[0]).toMatchObject({ attrs: { align: "right" } });
+    expect(picture({ align: "center" }).content[0]).toMatchObject({ attrs: { align: "center" } });
+    for (const align of [null, "justify", "left; position: fixed", 1]) {
+      expect(picture({ align }).content[0]).toEqual({ type: "image", attrs: { src: "", mediaId: IMAGE } });
+    }
+  });
+
   it("refuses anything the editor never writes", () => {
     const refused = (value: unknown) => posted(value).errors.stem;
     expect(refused(doc({ type: "heading", content: [text("x")] }))).toBe("invalid");

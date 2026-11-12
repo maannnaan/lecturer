@@ -41,6 +41,12 @@ describe("rich text on a page", () => {
     expect(out).not.toContain("height");
   });
 
+  it("places a picture left or right, for the text after it to sit beside it", () => {
+    const out = html({ value: doc({ type: "image", attrs: { src: "/media/t/1.jpg", mediaId: IMAGE, width: 160, align: "right" } }, p(text("পাশের লেখা"))) });
+    expect(out).toContain('class="rich-img rich-img-sized rich-img-right"');
+    expect(html({ value: doc({ type: "image", attrs: { src: "/x.jpg", mediaId: IMAGE, align: "left" } }) })).toContain('class="rich-img rich-img-left"');
+  });
+
   it("escapes words, so nothing typed becomes HTML", () => {
     const out = html({ value: doc(p(text('<img src=x onerror="alert(1)">'))) });
     expect(out).toContain("&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");

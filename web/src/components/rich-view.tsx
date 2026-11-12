@@ -107,7 +107,7 @@ function blocks(content: RichBlock[], draw: Draw): ReactNode[] {
             src={block.attrs.src}
             alt={block.attrs.alt ?? ""}
             width={block.attrs.width}
-            className={block.attrs.width ? "rich-img rich-img-sized" : "rich-img"}
+            className={["rich-img", block.attrs.width && "rich-img-sized", block.attrs.align && `rich-img-${block.attrs.align}`].filter(Boolean).join(" ")}
             loading="lazy"
             decoding="async"
           />
