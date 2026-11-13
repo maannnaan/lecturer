@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Pin, Trash2 } from "lucide-react";
+import { Megaphone, Pin, Trash2 } from "lucide-react";
 import { PendingButton } from "@/components/form";
 import { formatDate, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
@@ -25,21 +25,26 @@ export default async function NoticesPage() {
     <main className="dash-content">
       <header>
         <h1 className="page-title">{t.title}</h1>
-        <p className="mt-1 text-ink-2">{t.lead}</p>
+        <p className="page-lead">{t.lead}</p>
       </header>
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <NewNoticeForm t={t} c={d.common} rich={rich} />
         <section className="card p-5" aria-labelledby="notice-list-title">
-          <h3 id="notice-list-title" className="panel-title">
+          <h2 id="notice-list-title" className="panel-title">
             {t.title}
-          </h3>
+          </h2>
           {notices.length === 0 ? (
-            <p className="mt-2 text-[15px] text-muted">{t.empty}</p>
+            <div className="empty mt-3 !py-8">
+              <span className="empty-icon" aria-hidden="true">
+                <Megaphone />
+              </span>
+              <p className="empty-text">{t.empty}</p>
+            </div>
           ) : (
             <ul className="mt-3 flex flex-col gap-2">
               {notices.map((notice) => (
                 <li key={notice.id} className="rounded-lg border border-line p-3">
-                  <details>
+                  <details className="fold">
                     <summary className="cursor-pointer list-none">
                       <span className="block text-[13px] text-muted">{formatDate(notice.publishedAt, locale)}</span>
                       <span className="flex flex-wrap items-center gap-2 font-semibold text-ink">

@@ -61,9 +61,9 @@ export default async function EditCoursePage({ params }: { params: Promise<{ id:
 
         <section className="card flex min-w-0 flex-col gap-4 p-5" aria-labelledby="chapters-title">
           <div>
-            <h3 id="chapters-title" className="panel-title">
+            <h2 id="chapters-title" className="panel-title">
               {t.chapters.title}
-            </h3>
+            </h2>
             <p className="panel-lead">{t.chapters.lead}</p>
           </div>
           {chapters.length === 0 && <p className="text-[15px] text-muted">{t.chapters.empty}</p>}
@@ -72,7 +72,7 @@ export default async function EditCoursePage({ params }: { params: Promise<{ id:
               const dates = formatDayRange(chapter.startsOn, chapter.endsOn, locale);
               return (
                 <li key={chapter.id} className="flex items-start gap-2 rounded-lg border border-line p-3">
-                  <details className="min-w-0 flex-1">
+                  <details className="fold min-w-0 flex-1">
                     <summary className="cursor-pointer list-none">
                       <span className="block text-[13px] font-semibold text-muted">
                         {chapterLabel(chapter, i, d, locale)}

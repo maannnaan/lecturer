@@ -432,6 +432,7 @@ export const bn = {
     website: {
       title: "আমার ওয়েবসাইট",
       lead: (address: string) => `${address} ঠিকানায় শিক্ষার্থীরা যা দেখে, তা এখানে সাজান।`,
+      sections: "এই পাতার অংশ",
       profile: {
         title: "পরিচিতি",
         nameBn: "নাম (বাংলায়)",

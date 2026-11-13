@@ -23,16 +23,36 @@ export default async function WebsiteSettingsPage() {
 
   return (
     <main className="dash-content">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+      <header className="page-head">
         <div>
           <h1 className="page-title">{w.title}</h1>
-          <p className="mt-1 text-ink-2">{w.lead(`lecturer.bd/${teacher.handle}`)}</p>
+          <p className="page-lead">{w.lead(`lecturer.bd/${teacher.handle}`)}</p>
         </div>
         <Link href={`/${teacher.handle}`} className="btn btn-ghost btn-sm">
           {d.dashboard.status.visit}
           <ExternalLink aria-hidden="true" />
         </Link>
       </header>
+
+      {/* The page's parts, in reach wherever the teacher has scrolled to; each form's heading is its anchor. */}
+      <nav className="section-nav" aria-label={w.sections}>
+        {(
+          [
+            ["profile-title", w.profile.title],
+            ["photo-title", w.photo.title],
+            ["theme-title", d.dashboard.theme.title],
+            ["highlights-title", w.highlights.title],
+            ["contact-title", w.contact.title],
+            ["routine-title", w.routine.title],
+            ["language-title", w.language.title],
+            ["address-title", w.address.title],
+          ] as const
+        ).map(([id, label]) => (
+          <a key={id} href={`#${id}`} className="chip">
+            {label}
+          </a>
+        ))}
+      </nav>
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="flex min-w-0 flex-col gap-6">

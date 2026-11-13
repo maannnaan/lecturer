@@ -51,9 +51,9 @@ export function PhotoUploader({ photoUrl, initial, t }: { photoUrl: string | nul
   return (
     <section className="card flex flex-col gap-4 p-5" aria-labelledby="photo-title">
       <div>
-        <h3 id="photo-title" className="panel-title">
+        <h2 id="photo-title" className="panel-title">
           {t.title}
-        </h3>
+        </h2>
         <p className="panel-lead">{t.lead}</p>
       </div>
       <div className="flex items-center gap-4">

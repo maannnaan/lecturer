@@ -57,9 +57,9 @@ export function CourseForm({
       aria-labelledby={heading ? "course-form-title" : undefined}
     >
       {heading && (
-        <h3 id="course-form-title" className="panel-title">
+        <h2 id="course-form-title" className="panel-title">
           {heading}
-        </h3>
+        </h2>
       )}
       {course && <input type="hidden" name="courseId" value={course.id} />}
       <Field name="title" label={t.title} placeholder={t.titlePlaceholder} defaultValue={v("title")} error={e.title} required />
@@ -171,7 +171,7 @@ export function DeleteCourseForm({ courseId, t, c }: { courseId: string; t: Cour
   return (
     <form action={action} className="card flex flex-col gap-3 border-bad/30 p-5">
       <input type="hidden" name="courseId" value={courseId} />
-      <h3 className="panel-title">{t.title}</h3>
+      <h2 className="panel-title">{t.title}</h2>
       <p className="text-[15px] text-ink-2">{t.lead}</p>
       <label className="flex items-center gap-2 text-[15px]">
         <input type="checkbox" name="confirm" className="accent-[var(--lb-bad)]" />

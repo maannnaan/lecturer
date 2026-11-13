@@ -37,8 +37,8 @@ export default async function DashboardHome() {
   const site = teacher.site;
 
   const steps = [
-    { key: "photo", done: Boolean(site.photo), href: "/dashboard/website" },
-    { key: "about", done: richPlain(site.aboutRich ?? site.about).trim() !== "", href: "/dashboard/website" },
+    { key: "photo", done: Boolean(site.photo), href: "/dashboard/website#photo-title" },
+    { key: "about", done: richPlain(site.aboutRich ?? site.about).trim() !== "", href: "/dashboard/website#profile-title" },
     { key: "course", done: courses.length > 0, href: "/dashboard/courses/new" },
     { key: "bank", done: classes.length > 0, href: "/dashboard/bank/class/new" },
     { key: "notice", done: notices.length > 0, href: "/dashboard/notices" },

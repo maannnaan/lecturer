@@ -18,9 +18,9 @@ export function ThemePicker({
 }) {
   return (
     <section className="card p-5" aria-labelledby="theme-title">
-      <h3 id="theme-title" className="panel-title">
+      <h2 id="theme-title" className="panel-title">
         {t.title}
-      </h3>
+      </h2>
       <p className="panel-lead">{t.lead}</p>
       <div className={`mt-5 grid gap-4 ${stacked ? "" : "md:grid-cols-3"}`}>
         {THEMES.map((theme) => (

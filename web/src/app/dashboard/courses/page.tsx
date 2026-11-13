@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronDown, ChevronUp, Eye, Pencil, Plus } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronUp, Eye, Pencil, Plus } from "lucide-react";
 import { CourseIconGlyph } from "@/components/course-icon";
 import { PendingButton } from "@/components/form";
 import { formatNumber, getDictionary } from "@/i18n";
@@ -25,19 +25,30 @@ export default async function CoursesPage() {
 
   return (
     <main className="dash-content">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+      <header className="page-head">
         <div>
           <h1 className="page-title">{t.title}</h1>
-          <p className="mt-1 text-ink-2">{t.lead}</p>
+          <p className="page-lead">{t.lead}</p>
         </div>
-        <Link href="/dashboard/courses/new" className="btn btn-primary btn-sm">
-          <Plus aria-hidden="true" />
-          {t.new}
-        </Link>
+        {courses.length > 0 && (
+          <Link href="/dashboard/courses/new" className="btn btn-primary btn-sm">
+            <Plus aria-hidden="true" />
+            {t.new}
+          </Link>
+        )}
       </header>
 
       {courses.length === 0 ? (
-        <p className="card p-6 text-ink-2">{t.empty}</p>
+        <div className="empty">
+          <span className="empty-icon" aria-hidden="true">
+            <BookOpen />
+          </span>
+          <p className="empty-text">{t.empty}</p>
+          <Link href="/dashboard/courses/new" className="btn btn-primary">
+            <Plus aria-hidden="true" />
+            {t.new}
+          </Link>
+        </div>
       ) : (
         <ul className="flex flex-col gap-3">
           {courses.map((course, i) => (

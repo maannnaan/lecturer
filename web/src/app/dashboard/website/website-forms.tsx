@@ -66,9 +66,9 @@ export function ProfileForm({
   const e = state.errors;
   return (
     <form action={action} className="card flex flex-col gap-5 p-5" noValidate aria-labelledby="profile-title">
-      <h3 id="profile-title" className="panel-title">
+      <h2 id="profile-title" className="panel-title">
         {t.title}
-      </h3>
+      </h2>
       <div className="grid gap-5 sm:grid-cols-2">
         <Field name="nameBn" label={t.nameBn} defaultValue={v("nameBn")} error={e.nameBn} lang="bn" required />
         <Field name="nameEn" label={t.nameEn} defaultValue={v("nameEn")} error={e.nameEn} lang="en" required />
@@ -109,9 +109,9 @@ export function HighlightsForm({
   return (
     <form action={action} className="card flex flex-col gap-5 p-5" noValidate aria-labelledby="highlights-title">
       <div>
-        <h3 id="highlights-title" className="panel-title">
+        <h2 id="highlights-title" className="panel-title">
           {t.title}
-        </h3>
+        </h2>
         <p className="panel-lead">{t.lead}</p>
       </div>
       <fieldset className="flex flex-col gap-3">
@@ -166,9 +166,9 @@ export function ContactForm({ saved, t, c }: { saved: TeacherSite["contact"]; t:
   const v = (name: keyof NonNullable<TeacherSite["contact"]>) => valueOf(state, name, s[name]);
   return (
     <form action={action} className="card flex flex-col gap-5 p-5" noValidate aria-labelledby="contact-title">
-      <h3 id="contact-title" className="panel-title">
+      <h2 id="contact-title" className="panel-title">
         {t.title}
-      </h3>
+      </h2>
       <div className="grid gap-5 sm:grid-cols-2">
         <Field name="phone" label={t.phone} type="tel" inputMode="tel" placeholder="01XXXXXXXXX" defaultValue={v("phone")} error={e.phone} />
         <Field name="whatsapp" label={t.whatsapp} type="tel" inputMode="tel" placeholder="01XXXXXXXXX" defaultValue={v("whatsapp")} error={e.whatsapp} />
@@ -190,9 +190,9 @@ export function RoutineForm({ saved, t, c }: { saved: TeacherSite["routine"]; t:
   return (
     <form action={action} className="card flex flex-col gap-4 p-5" noValidate aria-labelledby="routine-title">
       <div>
-        <h3 id="routine-title" className="panel-title">
+        <h2 id="routine-title" className="panel-title">
           {t.title}
-        </h3>
+        </h2>
         <p className="panel-lead">{t.lead}</p>
       </div>
       <div className="hidden grid-cols-[minmax(0,1.2fr)_minmax(0,1.2fr)_minmax(0,0.8fr)] gap-3 text-sm font-semibold text-muted sm:grid" aria-hidden="true">
@@ -237,9 +237,9 @@ export function LanguageForm({ current, t, c }: { current: Locale; t: Website["l
   return (
     <form action={action} className="card flex flex-col gap-4 p-5" aria-labelledby="language-title">
       <div>
-        <h3 id="language-title" className="panel-title">
+        <h2 id="language-title" className="panel-title">
           {t.title}
-        </h3>
+        </h2>
         <p className="panel-lead">{t.lead}</p>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -260,9 +260,9 @@ export function AddressForm({ handle, t, c }: { handle: string; t: Website["addr
   return (
     <form action={action} className="card flex flex-col gap-4 p-5" noValidate aria-labelledby="address-title">
       <div>
-        <h3 id="address-title" className="panel-title">
+        <h2 id="address-title" className="panel-title">
           {t.title}
-        </h3>
+        </h2>
         <p className="panel-lead">{t.lead}</p>
       </div>
       <Field

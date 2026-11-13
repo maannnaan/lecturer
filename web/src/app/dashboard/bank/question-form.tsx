@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useDeferredValue, useRef, useState } from "react";
+import { Eye } from "lucide-react";
 import { Field, FormMessages, PendingButton, SelectField, SubmitButton, emptyForm } from "@/components/form";
 import { useKatex } from "@/components/math-preview";
 import { type EditorText, RichEditor, type UploadErrors } from "@/components/rich-editor/rich-editor";
@@ -315,9 +316,9 @@ export function QuestionForm({
           </>
         )}
 
-        <fieldset className="flex flex-col gap-4 border-t border-line pt-4">
+        <fieldset className="field-group">
           <legend className="sr-only">{t.details}</legend>
-          <p className="field-label">{t.details}</p>
+          <p className="field-group-title">{t.details}</p>
           <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem]">
             <SelectField
               name="board"
@@ -363,11 +364,16 @@ export function QuestionForm({
               {t.saveAndNext}
             </PendingButton>
           )}
+          {/* Where the preview sits below the form (narrower screens), a way down to it. */}
+          <a href="#question-preview" className="btn btn-soft 2xl:hidden">
+            <Eye aria-hidden="true" />
+            {t.preview}
+          </a>
           <FormMessages state={state} saved={c.saved} />
         </div>
       </form>
 
-      <section className="min-w-0 2xl:sticky 2xl:top-24" aria-label={t.preview}>
+      <section id="question-preview" className="min-w-0 scroll-mt-20 2xl:sticky 2xl:top-6" aria-label={t.preview}>
         <p className="mb-2 text-[13px] font-semibold text-muted">{t.preview}</p>
         <QuestionPreview type={type} read={(name) => (preview ? richFromField(preview[name]) : v(name))} q={q} />
       </section>
@@ -388,7 +394,7 @@ export function DeleteQuestionForm({
   return (
     <form action={action} className="card flex flex-col gap-3 border-bad/30 p-5">
       <input type="hidden" name="questionId" value={questionId} />
-      <h3 className="panel-title">{t.title}</h3>
+      <h2 className="panel-title">{t.title}</h2>
       <p className="text-[15px] text-ink-2">{t.lead}</p>
       <label className="flex items-center gap-2 text-[15px]">
         <input type="checkbox" name="confirm" className="accent-[var(--lb-bad)]" />

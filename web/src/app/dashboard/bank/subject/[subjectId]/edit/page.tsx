@@ -72,16 +72,16 @@ export default async function EditSubjectPage({
 
         <section id="chapters" className="card flex min-w-0 flex-col gap-4 p-5" aria-labelledby="chapters-title">
           <div>
-            <h3 id="chapters-title" className="panel-title">
+            <h2 id="chapters-title" className="panel-title">
               {t.chaptersEditor.title}
-            </h3>
+            </h2>
             <p className="panel-lead">{t.chaptersEditor.lead}</p>
           </div>
           {subject.chapters.length === 0 && <p className="text-[15px] text-muted">{t.chaptersEditor.empty}</p>}
           <ol className="flex flex-col gap-2">
             {subject.chapters.map((chapter, i) => (
               <li key={chapter.id} id={`chapter-${chapter.id}`} className="flex scroll-mt-24 items-start gap-2 rounded-lg border border-line p-3">
-                <details className="min-w-0 flex-1" open={chapter.id === openChapter}>
+                <details className="fold min-w-0 flex-1" open={chapter.id === openChapter}>
                   <summary className="cursor-pointer list-none">
                     <span className="block text-[13px] font-semibold text-muted">
                       {chapterLabel(chapter, i, d, locale)}
@@ -106,9 +106,9 @@ export default async function EditSubjectPage({
 
                     <section className="flex flex-col gap-3 border-t border-line pt-4" aria-labelledby={`topics-${chapter.id}`}>
                       <div>
-                        <h4 id={`topics-${chapter.id}`} className="font-semibold text-ink">
+                        <h3 id={`topics-${chapter.id}`} className="font-semibold text-ink">
                           {t.chaptersEditor.topics}
-                        </h4>
+                        </h3>
                         <p className="text-[14px] text-muted">{t.chaptersEditor.topicsLead}</p>
                       </div>
                       {chapter.topics.length > 0 && (

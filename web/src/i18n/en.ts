@@ -422,6 +422,7 @@ export const en: Dictionary = {
     website: {
       title: "My website",
       lead: (address: string) => `Arrange what students see at ${address}.`,
+      sections: "Parts of this page",
       profile: {
         title: "Profile",
         nameBn: "Name (in Bangla)",

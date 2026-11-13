@@ -63,9 +63,9 @@ export function NewNoticeForm({ t, c, rich }: { t: Labels; c: Common; rich: Noti
   if (state !== published.state) setPublished({ state, count: published.count + (state.ok ? 1 : 0) });
   return (
     <form action={action} className="card flex flex-col gap-4 p-5" noValidate aria-labelledby="notice-form-title">
-      <h3 id="notice-form-title" className="panel-title">
+      <h2 id="notice-form-title" className="panel-title">
         {t.new}
-      </h3>
+      </h2>
       <NoticeFields key={published.count} state={state} t={t} idPrefix="new-notice" rich={rich} />
       <div className="flex flex-wrap items-center gap-3">
         <SubmitButton className="btn btn-primary" pendingLabel={c.saving}>
