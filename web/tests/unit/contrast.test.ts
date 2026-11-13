@@ -8,13 +8,22 @@ import { describe, expect, it } from "vitest";
 
 const css = readFileSync(path.join(process.cwd(), "src/app/globals.css"), "utf8");
 
-/** The `--lb-*` tokens of one `[data-style="…"]` block that are plain hex colours. */
+/** The question bank's palette (`--color-qb-*`), which the "app" look takes its colours from. */
+const qb = Object.fromEntries([...css.matchAll(/--color-qb-([a-z0-9-]+):\s*(#[0-9a-f]{6});/gi)].map(([, name, value]) => [name, value]));
+
+/**
+ * The `--lb-*` tokens of one `[data-style="…"]` block that are plain colours: written as hex, or
+ * as a reference to one of the question bank's.
+ */
 function tokens(style: string): Record<string, string> {
   const block = new RegExp(`\\[data-style="${style}"\\] \\{([^}]*)\\}`).exec(css)?.[1];
   if (!block) throw new Error(`No [data-style="${style}"] block in globals.css`);
   const out: Record<string, string> = {};
-  for (const [, name, value] of block.matchAll(/--lb-([a-z0-9-]+):\s*([^;]+);/g)) {
-    if (/^#[0-9a-f]{6}$/i.test(value.trim())) out[name] = value.trim();
+  for (const [, name, raw] of block.matchAll(/--lb-([a-z0-9-]+):\s*([^;]+);/g)) {
+    const value = raw.trim();
+    const ref = /^var\(--color-qb-([a-z0-9-]+)\)$/.exec(value)?.[1];
+    if (ref && qb[ref]) out[name] = qb[ref];
+    else if (/^#[0-9a-f]{6}$/i.test(value)) out[name] = value;
   }
   return out;
 }

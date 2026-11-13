@@ -17,6 +17,8 @@ export type QbCardData = {
   tab: BankTab;
   /** "CQ ১", "পাঠ্যবই ২" */
   badge: string;
+  /** Its sub-chapter, "৪.১ বল ও গতির সূত্র": a quiet tag, apart from the yellow ones. */
+  topic?: string;
   /** Yellow tags: its board and year, or the test it comes from. */
   tags: string[];
   /** A creative question's total marks, written out: "১০ নম্বর". */

@@ -17,7 +17,7 @@ import { ClaimForm } from "@/components/landing/claim-form";
 import { Faq } from "@/components/landing/faq";
 import { SiteMockup } from "@/components/landing/site-mockup";
 import { PlatformFooter, PlatformHeader } from "@/components/platform-chrome";
-import { QbBadge, QbTag } from "@/components/qbank/ui";
+import { QbBadge, QbTag, QbTopic } from "@/components/qbank/ui";
 import { formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { THEMES } from "@/lib/themes";
@@ -161,7 +161,7 @@ export default async function LandingPage() {
                   <QbBadge tab="mcq">
                     {d.questions.tabsShort.mcq} {formatNumber(1, locale)}
                   </QbBadge>
-                  <QbTag>{t.bank.mock.topic}</QbTag>
+                  <QbTopic>{t.bank.mock.topic}</QbTopic>
                   <QbTag>{t.bank.mock.tag}</QbTag>
                 </div>
                 <p className="mt-3 text-[16px] leading-[1.6] font-semibold text-qb-ink">{t.bank.mock.stem}</p>

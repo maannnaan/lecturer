@@ -100,7 +100,8 @@ export function toCard(
     anchor: `q-${q.id}`,
     tab,
     badge: `${d.questions.tabsShort[tab]} ${formatNumber(number, locale)}`,
-    tags: [...(topic ? [topic] : []), ...(q.board ? [boardTag(q, d, locale)] : q.source ? [q.source] : [])],
+    topic,
+    tags: q.board ? [boardTag(q, d, locale)] : q.source ? [q.source] : [],
     stem: <RichContent value={body.stem} />,
     image: body.image?.url ?? null,
     video: q.videoUrl || undefined,
@@ -504,8 +505,8 @@ export function QbChapterView({
   return (
     <main id="main" className="qb flex-1">
       <QbNavProvider>
-        <div className="border-b border-qb-line bg-qb-surface" data-print-hide>
-          <div className="qb-x @container flex flex-col gap-[18px] pt-6">
+        <div className="bg-qb-surface" data-print-hide>
+          <div className="qb-x flex flex-col gap-[18px] pt-6 pb-2">
             {crumbs}
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div className="flex min-w-0 flex-col gap-1">
@@ -526,6 +527,11 @@ export function QbChapterView({
                 )}
               </div>
             </div>
+          </div>
+        </div>
+        {/* The tabs stay in reach while the questions scroll under them. */}
+        <div className="qb-tabs border-b border-qb-line bg-qb-surface" data-print-hide>
+          <div className="qb-x @container">
             <nav aria-label={d.qbank.sections} className="qb-scroll flex gap-1 overflow-x-auto">
               {BANK_TABS.map((t) => {
                 const on = t === tab;

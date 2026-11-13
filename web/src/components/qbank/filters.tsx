@@ -83,7 +83,8 @@ export function QbFilters({
   return (
     <aside
       aria-label={text.filters}
-      className="flex min-w-0 flex-[1_1_260px] flex-col gap-[22px] rounded-2xl border border-qb-line bg-qb-surface p-[22px]"
+      // Beside the questions (wide screens) it stays in view under the tabs, scrolling inside itself if it is taller than the window.
+      className="flex min-w-0 flex-[1_1_260px] flex-col gap-[22px] rounded-2xl border border-qb-line bg-qb-surface p-[22px] @min-[848px]:sticky @min-[848px]:top-[calc(var(--qb-top)+68px)] @min-[848px]:max-h-[calc(100dvh-var(--qb-top)-84px)] @min-[848px]:overflow-y-auto"
       data-print-hide
     >
       <div className="flex items-center justify-between gap-3">

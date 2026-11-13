@@ -110,15 +110,15 @@
 }
 
 /* The platform's own look ("app"): the landing page, sign-in, the admin panel and every teacher's
-   dashboard, whatever theme their website wears. Clean and neutral, one green accent: the same
-   palette as the question bank's pages (the qb-* tokens below). */
+   dashboard, whatever theme their website wears. Clean and neutral, one green accent. Its colours
+   are the question bank's (the qb-* tokens below), by reference: one palette, kept in one place. */
 [data-style="app"] {
-  --lb-bg: #f6f5f1; --lb-bg-2: #efede7; --lb-surface: #ffffff; --lb-surface-2: #f3f2ee; --lb-surface-3: #e9e7e0;
-  --lb-ink: #17191c; --lb-ink-2: #4e535b; --lb-muted: #5b6068;
-  --lb-line: #e3e1da; --lb-line-strong: #d5d2c8;
-  --lb-primary: #0b6b4f; --lb-on-primary: #ffffff; --lb-primary-soft: #e3f1ea; --lb-primary-text: #0b6b4f;
-  --lb-accent: #f2b53a; --lb-accent-soft: #fff3cc; --lb-accent-ink: #6b5300;
-  --lb-ok: #0b6b4f; --lb-ok-soft: #e3f1ea; --lb-bad: #b4361f; --lb-bad-soft: #fce8e4;
+  --lb-bg: var(--color-qb-page); --lb-bg-2: #efede7; --lb-surface: var(--color-qb-surface); --lb-surface-2: var(--color-qb-chip); --lb-surface-3: #e9e7e0;
+  --lb-ink: var(--color-qb-ink); --lb-ink-2: var(--color-qb-muted); --lb-muted: var(--color-qb-subtle);
+  --lb-line: var(--color-qb-line); --lb-line-strong: var(--color-qb-field);
+  --lb-primary: var(--color-qb-accent); --lb-on-primary: #ffffff; --lb-primary-soft: var(--color-qb-accent-soft); --lb-primary-text: var(--color-qb-accent);
+  --lb-accent: var(--color-qb-board-cta); --lb-accent-soft: var(--color-qb-board-soft); --lb-accent-ink: var(--color-qb-board);
+  --lb-ok: var(--color-qb-accent); --lb-ok-soft: var(--color-qb-accent-soft); --lb-bad: var(--color-qb-wrong); --lb-bad-soft: var(--color-qb-wrong-soft);
 
   --lb-font-head: var(--ff-kalpurush), var(--ff-grotesk), var(--ff-hind), system-ui, sans-serif;
   --lb-font-body: var(--ff-kalpurush), var(--ff-hind), system-ui, sans-serif;
@@ -935,6 +935,12 @@
   /* The page container, lined up with the website's header (.wrap) so the bank sits in the site. */
   .qb-x { width: 100%; max-width: 1180px; margin-inline: auto; padding-inline: 28px; }
   @media (max-width: 640px) { .qb-x { padding-inline: 16px; } }
+  /* A chapter's tabs stick under whatever bar the page already keeps at the top: a website's
+     header, the phone dashboard's bar, or nothing (the wide dashboard). */
+  .qb { --qb-top: 0px; }
+  .theme-scope:has(> .site-header) .qb { --qb-top: 73px; }
+  @media (max-width: 980px) { .dash .qb { --qb-top: 61px; } }
+  .qb-tabs { position: sticky; top: var(--qb-top); z-index: 6; }
   .qb-scroll { scrollbar-width: none; }
   .qb-scroll::-webkit-scrollbar { display: none; }
   .qb-figure { display: block; max-width: 100%; max-height: 320px; margin-top: 12px; border-radius: 10px; border: 1px solid var(--color-qb-line); background: #fff; object-fit: contain; }

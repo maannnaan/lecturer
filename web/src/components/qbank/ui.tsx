@@ -65,6 +65,11 @@ export function QbTag({ children }: { children: ReactNode }) {
   return <span className="rounded-md bg-qb-board-soft px-2.5 py-[3px] text-[13px] font-semibold text-qb-board">{children}</span>;
 }
 
+/** A question's sub-chapter ("৪.১ বল ও গতির সূত্র"): outlined, so it reads apart from the yellow source tags. */
+export function QbTopic({ children }: { children: ReactNode }) {
+  return <span className="rounded-md border border-qb-field bg-qb-surface px-2.5 py-0.5 text-[13px] font-semibold text-qb-muted">{children}</span>;
+}
+
 /** "শুধু আপনি": a question students don't see. */
 export function QbPrivate({ children }: { children: ReactNode }) {
   return <span className="rounded-md bg-qb-chip px-2.5 py-[3px] text-[13px] font-semibold text-qb-muted">{children}</span>;

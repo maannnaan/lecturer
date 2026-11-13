@@ -4,7 +4,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { QbBookmark } from "./bookmark";
 import { useQbNav } from "./nav";
 import type { QbCardData, QbListText } from "./types";
-import { QbBadge, QbPrivate, QbTag, cx, qbButton } from "./ui";
+import { QbBadge, QbPrivate, QbTag, QbTopic, cx, qbButton } from "./ui";
 
 /*
  * A list of question cards with the QBank design's interactions: answers shown or hidden one by one
@@ -134,6 +134,7 @@ function QbCard({
   ) : null;
   const tags = (
     <>
+      {card.topic && <QbTopic>{card.topic}</QbTopic>}
       {card.tags.map((tag) => (
         <QbTag key={tag}>{tag}</QbTag>
       ))}
