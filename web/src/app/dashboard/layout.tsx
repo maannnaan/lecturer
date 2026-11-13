@@ -23,9 +23,11 @@ import "katex/dist/katex.min.css";
 import { PendingButton } from "@/components/form";
 import { LangSwitch } from "@/components/lang-switch";
 import { Logo, initialOf } from "@/components/logo";
-import { type Dictionary, getDictionary } from "@/i18n";
+import { type Dictionary, formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { requireTeacher } from "@/server/auth/current";
+import { getDb } from "@/server/db";
+import { countPendingEnrollments } from "@/server/enrollments";
 import { logoutAction } from "./actions";
 import { MobileMenu } from "./mobile-menu";
 import { NavLink } from "./nav-link";
@@ -37,7 +39,7 @@ export const instant = false;
  * The dashboard's sections, shared by the sidebar (wide screens) and the menu sheet (phones):
  * what works today first, then what arrives in later phases, folded away under one line.
  */
-function DashNav({ d }: { d: Dictionary }) {
+function DashNav({ d, pending }: { d: Dictionary; pending: string | null }) {
   const t = d.dashboard;
   const soon = (Icon: LucideIcon, label: string) => (
     <span className="side-link" aria-disabled="true">
@@ -67,14 +69,25 @@ function DashNav({ d }: { d: Dictionary }) {
         <Megaphone aria-hidden="true" />
         {t.nav.notices}
       </NavLink>
+      <p className="side-label">{t.students.title}</p>
+      <NavLink href="/dashboard/requests" className="side-link">
+        <UserPlus aria-hidden="true" />
+        {t.nav.requests}
+        {pending && <span className="side-count">{pending}</span>}
+      </NavLink>
+      <NavLink href="/dashboard/students" className="side-link">
+        <Users aria-hidden="true" />
+        {t.nav.students}
+      </NavLink>
+      <NavLink href="/dashboard/batches" className="side-link">
+        <Layers aria-hidden="true" />
+        {t.nav.batches}
+      </NavLink>
       <details className="side-soon">
         <summary>
           {t.comingSoon}
           <ChevronDown aria-hidden="true" />
         </summary>
-        {soon(Users, t.nav.students)}
-        {soon(Layers, t.nav.batches)}
-        {soon(UserPlus, t.nav.requests)}
         {soon(Radio, t.nav.live)}
         {soon(Printer, t.nav.papers)}
         {soon(Wallet, t.nav.payments)}
@@ -90,6 +103,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const d = getDictionary(locale);
   const t = d.dashboard;
   const name = locale === "bn" ? teacher.nameBn : teacher.nameEn;
+  // Requests waiting for the teacher, shown beside the menu's link.
+  const waiting = await countPendingEnrollments(await getDb(), teacher.id);
+  const pending = waiting > 0 ? formatNumber(waiting, locale) : null;
   const siteLink = (
     <Link href={`/${teacher.handle}`} className="side-site">
       <span className="min-w-0">
@@ -108,7 +124,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             <Logo />
           </Link>
           {siteLink}
-          <DashNav d={d} />
+          <DashNav d={d} pending={pending} />
 
           <div className="side-account">
             <div className="side-who">
@@ -136,7 +152,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           <header className="dash-mobile-top">
             <MobileMenu label={d.common.menu}>
               {siteLink}
-              <DashNav d={d} />
+              <DashNav d={d} pending={pending} />
             </MobileMenu>
             <Logo />
             <div className="ml-auto flex items-center gap-2">

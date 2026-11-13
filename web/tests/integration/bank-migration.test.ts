@@ -45,7 +45,8 @@ describe("migration 0003_bank_by_class", () => {
     for (const [title, level] of cases) {
       const course = await createCourse(db, t.id, parseCourse({ title }).course);
       // As the course was before the migration: a level, and no class yet.
-      await db.update(courses).set({ level, grade: "other" }).where(eq(courses.id, course.id));
+      // (`level` has left the schema since, so it is set with plain SQL.)
+      await db.execute(sql`update courses set level = ${level}, grade = 'other' where id = ${course.id}`);
       ids.push(course.id);
     }
 
@@ -95,9 +96,9 @@ describe("migration 0004_bank_subjects", () => {
 
     // Only the courses with questions, in the teacher's course order, named by subject or title.
     const subjects = await listSubjectsWithChapters(db, teacher.id);
-    expect(subjects.map((s) => [s.id, s.number, s.grade, s.name])).toEqual([
-      [phys.id, 1, "hsc", "পদার্থবিজ্ঞান ১ম পত্র"],
-      [chem.id, 2, "hsc", "রসায়ন ১ম পত্র"],
+    expect(subjects.map((s) => [s.id, s.number, s.name])).toEqual([
+      [phys.id, 1, "পদার্থবিজ্ঞান ১ম পত্র"],
+      [chem.id, 2, "রসায়ন ১ম পত্র"],
     ]);
     expect(subjects[0].chapters.map((ch) => [ch.id, ch.number, ch.title])).toEqual([
       [vectors.id, 1, "ভেক্টর"],

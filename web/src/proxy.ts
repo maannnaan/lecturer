@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { isGrade } from "@/lib/grades";
 import { RESERVED_HANDLES } from "@/lib/handles";
-import { ADMIN_COOKIE, TEACHER_COOKIE } from "@/server/auth/cookies";
+import { ADMIN_COOKIE, TEACHER_COOKIE, studentCookie } from "@/server/auth/cookies";
 import { bankAddress, bankClassAddress } from "@/server/bank";
 import { courseVisibility } from "@/server/courses";
 import { getDb } from "@/server/db";
@@ -60,6 +60,12 @@ export async function proxy(request: NextRequest) {
       // A subject moved to another class, or an old address: links follow it.
       if (String(found.classNumber) !== cls) return redirect(request, `/${handle}/bank/${found.classNumber}/${rest.slice(2).join("/")}${search}`, 308);
     }
+  }
+  // lecturer.bd/<handle>/me: a student's own page. Without their cookie for this teacher's site,
+  // the way in (the page itself checks the session).
+  if (rest[0] === "me") {
+    if (rest.length > 1) return notFound(request);
+    if (!request.cookies.has(studentCookie(site.teacherId))) return redirect(request, `/${handle}/login`, 307);
   }
   // lecturer.bd/<handle>/courses/<number>
   if (rest[0] === "courses" && rest.length > 1) {

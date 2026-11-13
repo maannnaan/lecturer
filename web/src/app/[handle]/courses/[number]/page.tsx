@@ -3,15 +3,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { cache } from "react";
-import { ChevronRight, Phone } from "lucide-react";
+import { ArrowRight, ChevronRight, Phone } from "lucide-react";
 import { CourseIconGlyph } from "@/components/course-icon";
 import { SiteText } from "@/components/site-text";
-import { getDictionary } from "@/i18n";
+import { formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { gradeName, gradeOf } from "@/lib/grades";
-import { getCurrentTeacher } from "@/server/auth/current";
+import { getCurrentStudent, getCurrentTeacher } from "@/server/auth/current";
+import { listOpenBatches } from "@/server/batches";
 import { getCourseByNumber } from "@/server/courses";
 import { getDb } from "@/server/db";
+import { findEnrollment } from "@/server/enrollments";
+import { ApplyForm } from "../../student-forms";
 import { getSite } from "../../data";
 import { WhatsappMark } from "@/components/brand-icons";
 import { AccessBadge, CallBar, SectionHead, Timeline, contactLinks } from "../../site-ui";
@@ -52,6 +55,14 @@ export default async function CoursePage({ params }: { params: Params }) {
   const home = `/${teacher.handle}`;
   const hasContact = Object.values(teacher.site.contact ?? {}).some(Boolean);
   const { whatsapp } = contactLinks(teacher.site.contact);
+  const t = d.site.student;
+  // Students join a live site's published courses.
+  const canApply = teacher.status === "approved" && course.published;
+  const db = await getDb();
+  const student = canApply ? await getCurrentStudent(teacher.id) : null;
+  const [enrollment, openBatches] = canApply
+    ? await Promise.all([student ? findEnrollment(db, teacher.id, student.id, course.id) : null, listOpenBatches(db, teacher.id, course.id)])
+    : [null, []];
 
   return (
     <main>
@@ -95,6 +106,56 @@ export default async function CoursePage({ params }: { params: Params }) {
           </div>
           {(course.description || course.descriptionRich) && (
             <SiteText rich={course.descriptionRich} plain={course.description} className="mt-8 max-w-[46em] text-[17px] leading-[1.85] text-ink-2" />
+          )}
+
+          {/* Admission: ask to join (signing up first), or where the student's request stands. */}
+          {canApply && (
+            <div className="card mt-8 max-w-[560px] p-5" id="admission">
+              {!student ? (
+                <div className="flex flex-wrap items-center gap-3">
+                  <Link href={`${home}/join?next=${encodeURIComponent(`${home}/courses/${course.number}`)}`} className="btn btn-primary">
+                    {course.access === "free" ? t.applyFree : t.apply}
+                    <ArrowRight aria-hidden="true" />
+                  </Link>
+                  <Link href={`${home}/login?next=${encodeURIComponent(`${home}/courses/${course.number}`)}`} className="link text-[15px]">
+                    {t.loginToApply}
+                  </Link>
+                </div>
+              ) : enrollment?.status === "active" ? (
+                <p className="form-ok" role="status">
+                  {t.joined}
+                  {enrollment.roll && ` ${t.roll}: ${formatNumber(Number(enrollment.roll), locale)}`}
+                </p>
+              ) : enrollment?.status === "pending" ? (
+                <p className="form-ok" role="status">
+                  {t.applied}
+                </p>
+              ) : (
+                <>
+                  {enrollment?.status === "rejected" && (
+                    <p className="form-alert mb-4">
+                      {t.notApproved}
+                      {enrollment.decisionNote && ` ${t.teacherSays} ${enrollment.decisionNote}`}
+                    </p>
+                  )}
+                  <ApplyForm
+                    handle={teacher.handle}
+                    courseId={course.id}
+                    batches={openBatches.map((batch) => ({ id: batch.id, label: batch.schedule ? `${batch.name} · ${batch.schedule}` : batch.name }))}
+                    withNote={course.access !== "free"}
+                    t={{
+                      apply: enrollment ? t.applyAgain : course.access === "free" ? t.applyFree : t.apply,
+                      working: t.working,
+                      pickBatch: t.pickBatch,
+                      anyBatch: t.anyBatch,
+                      noteLabel: t.noteLabel,
+                      optional: d.common.optional,
+                      applied: t.applied,
+                    }}
+                  />
+                </>
+              )}
+            </div>
           )}
         </div>
       </section>

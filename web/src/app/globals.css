@@ -362,6 +362,8 @@
   a.side-link:hover, button.side-link:hover { background: var(--lb-side-card); color: var(--lb-side-ink-strong); }
   .side-link[aria-current="page"], a.side-link[aria-current="page"]:hover { background: var(--lb-side-on-bg); color: var(--lb-side-on-ink); font-weight: 600; }
   .side-link[aria-disabled="true"] { min-height: 34px; padding-block: 4px; font-size: 14px; color: var(--lb-side-ink-3); cursor: default; }
+  /* How many things are waiting behind a menu link. */
+  .side-count { display: grid; place-items: center; min-width: 22px; height: 22px; margin-left: auto; padding: 0 6px; border-radius: 999px; background: var(--lb-primary); color: var(--lb-on-primary); font-size: 12.5px; font-weight: 700; line-height: 1; }
   /* What's coming, folded away under one quiet line. */
   .side-soon { margin-top: 8px; }
   .side-soon > summary { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: var(--lb-r-sm); list-style: none; cursor: pointer; font-size: 12.5px; font-weight: 700; color: var(--lb-side-ink-3); }
@@ -672,7 +674,7 @@
   .lp-feature-icon { display: grid; place-items: center; width: 42px; height: 42px; flex: none; border-radius: var(--lb-r-md); background: var(--lb-primary-soft); color: var(--lb-primary-text); }
   .lp-feature-icon svg { width: 20px; height: 20px; }
   /* what's on the way: one quiet row */
-  .lp-soon { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .lp-soon { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
   .lp-soon-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: var(--lb-r-md); border: 1px dashed var(--lb-line-strong); }
   .lp-soon-item svg { width: 20px; height: 20px; margin-top: 3px; color: var(--lb-muted); }
   .lp-soon-item h4 { font-family: var(--lb-font-body); font-size: 15.5px; font-weight: 700; letter-spacing: 0; }
@@ -941,6 +943,9 @@
   .tab[aria-current="page"] { border-bottom-color: var(--lb-primary); color: var(--lb-primary-text); }
   .tab-count { padding: 1px 8px; border-radius: 999px; background: var(--lb-surface-3); font-size: 13px; color: var(--lb-ink-2); }
   .tab[aria-current="page"] .tab-count { background: var(--lb-primary); color: var(--lb-on-primary); }
+  /* A batch's list keeps every column on a phone (the website's class times drop one). */
+  .routine.roster th:nth-child(3), .routine.roster td:nth-child(3) { display: table-cell; }
+  .routine.roster { min-width: 520px; }
   /* Fields that belong together inside a form. */
   .field-group { display: flex; flex-direction: column; gap: 16px; padding: 16px; border-radius: var(--lb-r-md); border: 1px solid var(--lb-line); background: var(--lb-surface-2); }
   .field-group > legend, .field-group-title { font-size: 14.5px; font-weight: 700; color: var(--lb-ink); }

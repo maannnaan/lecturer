@@ -17,7 +17,10 @@ import type { Grade } from "@/lib/grades";
 import { parseQuestion } from "@/lib/questions";
 import type { ThemeName } from "@/lib/themes";
 import { addBankTopics, createBankClass, createSubject, getSubject } from "@/server/bank";
+import { createBatch } from "@/server/batches";
 import { addChapter, createCourse, listCourses } from "@/server/courses";
+import { enrollStudent, requestEnrollment } from "@/server/enrollments";
+import { createStudent } from "@/server/students";
 import { createNotice } from "@/server/notices";
 import { createQuestion } from "@/server/questions";
 import { updateSite } from "@/server/site";
@@ -518,6 +521,25 @@ async function main() {
             if (!result.ok) throw new Error(`Demo question not saved: ${result.reason}`);
           }
         }
+      }
+      // Tanvir's first course has two batches, a student in one of them, and a request waiting.
+      if (t.handle === "tanvir") {
+        const [physics] = await listCourses(db, id);
+        const first = await createBatch(db, id, physics.id, { name: "ক ব্যাচ", schedule: "শনি-সোম-বুধ, বিকেল ৪টা", capacity: 40, open: true });
+        await createBatch(db, id, physics.id, { name: "খ ব্যাচ", schedule: "রবি-মঙ্গল-বৃহস্পতি, সন্ধ্যা ৬টা", capacity: null, open: true });
+        const rahim = await createStudent(db, {
+          teacherId: id,
+          name: "রাহিম উদ্দিন",
+          phone: "01900000001",
+          password: "student-password",
+          institution: "ঢাকা কলেজ",
+          classLevel: "একাদশ",
+          guardianName: "করিম উদ্দিন",
+          guardianPhone: "01900000009",
+        });
+        await enrollStudent(db, id, rahim.id, physics.id, { batchId: first!.id, roll: null, fee: null });
+        const sadia = await createStudent(db, { teacherId: id, name: "সাদিয়া ইসলাম", phone: "01900000002", password: "student-password", classLevel: "একাদশ" });
+        await requestEnrollment(db, id, sadia.id, physics.id, { batchId: first!.id, note: "আমি শনিবারের ব্যাচে পড়তে চাই।" });
       }
       for (const n of t.notices) {
         const notice = await createNotice(db, id, { title: n.title, body: n.body ?? "", bodyRich: null, pinned: n.pinned ?? false });

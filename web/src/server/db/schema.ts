@@ -137,10 +137,14 @@ export const handles = pgTable(
   (t) => [index("handles_teacher_idx").on(t.teacherId)],
 );
 
+export const studentStatus = pgEnum("student_status", ["active", "inactive"]);
+/** How a student, or an enrolment, came to be: signed up on the website, or added by the teacher. */
+export const studentSource = pgEnum("student_source", ["online", "offline"]);
+
 /**
  * A student of one teacher. Accounts are per teacher site by design: the same phone number can
- * belong to two students of two different teachers, never twice under one teacher.
- * Extended in Phase 4 (batches, rolls, guardians); Phase 1 only needs enough to sign in.
+ * belong to two students of two different teachers, never twice under one teacher. What course
+ * and batch a student is in, and their roll there, is on `enrollments`.
  */
 export const students = pgTable(
   "students",
@@ -153,7 +157,24 @@ export const students = pgTable(
     phone: text("phone").notNull(),
     /** Null for an offline student who has not been given a login yet. */
     passwordHash: text("password_hash"),
+    guardianName: text("guardian_name").notNull().default(""),
+    /** Normalised like `phone`, or "". */
+    guardianPhone: text("guardian_phone").notNull().default(""),
+    /** The school or college the student goes to. */
+    institution: text("institution").notNull().default(""),
+    /** In the student's or teacher's own words: "একাদশ", "HSC 2027". */
+    classLevel: text("class_level").notNull().default(""),
+    address: text("address").notNull().default(""),
+    /** The teacher's own note; never shown to the student. */
+    note: text("note").notNull().default(""),
+    /** An inactive student keeps their record but can't sign in. */
+    status: studentStatus("status").notNull().default("active"),
+    source: studentSource("source").notNull().default("online"),
     createdAt: createdAt(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
   },
   (t) => [uniqueIndex("students_teacher_phone_key").on(t.teacherId, t.phone)],
 );
@@ -207,15 +228,8 @@ export const courses = pgTable(
       .references(() => teachers.id, { onDelete: "cascade" }),
     number: integer("number").notNull(),
     title: text("title").notNull(),
-    /**
-     * The old free-text class ("এইচএসসি", "Class 8"). Unused since `grade` and `subject` replaced
-     * it; kept one release so the previous deployment still runs, dropped in Phase 4's migration.
-     */
-    level: text("level").notNull().default(""),
     /** The class the course is for, shown on its cover: a key from GRADES in src/lib/grades.ts. */
     grade: text("grade").notNull().default("other"),
-    /** Unused since the question bank got its own subjects (0004); dropped in Phase 4's migration. */
-    subject: text("subject").notNull().default(""),
     /** e.g. "এইচএসসি ২০২৮ ব্যাচ · সেপ্টেম্বর–ফেব্রুয়ারি" */
     session: text("session").notNull().default(""),
     /** As plain text: older courses' only copy, and what page descriptions use. */
@@ -274,6 +288,80 @@ export const chapters = pgTable(
     uniqueIndex("chapters_course_number_key").on(t.courseId, t.number),
     index("chapters_course_position_idx").on(t.courseId, t.position),
     index("chapters_teacher_idx").on(t.teacherId),
+  ],
+);
+
+/**
+ * A batch of a course: the group that meets together ("শনি-সোম-বুধ, বিকেল ৪টা"). A course needs
+ * none; with some, a student asking to join picks one of the open ones.
+ */
+export const batches = pgTable(
+  "batches",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => teachers.id, { onDelete: "cascade" }),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** When it meets, in the teacher's words. */
+    schedule: text("schedule").notNull().default(""),
+    /** The most students it takes, or null for no limit. */
+    capacity: integer("capacity"),
+    /** Whether new students can ask to join it. */
+    open: boolean("open").notNull().default(true),
+    position: integer("position").notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("batches_course_name_key").on(t.courseId, t.name), index("batches_teacher_idx").on(t.teacherId)],
+);
+
+export const enrollmentStatus = pgEnum("enrollment_status", ["pending", "active", "rejected", "left"]);
+
+/**
+ * A student in a course: asked to join (pending), in it (active), turned down (rejected) or gone
+ * (left). One row per student and course. `roll` is digits only, at most 8, and unique within the
+ * course: it is what the OMR sheet's roll grid carries.
+ */
+export const enrollments = pgTable(
+  "enrollments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => teachers.id, { onDelete: "cascade" }),
+    studentId: uuid("student_id")
+      .notNull()
+      .references(() => students.id, { onDelete: "cascade" }),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    batchId: uuid("batch_id").references(() => batches.id, { onDelete: "set null" }),
+    status: enrollmentStatus("status").notNull().default("pending"),
+    roll: text("roll"),
+    /** Taka a month (or once, by the course's price period): the course's price unless the teacher changed it. */
+    fee: integer("fee").notNull().default(0),
+    /** The first month the fee is due, "YYYY-MM" in Asia/Dhaka; "" until the student is in. */
+    startMonth: text("start_month").notNull().default(""),
+    /** What the student wrote when asking. */
+    note: text("note").notNull().default(""),
+    /** What the teacher answered, e.g. why not. Shown to the student. */
+    decisionNote: text("decision_note").notNull().default(""),
+    source: studentSource("source").notNull().default("online"),
+    createdAt: createdAt(),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("enrollments_student_course_key").on(t.studentId, t.courseId),
+    uniqueIndex("enrollments_course_roll_key").on(t.courseId, t.roll).where(sql`${t.roll} is not null`),
+    index("enrollments_teacher_status_idx").on(t.teacherId, t.status),
+    index("enrollments_batch_idx").on(t.batchId),
   ],
 );
 
@@ -340,8 +428,6 @@ export const bankSubjects = pgTable(
     classId: uuid("class_id")
       .notNull()
       .references(() => bankClasses.id),
-    /** Unused since migration 0007 gave subjects a class of the teacher's own; dropped in Phase 4. */
-    grade: text("grade").notNull().default("other"),
     /** A key from SUBJECT_GROUPS in src/lib/bank.ts (বিজ্ঞান, মানবিক…), or "" for none. */
     group: text("subject_group").notNull().default(""),
     name: text("name").notNull(),
@@ -467,8 +553,6 @@ export const questions = pgTable(
     chapterId: uuid("chapter_id").references(() => bankChapters.id, { onDelete: "set null" }),
     /** A sub-chapter of its chapter, or null. Deleting the sub-chapter leaves the question in the chapter. */
     topicId: uuid("topic_id").references(() => bankTopics.id, { onDelete: "set null" }),
-    /** Unused since migration 0004 moved questions from courses to bank subjects; dropped in Phase 4. */
-    courseId: uuid("course_id"),
     type: questionType("type").notNull(),
     visibility: questionVisibility("visibility").notNull().default("public"),
     body: jsonb("body").$type<QuestionBody>().notNull(),

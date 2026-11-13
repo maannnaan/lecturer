@@ -177,9 +177,10 @@ test.describe("on a phone", () => {
     // The phone menu holds every section, with what's coming folded away.
     await page.locator("summary[aria-label='মেনু']").click();
     await expect(page.getByRole("navigation", { name: "মেনু" }).getByRole("link", { name: "প্রশ্নব্যাংক" })).toBeVisible();
-    await expect(page.getByRole("navigation", { name: "মেনু" }).getByText("শিক্ষার্থী তালিকা")).toBeHidden();
+    await expect(page.getByRole("navigation", { name: "মেনু" }).getByRole("link", { name: "শিক্ষার্থী তালিকা" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "মেনু" }).getByText("লাইভ MCQ")).toBeHidden();
     await page.getByRole("navigation", { name: "মেনু" }).getByText("শীঘ্রই আসছে").click();
-    await expect(page.getByRole("navigation", { name: "মেনু" }).getByText("শিক্ষার্থী তালিকা")).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "মেনু" }).getByText("লাইভ MCQ")).toBeVisible();
   });
 });
 

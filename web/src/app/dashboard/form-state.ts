@@ -19,6 +19,12 @@ function messages(e: Dictionary["errors"]): Record<FieldError, string> {
     invalid: e.invalid,
     pickAnswer: e.pickAnswer,
     classTaken: e.classTaken,
+    // A student's password (their own, or one the teacher sets): shorter than a teacher's may be.
+    passwordShort: e.studentPasswordShort,
+    phoneTaken: e.studentPhoneTaken,
+    roll: e.roll,
+    rollTaken: e.rollTaken,
+    batchTaken: e.batchTaken,
   };
 }
 

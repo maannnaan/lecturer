@@ -11,7 +11,12 @@ export type FieldError =
   | "dateOrder"
   | "invalid"
   | "pickAnswer"
-  | "classTaken";
+  | "classTaken"
+  | "passwordShort"
+  | "phoneTaken"
+  | "roll"
+  | "rollTaken"
+  | "batchTaken";
 
 export type FieldErrors = Record<string, FieldError>;
 

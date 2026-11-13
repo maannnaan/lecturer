@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { Menu, Phone } from "lucide-react";
+import { Menu, Phone, UserRound } from "lucide-react";
 import "katex/dist/katex.min.css";
 import { CurrentYear } from "@/components/current-year";
 import { LangSwitch } from "@/components/lang-switch";
 import { Logo, initialOf } from "@/components/logo";
 import { getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
-import { getCurrentTeacher } from "@/server/auth/current";
+import { getCurrentStudent, getCurrentTeacher } from "@/server/auth/current";
 import { getSite, getSiteBank, getSiteCourses, getSiteNotices } from "./data";
 import { contactLinks } from "./site-ui";
 
@@ -90,6 +90,10 @@ export default async function TeacherSiteLayout({ children, params }: Props) {
   ].filter((l): l is { href: string; label: string } => Boolean(l));
   const name = locale === "bn" ? teacher.nameBn : teacher.nameEn;
   const { tel } = contactLinks(s.contact);
+  // Students have accounts on live sites only: their own page when signed in, else the way in.
+  const student = teacher.status === "approved" ? await getCurrentStudent(teacher.id) : null;
+  const account =
+    teacher.status === "approved" ? (student ? { href: `${home}/me`, label: d.site.student.me } : { href: `${home}/login`, label: d.site.student.login }) : null;
 
   return (
     <div data-style={teacher.theme} className="theme-scope flex flex-col" lang={locale}>
@@ -129,8 +133,14 @@ export default async function TeacherSiteLayout({ children, params }: Props) {
                 {s.contact?.phone}
               </a>
             )}
+            {account && (
+              <Link href={account.href} className="btn btn-ghost btn-sm max-sm:hidden">
+                <UserRound aria-hidden="true" />
+                {account.label}
+              </Link>
+            )}
             <LangSwitch locale={locale} label={d.common.language} />
-            {links.length > 1 && (
+            {(links.length > 1 || account) && (
               <details className="site-menu">
                 <summary aria-label={d.common.menu}>
                   <Menu className="size-5" aria-hidden="true" />
@@ -141,6 +151,11 @@ export default async function TeacherSiteLayout({ children, params }: Props) {
                       {l.label}
                     </Link>
                   ))}
+                  {account && (
+                    <Link href={account.href} className="!font-semibold !text-primary-text">
+                      {account.label}
+                    </Link>
+                  )}
                 </nav>
               </details>
             )}
