@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Users } from "lucide-react";
 import { PendingButton } from "@/components/form";
 import { initialOf } from "@/components/logo";
 import { type Dictionary, type Locale, formatDate, formatNumber, getDictionary } from "@/i18n";
@@ -37,24 +37,24 @@ export default async function AdminTeachersPage({ searchParams }: { searchParams
   return (
     <main className="wrap flex flex-col gap-6 py-8">
       <div>
-        <h1 className="text-3xl">{a.title}</h1>
-        <p className="mt-1 text-ink-2">{a.lead}</p>
+        <h1 className="page-title">{a.title}</h1>
+        <p className="page-lead">{a.lead}</p>
       </div>
-      <nav className="flex flex-wrap gap-2" aria-label={a.title}>
+      <nav className="tabs" aria-label={a.title}>
         {TEACHER_STATUSES.map((s) => (
-          <Link
-            key={s}
-            href={`/admin?status=${s}`}
-            aria-current={s === status ? "page" : undefined}
-            className={`btn btn-sm ${s === status ? "btn-primary" : "btn-ghost"}`}
-          >
+          <Link key={s} href={`/admin?status=${s}`} aria-current={s === status ? "page" : undefined} className="tab">
             {a.tabs[s]}
-            <span className="font-num opacity-80">{formatNumber(counts[s], locale)}</span>
+            <span className="tab-count">{formatNumber(counts[s], locale)}</span>
           </Link>
         ))}
       </nav>
       {teachers.length === 0 ? (
-        <p className="card p-6 text-ink-2">{a.empty[status]}</p>
+        <div className="empty">
+          <span className="empty-icon" aria-hidden="true">
+            <Users />
+          </span>
+          <p className="empty-text">{a.empty[status]}</p>
+        </div>
       ) : (
         <ul className="flex flex-col gap-3">
           {teachers.map((teacher) => (

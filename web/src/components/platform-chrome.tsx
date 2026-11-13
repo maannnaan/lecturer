@@ -55,10 +55,14 @@ export function PlatformHeader({
 export function PlatformFooter({ d }: { d?: Dictionary }) {
   return (
     <footer className="site-footer">
-      <div className="wrap flex flex-wrap items-center justify-between gap-4">
-        <span>
-          © <CurrentYear /> Lecturer.bd
-        </span>
+      <div className="wrap flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
+        <div className="flex flex-col gap-1.5">
+          <Logo />
+          {d && <span className="text-[14.5px]">{d.landing.footerLine}</span>}
+          <span className="text-muted">
+            © <CurrentYear /> Lecturer.bd
+          </span>
+        </div>
         {d ? (
           <nav className="flex flex-wrap items-center gap-5" aria-label="Lecturer.bd">
             <Link href="/login" className="hover:text-ink">

@@ -17,6 +17,7 @@ import { ClaimForm } from "@/components/landing/claim-form";
 import { Faq } from "@/components/landing/faq";
 import { SiteMockup } from "@/components/landing/site-mockup";
 import { PlatformFooter, PlatformHeader } from "@/components/platform-chrome";
+import { QbBadge, QbTag } from "@/components/qbank/ui";
 import { formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { THEMES } from "@/lib/themes";
@@ -35,6 +36,7 @@ export default async function LandingPage() {
 
   const nav = [
     { href: "#features", label: t.nav.features },
+    { href: "#bank", label: t.bank.kicker },
     { href: "#themes", label: t.nav.themes },
     { href: "#steps", label: t.nav.steps },
     { href: "#faq", label: t.nav.faq },
@@ -98,20 +100,18 @@ export default async function LandingPage() {
               })}
             </ul>
 
+            {/* What's on the way: named, but quieter than what works today. */}
             <h3 className="lp-group-title mt-12">{t.soonTitle}</h3>
-            <ul className="lp-features">
+            <ul className="lp-soon">
               {t.soon.map((f, i) => {
                 const Icon = SOON_ICONS[i] ?? Radio;
                 return (
-                  <li key={f.title} className="lp-feature lp-feature-soon">
-                    <span className="flex items-center justify-between gap-3">
-                      <span className="lp-feature-icon">
-                        <Icon aria-hidden="true" />
-                      </span>
-                      <span className="badge badge-warn">{d.common.soon}</span>
-                    </span>
-                    <h4>{f.title}</h4>
-                    <p>{f.text}</p>
+                  <li key={f.title} className="lp-soon-item">
+                    <Icon aria-hidden="true" />
+                    <div className="min-w-0">
+                      <h4>{f.title}</h4>
+                      <p>{f.text}</p>
+                    </div>
                   </li>
                 );
               })}
@@ -119,8 +119,78 @@ export default async function LandingPage() {
           </div>
         </section>
 
+        {/* The question bank: what it does, beside a sample question drawn as students see it */}
+        <section id="bank" className="section section-alt lp-anchor">
+          <div className="wrap lp-bank">
+            <div>
+              <p className="eyebrow">{t.bank.kicker}</p>
+              <h2 className="lp-bank-title">{t.bank.title}</h2>
+              <p className="lp-section-lead">{t.bank.lead}</p>
+              <ul className="lp-points">
+                {t.bank.points.map((point) => (
+                  <li key={point.title}>
+                    <span className="lp-point-mark" aria-hidden="true">
+                      <Check />
+                    </span>
+                    <div className="min-w-0">
+                      <b>{point.title}</b>
+                      <p>{point.text}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="lp-bank-mock" aria-hidden="true">
+              <p className="border-b border-qb-line px-5 py-3 text-[13px] font-semibold text-qb-muted">{t.bank.mock.chapter}</p>
+              <div className="flex gap-1 border-b border-qb-line px-3">
+                {(["mcq", "sq", "cq", "board"] as const).map((tab, i) => (
+                  <span
+                    key={tab}
+                    className={
+                      i === 0
+                        ? "border-b-[3px] border-qb-accent px-3 py-2.5 text-[14px] font-semibold text-qb-accent"
+                        : "border-b-[3px] border-transparent px-3 py-2.5 text-[14px] font-semibold text-qb-muted"
+                    }
+                  >
+                    {d.questions.tabsShort[tab]}
+                  </span>
+                ))}
+              </div>
+              <div className="p-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <QbBadge tab="mcq">
+                    {d.questions.tabsShort.mcq} {formatNumber(1, locale)}
+                  </QbBadge>
+                  <QbTag>{t.bank.mock.topic}</QbTag>
+                  <QbTag>{t.bank.mock.tag}</QbTag>
+                </div>
+                <p className="mt-3 text-[16px] leading-[1.6] font-semibold text-qb-ink">{t.bank.mock.stem}</p>
+                <div className="mt-4 grid grid-cols-2 gap-2.5">
+                  {t.bank.mock.options.map((option, i) => {
+                    const right = i === 1;
+                    return (
+                      <span
+                        key={option}
+                        className={`flex items-center gap-2.5 rounded-[10px] border px-3 py-2.5 text-[15px] ${right ? "border-qb-accent bg-qb-accent-soft text-qb-answer-ink" : "border-qb-field bg-qb-surface text-qb-ink"}`}
+                      >
+                        <span
+                          className={`grid size-7 shrink-0 place-items-center rounded-full text-[13px] font-bold ${right ? "bg-qb-accent text-white" : "border border-qb-field text-qb-muted"}`}
+                        >
+                          {d.questions.optionKeys[i]}
+                        </span>
+                        {option}
+                        {right && <span className="ml-auto text-[12px] font-bold text-qb-accent max-sm:hidden">✓ {t.bank.mock.right}</span>}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* The three themes, each drawn in its own look */}
-        <section id="themes" className="section section-alt lp-anchor">
+        <section id="themes" className="section lp-anchor">
           <div className="wrap">
             <div className="section-head">
               <div>
@@ -140,7 +210,7 @@ export default async function LandingPage() {
         </section>
 
         {/* How to start */}
-        <section id="steps" className="section lp-anchor">
+        <section id="steps" className="section section-alt lp-anchor">
           <div className="wrap">
             <div className="section-head">
               <h2>{t.stepsTitle}</h2>
@@ -158,7 +228,7 @@ export default async function LandingPage() {
         </section>
 
         {/* Questions */}
-        <section id="faq" className="section section-alt lp-anchor">
+        <section id="faq" className="section lp-anchor">
           <div className="wrap lp-faq-grid">
             <div className="section-head">
               <h2>{t.faqTitle}</h2>
