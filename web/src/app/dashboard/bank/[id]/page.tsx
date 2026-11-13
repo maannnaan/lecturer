@@ -61,10 +61,10 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ i
           )}
         </div>
       </div>
-      <h2 className="flex flex-wrap items-center gap-3 text-2xl">
+      <h1 className="page-title flex flex-wrap items-center gap-3">
         {t.editTitle}
         <span className="tag">{d.questions.types[question.type]}</span>
-      </h2>
+      </h1>
       <QuestionForm
         question={{
           id: question.id,

@@ -79,7 +79,7 @@ export default async function BankChapterPage({ params, searchParams }: { params
   const locale = await getLocale();
   const d = getDictionary(locale);
   const t = d.dashboard.bank;
-  const ctx: QbCtx = { d, locale, voice: t.qb, titleAs: "h2" };
+  const ctx: QbCtx = { d, locale, voice: t.qb, titleAs: "h1" };
   const s = await searchParams;
   const label = chapter ? chapterLabel(chapter, index, d, locale) : t.unfiled;
   const path = `/dashboard/bank/subject/${subject.id}/${chapter?.id ?? "unfiled"}`;

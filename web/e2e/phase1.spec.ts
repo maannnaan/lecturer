@@ -75,7 +75,12 @@ test("a new teacher signs up, waits for approval, and can preview their own site
 
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole("status").getByText("অনুমোদনের অপেক্ষায়")).toBeVisible();
-  await expect(page.locator(".theme-scope").first()).toHaveAttribute("data-style", "ink");
+  // The dashboard wears the platform's own look, whatever theme the website has.
+  await expect(page.locator(".theme-scope").first()).toHaveAttribute("data-style", "app");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`স্বাগতম, ${NEW_TEACHER.nameBn}`);
+  // A new teacher sees what is left to set up, nothing done yet.
+  await expect(page.getByRole("heading", { name: "ওয়েবসাইট গুছিয়ে নিন" })).toBeVisible();
+  await expect(page.getByText("৫টির মধ্যে ০টি হয়েছে")).toBeVisible();
   await shot(page, "dashboard-pending-1280");
 
   // The owner sees their unapproved site with a notice; nobody else can.
@@ -114,17 +119,22 @@ test("the teacher sees the approval and switches their theme", async ({ page }) 
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole("status").getByText("আপনার ওয়েবসাইট চালু আছে")).toBeVisible();
   await expect(page.getByText("ফ্রি ট্রায়াল: আর ১৪ দিন বাকি")).toBeVisible();
-  await shot(page, "dashboard-approved-ink-1280");
+  await shot(page, "dashboard-approved-1280");
 
+  // The theme is the website's: it is chosen on the website page, and the dashboard keeps its look.
+  await page.getByRole("complementary", { name: "মেনু" }).getByRole("link", { name: "ওয়েবসাইট", exact: true }).click();
+  await expect(page).toHaveURL(/\/dashboard\/website$/);
   for (const [theme, label] of [
     ["mist", "কুয়াশা"],
     ["sage", "সবুজ পাতা"],
   ] as const) {
     await page.locator("form").filter({ has: page.locator(`input[name=theme][value=${theme}]`) }).getByRole("button").click();
-    await expect(page.locator(".theme-scope").first()).toHaveAttribute("data-style", theme);
+    // The theme in use has a badge where the others have their button.
+    await expect(page.locator(`input[name=theme][value=${theme}]`)).toHaveCount(0);
     await expect(page.getByText(label, { exact: true })).toBeVisible();
-    await shot(page, `dashboard-approved-${theme}-1280`);
+    await expect(page.locator(".theme-scope").first()).toHaveAttribute("data-style", "app");
   }
+  await shot(page, "dashboard-website-1280");
 
   await page.goto(`/${NEW_TEACHER.handle}`);
   await expect(page.locator(".theme-scope").first()).toHaveAttribute("data-style", "sage");
@@ -163,7 +173,13 @@ test.describe("on a phone", () => {
     await page.getByRole("button", { name: "লগইন করুন" }).click();
     await expect(page).toHaveURL(/\/dashboard$/);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - 360)).toBeLessThanOrEqual(0);
-    await shot(page, "dashboard-mist-360");
+    await shot(page, "dashboard-360");
+    // The phone menu holds every section, with what's coming folded away.
+    await page.locator("summary[aria-label='মেনু']").click();
+    await expect(page.getByRole("navigation", { name: "মেনু" }).getByRole("link", { name: "প্রশ্নব্যাংক" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "মেনু" }).getByText("শিক্ষার্থী তালিকা")).toBeHidden();
+    await page.getByRole("navigation", { name: "মেনু" }).getByText("শীঘ্রই আসছে").click();
+    await expect(page.getByRole("navigation", { name: "মেনু" }).getByText("শিক্ষার্থী তালিকা")).toBeVisible();
   });
 });
 

@@ -3,11 +3,12 @@
 /* ──────────────────────────────────────────────────────────────────────────
    Themes. The three looks approved in the Phase 0 review (design/phase0):
      ink   কালি ও কাগজ  warm paper, ink, deep teal, gold rules, serif headings
-     mist  কুয়াশা       misty blue, steel blue, bold sans, navy dashboard menu
+     mist  কুয়াশা       misty blue, steel blue, bold sans
      sage  সবুজ পাতা    sage and sand, rounded shapes
-   The element carrying data-style sets every token for its subtree. Platform pages
-   use ink; a teacher's site and dashboard use the teacher's choice. Text colours
-   reach 4.5:1 on the surfaces they sit on.
+   The element carrying data-style sets every token for its subtree. A teacher's
+   public website wears the teacher's choice of these three; the platform's own
+   pages and every dashboard wear "app" (after them, below). Text colours reach
+   4.5:1 on the surfaces they sit on (tests/unit/contrast.test.ts).
    ────────────────────────────────────────────────────────────────────────── */
 
 [data-style="ink"] {
@@ -33,12 +34,7 @@
   --lb-nav-on-bg: transparent; --lb-nav-on-ink: #1e2a2f; --lb-nav-on-line: #b0822f;
   --lb-hero-bg: linear-gradient(180deg, #f7f3ea 0%, #f2ece0 100%);
 
-  --lb-side-bg: #fffdf8; --lb-side-line: #e4dccb; --lb-side-ink: #1e2a2f; --lb-side-ink-strong: #1e2a2f;
-  --lb-side-ink-2: #44545a; --lb-side-ink-3: #5e6a6e; --lb-side-on-bg: #e2eeea; --lb-side-on-ink: #1c5d5b;
-  --lb-side-card: #f7f3ea; --lb-side-accent: #7e5a17; --lb-count-ink: #fffdf8;
   --lb-logo-bg: #1c5d5b; --lb-logo-ink: #fffdf8;
-  --lb-topbar-bg: rgb(247 243 234 / 0.92);
-  --lb-mtop-bg: #fffdf8; --lb-mtop-ink: #1e2a2f; --lb-mtop-line: #e4dccb;
 
   --lb-portrait-radius: 200px 200px 12px 12px; --lb-portrait-bg: #e7decc;
   --lb-portrait-border: 1px solid #d5cbb5; --lb-portrait-shadow: none;
@@ -71,12 +67,7 @@
   --lb-hero-bg: radial-gradient(760px 420px at 88% 8%, rgb(62 156 158 / 0.18), transparent 62%),
     radial-gradient(820px 520px at 6% -10%, rgb(43 92 138 / 0.14), transparent 60%), #f3f6f9;
 
-  --lb-side-bg: #12233a; --lb-side-line: rgb(255 255 255 / 0.09); --lb-side-ink: #dce6f0; --lb-side-ink-strong: #ffffff;
-  --lb-side-ink-2: #b9c7d6; --lb-side-ink-3: #8ea1b6; --lb-side-on-bg: rgb(255 255 255 / 0.11); --lb-side-on-ink: #ffffff;
-  --lb-side-card: rgb(255 255 255 / 0.06); --lb-side-accent: #86d3d4; --lb-count-ink: #0e2a2b;
   --lb-logo-bg: linear-gradient(135deg, #3e9c9e, #86d3d4); --lb-logo-ink: #12233a;
-  --lb-topbar-bg: rgb(243 246 249 / 0.86);
-  --lb-mtop-bg: #12233a; --lb-mtop-ink: #ffffff; --lb-mtop-line: rgb(255 255 255 / 0.12);
 
   --lb-portrait-radius: 30px; --lb-portrait-bg: linear-gradient(160deg, #dce7f1, #cfe4e3);
   --lb-portrait-border: 6px solid #ffffff; --lb-portrait-shadow: 0 22px 44px -18px rgb(19 33 47 / 0.3);
@@ -109,18 +100,52 @@
   --lb-nav-on-bg: #e4eee6; --lb-nav-on-ink: #356049; --lb-nav-on-line: transparent;
   --lb-hero-bg: #f6f4ee;
 
-  --lb-side-bg: #eaf0e6; --lb-side-line: #dae3d3; --lb-side-ink: #1f2d26; --lb-side-ink-strong: #1f2d26;
-  --lb-side-ink-2: #4a5b52; --lb-side-ink-3: #66756c; --lb-side-on-bg: #ffffff; --lb-side-on-ink: #356049;
-  --lb-side-card: #f5f8f2; --lb-side-accent: #8a5c1b; --lb-count-ink: #ffffff;
   --lb-logo-bg: #3f6e55; --lb-logo-ink: #ffffff;
-  --lb-topbar-bg: rgb(246 244 238 / 0.92);
-  --lb-mtop-bg: #eaf0e6; --lb-mtop-ink: #1f2d26; --lb-mtop-line: #dae3d3;
 
   --lb-portrait-radius: 46% 54% 44% 56% / 52% 46% 54% 48%; --lb-portrait-bg: #dce8dd;
   --lb-portrait-border: 0; --lb-portrait-shadow: none;
   --lb-cover-1: #ddeadf; --lb-cover-2: #f4e5cf; --lb-cover-3: #e1e7f1; --lb-cover-4: #efe2e7;
   --lb-cover-ink: #1f2d26; --lb-cover-chip: rgb(255 255 255 / 0.75);
   --lb-date-bg: #f8ecd9; --lb-date-ink: #8a5c1b;
+}
+
+/* The platform's own look ("app"): the landing page, sign-in, the admin panel and every teacher's
+   dashboard, whatever theme their website wears. Clean and neutral, one green accent: the same
+   palette as the question bank's pages (the qb-* tokens below). */
+[data-style="app"] {
+  --lb-bg: #f6f5f1; --lb-bg-2: #efede7; --lb-surface: #ffffff; --lb-surface-2: #f3f2ee; --lb-surface-3: #e9e7e0;
+  --lb-ink: #17191c; --lb-ink-2: #4e535b; --lb-muted: #5b6068;
+  --lb-line: #e3e1da; --lb-line-strong: #d5d2c8;
+  --lb-primary: #0b6b4f; --lb-on-primary: #ffffff; --lb-primary-soft: #e3f1ea; --lb-primary-text: #0b6b4f;
+  --lb-accent: #f2b53a; --lb-accent-soft: #fff3cc; --lb-accent-ink: #6b5300;
+  --lb-ok: #0b6b4f; --lb-ok-soft: #e3f1ea; --lb-bad: #b4361f; --lb-bad-soft: #fce8e4;
+
+  --lb-font-head: var(--ff-kalpurush), var(--ff-grotesk), var(--ff-hind), system-ui, sans-serif;
+  --lb-font-body: var(--ff-kalpurush), var(--ff-hind), system-ui, sans-serif;
+  --lb-font-num: var(--ff-kalpurush), var(--ff-grotesk), var(--ff-hind), system-ui, sans-serif;
+  --lb-head-weight: 700; --lb-head-tracking: -0.02em;
+
+  --lb-r-sm: 8px; --lb-r-md: 10px; --lb-r-lg: 16px; --lb-r-btn: 10px; --lb-r-mark: 10px;
+  --lb-shadow-card: none;
+  --lb-shadow-float: 0 16px 40px -16px rgb(23 25 28 / 0.22);
+  --lb-shadow-btn: none;
+
+  --lb-header-bg: rgb(246 245 241 / 0.9);
+  --lb-mark-bg: #0b6b4f; --lb-mark-ink: #ffffff;
+  --lb-nav-on-bg: #e3f1ea; --lb-nav-on-ink: #0b6b4f; --lb-nav-on-line: transparent;
+  --lb-hero-bg: #f6f5f1;
+
+  --lb-side-bg: #ffffff; --lb-side-line: #e3e1da; --lb-side-ink: #17191c; --lb-side-ink-strong: #17191c;
+  --lb-side-ink-2: #4e535b; --lb-side-ink-3: #5b6068; --lb-side-on-bg: #e3f1ea; --lb-side-on-ink: #0b6b4f;
+  --lb-side-card: #f6f5f1; --lb-side-accent: #0b6b4f;
+  --lb-logo-bg: #0b6b4f; --lb-logo-ink: #ffffff;
+  --lb-mtop-bg: #ffffff; --lb-mtop-ink: #17191c; --lb-mtop-line: #e3e1da;
+
+  --lb-portrait-radius: 16px; --lb-portrait-bg: #e3f1ea;
+  --lb-portrait-border: 1px solid #e3e1da; --lb-portrait-shadow: none;
+  --lb-cover-1: #0b6b4f; --lb-cover-2: #1d4ed8; --lb-cover-3: #9a4a12; --lb-cover-4: #5b2bb5;
+  --lb-cover-ink: #ffffff; --lb-cover-chip: rgb(255 255 255 / 0.18);
+  --lb-date-bg: #e3f1ea; --lb-date-ink: #0b6b4f;
 }
 
 /* The tokens as Tailwind utilities: bg-surface, text-muted, border-line, rounded-lg, font-head… */
@@ -311,6 +336,7 @@
   .logo-mark { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 10px; background: var(--lb-logo-bg); color: var(--lb-logo-ink); font-family: var(--lb-font-head); font-weight: 800; font-size: 18px; }
   .logo-word { font-family: var(--lb-font-head); font-weight: 700; font-size: 19px; letter-spacing: -0.01em; color: var(--lb-ink); }
   .logo-word em { font-style: normal; color: var(--lb-accent-ink); }
+  [data-style="app"] .logo-word em { color: var(--lb-primary); }
 
   /* top bars of the platform and of teacher sites */
   .site-header { position: sticky; top: 0; z-index: 20; background: var(--lb-header-bg); border-bottom: 1px solid var(--lb-line); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
@@ -324,24 +350,66 @@
   .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--lb-accent-ink); }
 
   /* dashboard shell */
-  .dash { display: grid; grid-template-columns: 272px minmax(0, 1fr); min-height: 100dvh; }
-  .dash-side { position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; gap: 2px; padding: 14px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--lb-side-line) transparent; background: var(--lb-side-bg); color: var(--lb-side-ink); border-right: 1px solid var(--lb-side-line); }
+  .dash { display: grid; grid-template-columns: 264px minmax(0, 1fr); min-height: 100dvh; }
+  .dash-side { position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; gap: 2px; padding: 16px 12px 12px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--lb-side-line) transparent; background: var(--lb-side-bg); color: var(--lb-side-ink); border-right: 1px solid var(--lb-side-line); }
   .dash-side .logo-word { color: var(--lb-side-ink-strong); }
   .dash-side .logo-word em { color: var(--lb-side-accent); }
   .side-site { display: flex; align-items: center; gap: 10px; margin: 6px 4px; padding: 8px 12px; border-radius: var(--lb-r-md); background: var(--lb-side-card); border: 1px solid var(--lb-side-line); font-size: 13.5px; color: var(--lb-side-ink-2); overflow-wrap: anywhere; }
   .side-site b { display: block; color: var(--lb-side-ink-strong); font-weight: 600; font-size: 14px; }
-  .side-label { padding: 10px 12px 2px; font-size: 12px; font-weight: 700; color: var(--lb-side-ink-3); }
-  .side-link { display: flex; align-items: center; gap: 12px; min-height: 34px; padding: 5px 12px; border-radius: var(--lb-r-sm); font-size: 14.5px; font-weight: 500; color: var(--lb-side-ink-2); }
+  .side-label { padding: 14px 12px 4px; font-size: 12.5px; font-weight: 700; color: var(--lb-side-ink-3); }
+  .side-link { display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 7px 12px; border-radius: var(--lb-r-sm); font-size: 15px; font-weight: 500; color: var(--lb-side-ink-2); transition: background-color 0.12s, color 0.12s; }
   .side-link svg { width: 18px; height: 18px; }
-  .side-link[aria-current="page"] { background: var(--lb-side-on-bg); color: var(--lb-side-on-ink); font-weight: 600; }
-  .side-link[aria-disabled="true"] { cursor: default; }
-  .side-link .soon { margin-left: auto; font-size: 11.5px; font-weight: 600; color: var(--lb-side-ink-3); }
-  [data-style="mist"] .side-link[aria-current="page"] { box-shadow: inset 3px 0 0 var(--lb-side-accent); }
-  .dash-topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 14px; min-height: 72px; padding: 0 32px; background: var(--lb-topbar-bg); border-bottom: 1px solid var(--lb-line); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+  a.side-link:hover, button.side-link:hover { background: var(--lb-side-card); color: var(--lb-side-ink-strong); }
+  .side-link[aria-current="page"], a.side-link[aria-current="page"]:hover { background: var(--lb-side-on-bg); color: var(--lb-side-on-ink); font-weight: 600; }
+  .side-link[aria-disabled="true"] { min-height: 34px; padding-block: 4px; font-size: 14px; color: var(--lb-side-ink-3); cursor: default; }
+  /* What's coming, folded away under one quiet line. */
+  .side-soon { margin-top: 8px; }
+  .side-soon > summary { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: var(--lb-r-sm); list-style: none; cursor: pointer; font-size: 12.5px; font-weight: 700; color: var(--lb-side-ink-3); }
+  .side-soon > summary::-webkit-details-marker { display: none; }
+  .side-soon > summary:hover { background: var(--lb-side-card); }
+  .side-soon > summary svg { width: 14px; height: 14px; margin-left: auto; transition: transform 0.15s; }
+  .side-soon[open] > summary svg { transform: rotate(180deg); }
+  /* The teacher, the language and the way out, at the foot of the menu. */
+  .side-account { display: flex; flex-direction: column; gap: 10px; margin-top: auto; padding: 12px 4px 0; border-top: 1px solid var(--lb-side-line); }
+  .side-who { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 0 8px; }
+  .side-who b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; font-weight: 600; color: var(--lb-side-ink-strong); }
+  .side-who span span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--lb-side-ink-3); }
   .dash-mobile-top { display: none; position: sticky; top: 0; z-index: 10; align-items: center; gap: 10px; min-height: 60px; padding: 0 16px; background: var(--lb-mtop-bg); color: var(--lb-mtop-ink); border-bottom: 1px solid var(--lb-mtop-line); }
   .dash-mobile-top .logo-word { color: var(--lb-mtop-ink); font-size: 18px; }
   .dash-mobile-top .logo-word em { color: var(--lb-side-accent); }
-  .dash-content { display: flex; flex-direction: column; gap: 24px; padding: 28px 32px 56px; }
+  .dash-content { display: flex; flex-direction: column; gap: 24px; width: 100%; max-width: 1280px; padding: 32px 40px 64px; }
+  /* A page's own heading: its title, a line about it, and its main actions. */
+  .page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; }
+  .page-title { font-size: clamp(25px, 3vw, 31px); line-height: 1.25; }
+  .page-lead { margin-top: 4px; max-width: 46em; font-size: 16px; color: var(--lb-ink-2); }
+  /* A number that matters, with what it counts and where to go for it. */
+  .stat-card { display: flex; align-items: center; gap: 14px; min-width: 0; padding: 16px 18px; border-radius: var(--lb-r-lg); border: 1px solid var(--lb-line); background: var(--lb-surface); transition: border-color 0.12s; }
+  a.stat-card:hover { border-color: var(--lb-primary); }
+  .stat-card b { display: block; font-family: var(--lb-font-num); font-size: 28px; line-height: 1.15; color: var(--lb-ink); }
+  .stat-card .stat-label { display: block; font-size: 14.5px; color: var(--lb-ink-2); }
+  .stat-card .stat-icon { display: grid; place-items: center; width: 42px; height: 42px; flex: none; border-radius: var(--lb-r-md); background: var(--lb-primary-soft); color: var(--lb-primary-text); }
+  .stat-card .stat-icon svg { width: 20px; height: 20px; }
+  @media (max-width: 640px) {
+    .stat-card { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; }
+    .stat-card .stat-icon { width: 32px; height: 32px; }
+    .stat-card .stat-icon svg { width: 16px; height: 16px; }
+    .stat-card b { font-size: 24px; }
+    .stat-card .stat-label { font-size: 13px; }
+  }
+  /* Steps to finish, ticked off as they are done. */
+  .steps { display: flex; flex-direction: column; }
+  .step { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-top: 1px solid var(--lb-line); }
+  .step:first-child { border-top: 0; }
+  .step-mark { display: grid; place-items: center; width: 26px; height: 26px; flex: none; margin-top: 1px; border-radius: 50%; border: 2px solid var(--lb-line-strong); color: var(--lb-on-primary); }
+  .step-mark svg { width: 14px; height: 14px; stroke-width: 3; }
+  .step[data-done="true"] .step-mark { background: var(--lb-primary); border-color: var(--lb-primary); }
+  .step[data-done="true"] .step-title { color: var(--lb-ink-2); }
+  .step-title { font-weight: 600; color: var(--lb-ink); }
+  .step-text { font-size: 14.5px; color: var(--lb-ink-2); }
+  /* A tile that starts a common task. */
+  .quick { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 14px; border-radius: var(--lb-r-md); border: 1px solid var(--lb-line); background: var(--lb-surface); font-weight: 600; color: var(--lb-ink); transition: border-color 0.12s, background-color 0.12s; }
+  .quick:hover { border-color: var(--lb-primary); background: var(--lb-primary-soft); }
+  .quick svg { width: 19px; height: 19px; color: var(--lb-primary-text); }
   .bottom-nav { display: none; position: fixed; inset: auto 0 0 0; z-index: 30; grid-template-columns: repeat(5, 1fr); height: 66px; padding-bottom: env(safe-area-inset-bottom, 0px); background: var(--lb-surface); border-top: 1px solid var(--lb-line); }
   .bottom-nav a, .bottom-nav span { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11.5px; font-weight: 600; color: var(--lb-muted); }
   .bottom-nav svg { width: 21px; height: 21px; }

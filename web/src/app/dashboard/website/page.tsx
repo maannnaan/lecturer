@@ -25,7 +25,7 @@ export default async function WebsiteSettingsPage() {
     <main className="dash-content">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-2xl">{w.title}</h2>
+          <h1 className="page-title">{w.title}</h1>
           <p className="mt-1 text-ink-2">{w.lead(`lecturer.bd/${teacher.handle}`)}</p>
         </div>
         <Link href={`/${teacher.handle}`} className="btn btn-ghost btn-sm">

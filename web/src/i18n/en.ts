@@ -348,7 +348,26 @@ export const en: Dictionary = {
   dashboard: {
     welcome: (name: string) => `Welcome, ${name}`,
     mySite: "My website",
-    groups: { teaching: "Teaching", students: "Students", exams: "Exams", accounts: "Accounts" },
+    comingSoon: "Coming soon",
+    overview: {
+      lead: "Your website, courses and question bank in one place.",
+      setupTitle: "Set up your website",
+      setupProgress: (done: string, total: string) => `${done} of ${total} done`,
+      setupDone: "Every step is done. Your website is ready for students.",
+      steps: {
+        photo: { title: "Add your photo", text: "A photo helps students recognise you.", cta: "Add a photo" },
+        about: { title: "Write about yourself", text: "Your experience and how you teach, in a few lines.", cta: "Write it" },
+        course: { title: "Add your first course", text: "What you teach, when, and the fee: shown on your website.", cta: "Add a course" },
+        bank: { title: "Start your question bank", text: "Add a class, then its subjects and questions.", cta: "Add a class" },
+        notice: { title: "Post your first notice", text: "Tell students about class times or admission.", cta: "Post a notice" },
+      },
+      numbers: "At a glance",
+      courses: "Courses",
+      questions: "Questions",
+      notices: "Notices",
+      quickTitle: "Quick actions",
+      quick: { question: "New question", course: "New course", notice: "New notice", website: "Edit website" },
+    },
     nav: {
       overview: "Dashboard",
       courses: "Courses and chapters",
@@ -381,7 +400,7 @@ export const en: Dictionary = {
     },
     theme: {
       title: "Website theme",
-      lead: "Your website, your students' pages and this dashboard all use this theme.",
+      lead: "This is how students see your website. The dashboard keeps its own look.",
       names: { ink: "Ink & Paper", mist: "Mist", sage: "Sage" },
       descriptions: {
         ink: "Warm paper, deep teal and gold rules, with serif headings.",
@@ -390,14 +409,6 @@ export const en: Dictionary = {
       },
       inUse: "In use",
       use: "Use this",
-    },
-    next: {
-      title: "Coming next",
-      items: [
-        "Students, batches and payments",
-        "Live MCQ, question paper sets and OMR",
-      ],
-      note: "These parts arrive in the next updates.",
     },
     account: {
       title: "Account",

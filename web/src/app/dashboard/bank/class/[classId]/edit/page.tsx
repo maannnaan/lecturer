@@ -32,7 +32,7 @@ export default async function RenameClassPage({ params }: { params: Promise<{ cl
           { label: t.renameClass },
         ]}
       />
-      <h2 className="text-2xl">{t.renameClass}</h2>
+      <h1 className="page-title">{t.renameClass}</h1>
       <ClassForm bankClass={{ id: bankClass.id, name: bankClass.name }} t={t.classForm} c={d.common} />
     </main>
   );

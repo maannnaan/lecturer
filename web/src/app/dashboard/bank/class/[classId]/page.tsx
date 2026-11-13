@@ -26,7 +26,7 @@ export default async function BankClassPage({ params }: { params: Promise<{ clas
   const locale = await getLocale();
   const d = getDictionary(locale);
   const t = d.dashboard.bank;
-  const ctx: QbCtx = { d, locale, voice: t.qb, titleAs: "h2" };
+  const ctx: QbCtx = { d, locale, voice: t.qb, titleAs: "h1" };
   const db = await getDb();
   const [classes, subjects, counts] = await Promise.all([
     listBankClasses(db, teacher.id),

@@ -2,7 +2,9 @@
 
 The platform site, the teacher dashboard, the admin panel and every teacher's own website
 (`lecturer.bd/<handle>`). Next.js (App Router, Cache Components) with PostgreSQL through Drizzle.
-Bangla first, with an English switch. Each teacher picks one of three themes: `ink`, `mist`, `sage`.
+Bangla first, with an English switch. The platform's own pages and every dashboard wear one look
+(`app`: clean, neutral, one green accent, the question bank's palette); each teacher picks one of
+three themes for their public website: `ink`, `mist`, `sage`.
 
 ## Run it locally
 
@@ -59,7 +61,7 @@ npm run test:e2e    # Playwright against the production build, using the install
 | `src/proxy.ts` | Real 404 / 308 / 307 answers decided before rendering; the comment there explains why |
 | `src/server/` | Schema, sessions, data access. Teacher-owned data is always read for the teacher in the session or the address, never an id from the browser |
 | `src/i18n/` | `bn.ts` is the source; `en.ts` is typed against it, so a missing translation fails the type check |
-| `src/app/globals.css` | The three themes as tokens on `[data-style]`, mapped to Tailwind utilities |
+| `src/app/globals.css` | The looks as tokens on `[data-style]` (`app` for the platform and dashboards; `ink`, `mist`, `sage` for teachers' websites), mapped to Tailwind utilities. `tests/unit/contrast.test.ts` checks each one's text colours against its surfaces (4.5:1) |
 | `src/app/fonts.ts`, `src/fonts/` | The fonts. Bangla is Kalpurush everywhere: the original file from the Avro Font Development Project, under the SIL Open Font License (`src/fonts/Kalpurush-OFL.txt`; keep it with the font). It answers only for Bangla characters, so each theme's own face draws Latin text |
 | `drizzle/` | SQL migrations; run `npm run db:generate` after changing `src/server/db/schema.ts` |
 

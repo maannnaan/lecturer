@@ -24,7 +24,7 @@ export default async function NoticesPage() {
   return (
     <main className="dash-content">
       <header>
-        <h2 className="text-2xl">{t.title}</h2>
+        <h1 className="page-title">{t.title}</h1>
         <p className="mt-1 text-ink-2">{t.lead}</p>
       </header>
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">

@@ -56,7 +56,7 @@ export default async function EditSubjectPage({
           { label: t.editSubject },
         ]}
       />
-      <h2 className="text-2xl">{t.editSubject}</h2>
+      <h1 className="page-title">{t.editSubject}</h1>
 
       <div className="grid items-start gap-6 xl:grid-cols-2">
         <div className="min-w-0">

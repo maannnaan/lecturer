@@ -27,7 +27,7 @@ export default async function CoursesPage() {
     <main className="dash-content">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-2xl">{t.title}</h2>
+          <h1 className="page-title">{t.title}</h1>
           <p className="mt-1 text-ink-2">{t.lead}</p>
         </div>
         <Link href="/dashboard/courses/new" className="btn btn-primary btn-sm">

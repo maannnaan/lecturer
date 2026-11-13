@@ -30,7 +30,7 @@ export default async function BankSubjectPage({ params }: { params: Promise<{ su
   const locale = await getLocale();
   const d = getDictionary(locale);
   const t = d.dashboard.bank;
-  const ctx: QbCtx = { d, locale, voice: t.qb, titleAs: "h2" };
+  const ctx: QbCtx = { d, locale, voice: t.qb, titleAs: "h1" };
   const base = `/dashboard/bank/subject/${subject.id}`;
   const onSite = node.total > 0 ? `/${teacher.handle}/bank/${bankClass.number}/${subject.number}` : null;
 

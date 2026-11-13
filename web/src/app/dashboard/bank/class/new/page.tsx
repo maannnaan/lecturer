@@ -19,7 +19,7 @@ export default async function NewClassPage() {
     <main className="dash-content max-w-[820px]">
       <Crumbs className="crumbs !pt-0" label={d.common.breadcrumb} items={[{ label: t.title, href: "/dashboard/bank" }, { label: t.newClass }]} />
       <div>
-        <h2 className="text-2xl">{t.newClass}</h2>
+        <h1 className="page-title">{t.newClass}</h1>
         <p className="mt-1 text-ink-2">{t.classForm.lead}</p>
       </div>
       <ClassForm t={t.classForm} c={d.common} />

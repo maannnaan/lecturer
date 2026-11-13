@@ -20,7 +20,7 @@ export default async function NewCoursePage() {
         <ArrowLeft aria-hidden="true" />
         {t.backToList}
       </Link>
-      <h2 className="text-2xl">{t.newTitle}</h2>
+      <h1 className="page-title">{t.newTitle}</h1>
       <CourseForm
         t={t.form}
         c={d.common}

@@ -60,7 +60,7 @@ export default async function NewQuestionPage({ searchParams }: { searchParams: 
     return (
       <main className="dash-content">
         {back}
-        <h2 className="text-2xl">{t.pickType}</h2>
+        <h1 className="page-title">{t.pickType}</h1>
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {QUESTION_TYPES.map((option) => (
             <li key={option}>
@@ -87,9 +87,9 @@ export default async function NewQuestionPage({ searchParams }: { searchParams: 
           {t.changeType}
         </Link>
       </div>
-      <h2 className="text-2xl">
+      <h1 className="page-title">
         {t.newTitle}: {d.questions.types[type]}
-      </h2>
+      </h1>
       {s.added && (
         <p className="form-ok" role="status">
           {t.added}

@@ -44,7 +44,7 @@ export default async function EditCoursePage({ params }: { params: Promise<{ id:
           </Link>
         )}
       </div>
-      <h2 className="text-2xl">{course.title}</h2>
+      <h1 className="page-title">{course.title}</h1>
 
       <div className="grid items-start gap-6 xl:grid-cols-2">
         <div className="min-w-0">

@@ -32,7 +32,7 @@ export default async function NewSubjectPage({ searchParams }: { searchParams: P
     <main className="dash-content max-w-[820px]">
       <Crumbs className="crumbs !pt-0" label={d.common.breadcrumb} items={[...crumbs, { label: t.newSubject }]} />
       <div>
-        <h2 className="text-2xl">{t.subjectForm.newTitle}</h2>
+        <h1 className="page-title">{t.subjectForm.newTitle}</h1>
         <p className="mt-1 text-ink-2">{t.subjectForm.newLead}</p>
       </div>
       {classes.length === 0 ? (
