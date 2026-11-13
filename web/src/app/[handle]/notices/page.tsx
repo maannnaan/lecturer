@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { getSite, getSiteNotices } from "../data";
-import { NoticeList, SectionHead } from "../site-ui";
+import { CallBar, NoticeList, SectionHead } from "../site-ui";
 
 export const instant = false;
 
@@ -37,6 +37,7 @@ export default async function NoticesPage({ params }: { params: Params }) {
           <p className="card p-6 text-ink-2">{d.site.noticesEmpty}</p>
         )}
       </div>
+      <CallBar contact={teacher.site.contact} d={d} />
     </main>
   );
 }

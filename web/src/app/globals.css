@@ -555,6 +555,56 @@
     .routine .t-sm { display: block; font-size: 13.5px; color: var(--lb-muted); }
   }
 
+  /* The news a visitor most needs, above the teacher's name: admission is open. */
+  .hero-admission { display: flex; width: fit-content; max-width: 100%; align-items: center; gap: 8px; margin-bottom: 16px; padding: 6px 14px 6px 10px; border-radius: 999px; background: var(--lb-ok-soft); color: var(--lb-ok); font-size: 14.5px; font-weight: 700; line-height: 1.4; }
+  .hero-admission svg { width: 17px; height: 17px; flex: none; }
+
+  /* The question bank, offered from the home page. */
+  .practice { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 40px; align-items: center; padding: 36px; border-radius: var(--lb-r-lg); border: 1px solid var(--lb-line); background: var(--lb-surface); box-shadow: var(--lb-shadow-card); }
+  .practice h2 { margin-top: 8px; font-size: clamp(25px, 3vw, 34px); }
+  .practice-text { margin-top: 10px; max-width: 36em; font-size: 16.5px; color: var(--lb-ink-2); }
+  .practice-classes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+  .practice-classes .chip { gap: 6px; }
+  .practice-classes .chip:hover { border-color: var(--lb-primary); }
+  .practice-side { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 28px 24px; border-radius: var(--lb-r-lg); background: var(--lb-primary-soft); text-align: center; }
+  .practice-side b { font-family: var(--lb-font-num); font-size: 30px; line-height: 1.3; color: var(--lb-ink); }
+  .practice-side > span:not(.practice-icon) { font-size: 15px; color: var(--lb-ink-2); }
+  .practice-side .btn { margin-top: 16px; }
+  .practice-icon { display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 8px; border-radius: 50%; background: var(--lb-surface); color: var(--lb-primary-text); }
+  .practice-icon svg { width: 24px; height: 24px; }
+
+  /* A long lesson plan shows where the batch is now; the whole of it opens below. */
+  .plan-short:has(+ .plan-all[open]) { display: none; }
+  .plan-all > summary { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 14px; border-top: 1px solid var(--lb-line); list-style: none; cursor: pointer; font-size: 15px; font-weight: 600; color: var(--lb-primary-text); }
+  .plan-all > summary::-webkit-details-marker { display: none; }
+  .plan-all > summary::after { content: ""; width: 8px; height: 8px; margin-top: -4px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
+  .plan-all[open] > summary { border-top: 0; border-bottom: 1px solid var(--lb-line); }
+  .plan-all[open] > summary::after { margin-top: 4px; transform: rotate(-135deg); }
+
+  /* Every way to reach the teacher, each a tile to tap. */
+  .contact-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .contact-tile { display: flex; align-items: center; gap: 16px; min-height: 76px; padding: 14px 18px; border-radius: var(--lb-r-lg); border: 1px solid var(--lb-line); background: var(--lb-surface); box-shadow: var(--lb-shadow-card); transition: border-color 0.12s; }
+  a.contact-tile:hover { border-color: var(--lb-primary); }
+
+  /* On a phone: call or message, always at the foot of the screen. */
+  .callbar { display: none; }
+  @media (max-width: 640px) {
+    .callbar { position: fixed; inset: auto 0 0 0; z-index: 25; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--lb-surface); border-top: 1px solid var(--lb-line); box-shadow: 0 -10px 24px -18px rgb(0 0 0 / 0.35); }
+    .theme-scope:has(.callbar) .site-footer { padding-bottom: 104px; }
+    .practice { grid-template-columns: minmax(0, 1fr); gap: 22px; padding: 22px; }
+    /* Courses two to a row, the whole card a link. */
+    .course-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .course-card { position: relative; }
+    .course-cover { height: 72px; padding: 10px 12px; }
+    .course-cover .lvl { padding: 3px 8px; font-size: 11.5px; }
+    .course-cover svg { width: 30px; height: 30px; }
+    .course-body { padding: 12px; }
+    .course-body h3 { font-size: 16.5px; line-height: 1.4; }
+    .course-body h3 a::after { content: ""; position: absolute; inset: 0; }
+    .course-foot { padding-top: 10px; }
+    .course-foot .link { display: none; }
+  }
+
   /* ── Platform landing page (src/app/page.tsx). Only existing tokens, so it follows the theme. ── */
   .lp-anchor { scroll-margin-top: 84px; }
   @media (prefers-reduced-motion: no-preference) { html:has(.lp-anchor) { scroll-behavior: smooth; } }

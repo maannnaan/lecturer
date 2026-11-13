@@ -13,7 +13,8 @@ import { getCurrentTeacher } from "@/server/auth/current";
 import { getCourseByNumber } from "@/server/courses";
 import { getDb } from "@/server/db";
 import { getSite } from "../../data";
-import { AccessBadge, SectionHead, Timeline } from "../../site-ui";
+import { WhatsappMark } from "@/components/brand-icons";
+import { AccessBadge, CallBar, SectionHead, Timeline, contactLinks } from "../../site-ui";
 
 export const instant = false;
 
@@ -50,6 +51,7 @@ export default async function CoursePage({ params }: { params: Params }) {
   const d = getDictionary(locale);
   const home = `/${teacher.handle}`;
   const hasContact = Object.values(teacher.site.contact ?? {}).some(Boolean);
+  const { whatsapp } = contactLinks(teacher.site.contact);
 
   return (
     <main>
@@ -81,6 +83,13 @@ export default async function CoursePage({ params }: { params: Params }) {
                     {d.site.course.join}
                   </a>
                 )}
+                {/* One tap to ask about this course. */}
+                {whatsapp && (
+                  <a href={whatsapp} className="btn btn-ghost btn-sm" target="_blank" rel="noopener noreferrer">
+                    <WhatsappMark className="size-[17px] text-[#128c7e]" />
+                    {d.site.whatsappWrite}
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -102,6 +111,7 @@ export default async function CoursePage({ params }: { params: Params }) {
           )}
         </div>
       </section>
+      <CallBar contact={teacher.site.contact} d={d} />
     </main>
   );
 }

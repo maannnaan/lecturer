@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, Check, Pin } from "lucide-react";
+import { ArrowRight, Check, Phone, Pin } from "lucide-react";
 import type { ReactNode } from "react";
+import { WhatsappMark } from "@/components/brand-icons";
 import { CourseIconGlyph } from "@/components/course-icon";
 import { SiteText } from "@/components/site-text";
 import { chapterLabel } from "@/lib/chapter-label";
@@ -58,8 +59,45 @@ export function CourseCard({
   );
 }
 
-/** The chapters of a course as a lesson-plan timeline: done, in progress, coming up. */
-export function Timeline({ chapters, d, locale }: { chapters: Chapter[]; d: Dictionary; locale: Locale }) {
+/** The addresses that reach the teacher in one tap: a call, and a WhatsApp chat. */
+export function contactLinks(contact: { phone?: string; whatsapp?: string } | undefined) {
+  return {
+    tel: contact?.phone ? `tel:${contact.phone}` : null,
+    whatsapp: contact?.whatsapp ? `https://wa.me/88${contact.whatsapp}` : null,
+  };
+}
+
+/**
+ * On a phone, the way to reach the teacher stays at the foot of the screen: students and guardians
+ * mostly come by phone, and the contact section is a long way down. Hidden on wider screens (the
+ * header has the number there) and when the teacher has given neither a phone nor WhatsApp.
+ */
+export function CallBar({ contact, d }: { contact: { phone?: string; whatsapp?: string } | undefined; d: Dictionary }) {
+  const { tel, whatsapp } = contactLinks(contact);
+  if (!tel && !whatsapp) return null;
+  return (
+    <nav className="callbar" aria-label={d.site.quickContact}>
+      {tel && (
+        <a href={tel} className="btn btn-primary">
+          <Phone aria-hidden="true" />
+          {d.site.call}
+        </a>
+      )}
+      {whatsapp && (
+        <a href={whatsapp} className="btn btn-ghost" target="_blank" rel="noopener noreferrer">
+          <WhatsappMark className="size-[18px] text-[#128c7e]" />
+          {d.site.whatsapp}
+        </a>
+      )}
+    </nav>
+  );
+}
+
+/**
+ * The chapters of a course as a lesson-plan timeline: done, in progress, coming up. `offset` is
+ * how many chapters come before the ones given, so a window of the plan keeps its numbering.
+ */
+export function Timeline({ chapters, d, locale, offset = 0 }: { chapters: Chapter[]; d: Dictionary; locale: Locale; offset?: number }) {
   const statuses = d.dashboard.courses.statuses;
   return (
     <ol className="timeline">
@@ -70,7 +108,7 @@ export function Timeline({ chapters, d, locale }: { chapters: Chapter[]; d: Dict
             <span className="tl-dot">{chapter.status === "done" && <Check aria-hidden="true" />}</span>
             <div className="min-w-0">
               <p className="tl-title">
-                <span className="tl-label">{chapterLabel(chapter, i, d, locale)}</span>
+                <span className="tl-label">{chapterLabel(chapter, i + offset, d, locale)}</span>
                 {chapter.title}
               </p>
               {dates && <p className="tl-date">{dates}</p>}

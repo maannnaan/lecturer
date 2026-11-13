@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { Menu } from "lucide-react";
+import { Menu, Phone } from "lucide-react";
 import "katex/dist/katex.min.css";
 import { CurrentYear } from "@/components/current-year";
 import { LangSwitch } from "@/components/lang-switch";
@@ -11,6 +11,7 @@ import { getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { getCurrentTeacher } from "@/server/auth/current";
 import { getSite, getSiteBank, getSiteCourses, getSiteNotices } from "./data";
+import { contactLinks } from "./site-ui";
 
 // The handle has to be resolved before the response starts, so an unknown address can answer 404
 // and an old one 308. That means rendering per request: no static shell, and no loading.tsx here
@@ -84,9 +85,11 @@ export default async function TeacherSiteLayout({ children, params }: Props) {
     bank.length > 0 && { href: `${home}/bank`, label: d.site.nav.bank },
     courses.some((c) => c.chapters.length > 0) && { href: `${home}#plan`, label: d.site.nav.plan },
     notices.length > 0 && { href: `${home}/notices`, label: d.site.nav.notices },
-    hasContact && { href: `${home}#contact`, label: d.site.nav.contact },
+    // The contact section, or the class times when that is all the teacher has given.
+    hasContact && { href: `${home}#${Object.values(s.contact ?? {}).some(Boolean) ? "contact" : "times"}`, label: d.site.nav.contact },
   ].filter((l): l is { href: string; label: string } => Boolean(l));
   const name = locale === "bn" ? teacher.nameBn : teacher.nameEn;
+  const { tel } = contactLinks(s.contact);
 
   return (
     <div data-style={teacher.theme} className="theme-scope flex flex-col" lang={locale}>
@@ -119,6 +122,13 @@ export default async function TeacherSiteLayout({ children, params }: Props) {
             </nav>
           )}
           <div className="site-actions">
+            {/* On wide screens the number is always in sight; phones get the bar at the foot of the page. */}
+            {tel && (
+              <a href={tel} className="btn btn-primary btn-sm max-[1180px]:hidden">
+                <Phone aria-hidden="true" />
+                {s.contact?.phone}
+              </a>
+            )}
             <LangSwitch locale={locale} label={d.common.language} />
             {links.length > 1 && (
               <details className="site-menu">
@@ -139,13 +149,31 @@ export default async function TeacherSiteLayout({ children, params }: Props) {
       </header>
       <div className="flex flex-1 flex-col">{children}</div>
       <footer className="site-footer">
-        <div className="wrap flex flex-wrap items-center justify-between gap-3">
-          <span>
-            © <CurrentYear /> {name}
-          </span>
-          <Link href="/" className="text-[13px] text-muted">
-            {d.common.builtWith}
-          </Link>
+        <div className="wrap flex flex-col gap-5">
+          <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-5">
+            <div className="min-w-0">
+              <p className="font-head text-[19px] text-ink">{name}</p>
+              {teacher.subjects && <p className="text-[14.5px]">{teacher.subjects}</p>}
+              {s.contact?.address && <p className="mt-1 max-w-[30em] text-[14.5px]">{s.contact.address}</p>}
+            </div>
+            {links.length > 1 && (
+              <nav className="flex flex-wrap gap-x-6 gap-y-2 text-[15px]" aria-label={d.common.menu}>
+                {links.map((l) => (
+                  <Link key={l.href} href={l.href} className="hover:text-ink">
+                    {l.label}
+                  </Link>
+                ))}
+              </nav>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+            <span>
+              © <CurrentYear /> {name}
+            </span>
+            <Link href="/" className="text-[13px] text-muted">
+              {d.common.builtWith}
+            </Link>
+          </div>
         </div>
       </footer>
     </div>
