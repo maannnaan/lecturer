@@ -31,7 +31,7 @@ export type QuestionFilters = {
   type?: QuestionType;
   /** A board key, or "any" for every board question. */
   board?: string;
-  visibility?: "public" | "private";
+  visibility?: "public" | "enrolled" | "private";
   search?: string;
   /** 1-based. */
   page?: number;
@@ -317,7 +317,8 @@ const SECTION_ORDER = sql`case ${questions.type}
 
 export async function bankCounts(db: Database, teacherId: string, options: { publicOnly?: boolean } = {}): Promise<CountRow[]> {
   const conditions: SQL[] = [eq(questions.teacherId, teacherId)];
-  if (options.publicOnly) conditions.push(eq(questions.visibility, "public"));
+  // The website counts what students can come to see: enrolled-only questions too, never private ones.
+  if (options.publicOnly) conditions.push(ne(questions.visibility, "private"));
   const rows = await db
     .select({ subjectId: questions.subjectId, chapterId: questions.chapterId, type: questions.type, board: IS_BOARD, n: count() })
     .from(questions)
@@ -351,14 +352,32 @@ function filterConditions(filters: ChapterFilters, chapterId: string | null): SQ
   return conditions;
 }
 
-/** A chapter's questions (public ones only unless `includePrivate`), with the filters applied. */
+/**
+ * Who is looking at a chapter. The teacher's own bank passes `includePrivate` and sees everything.
+ * The website never sees private questions; it sees an enrolled-only question's text only with
+ * `unlockEnrolled` (a signed-in student who is in one of the teacher's courses, or the owner).
+ */
+export type ChapterViewer = { includePrivate?: boolean; unlockEnrolled?: boolean };
+
+const seesEnrolled = (viewer: ChapterViewer) => Boolean(viewer.includePrivate || viewer.unlockEnrolled);
+
+/**
+ * An enrolled-only question as someone not entitled gets it: that it exists, its type, and where
+ * it is from, but none of its text, answers or pictures. Done here, in the data layer, so no page
+ * can show them by mistake.
+ */
+export function lockedQuestion(q: Question): Question {
+  return { ...q, body: { stem: "" }, videoUrl: "" };
+}
+
+/** A chapter's questions as a viewer may list them (never private ones on the website), with the filters applied. */
 function chapterConditions(
   teacherId: string,
   place: { subjectId: string; chapterId: string | null },
-  options: { filters?: ChapterFilters; includePrivate?: boolean },
+  options: { filters?: ChapterFilters } & ChapterViewer,
 ): { chapter: SQL; filtered: SQL } {
   const inChapter: SQL[] = [sameGroup(teacherId, place.subjectId, place.chapterId)];
-  if (!options.includePrivate) inChapter.push(eq(questions.visibility, "public"));
+  if (!options.includePrivate) inChapter.push(ne(questions.visibility, "private"));
   const chapter = and(...inChapter)!;
   return { chapter, filtered: and(chapter, ...filterConditions(options.filters ?? {}, place.chapterId))! };
 }
@@ -394,9 +413,8 @@ export async function listChapterQuestions(
     filters?: ChapterFilters;
     page?: number;
     pageSize?: number;
-    includePrivate?: boolean;
     focus?: string;
-  },
+  } & ChapterViewer,
 ): Promise<SectionQuestions> {
   if (!validPlace(place)) return { items: [], total: 0, page: 1, counts: emptyCounts(), boards: [], years: [] };
   const { chapter, filtered } = chapterConditions(teacherId, place, options);
@@ -425,13 +443,15 @@ export async function listChapterQuestions(
   const at = focusIds?.findIndex((row) => row.id === options.focus) ?? -1;
   if (at >= 0) page = Math.floor(at / size) + 1;
 
-  const items = await db
+  const found = await db
     .select()
     .from(questions)
     .where(where)
     .orderBy(...order)
     .limit(size)
     .offset((page - 1) * size);
+  // Someone not entitled gets an enrolled-only question without its content.
+  const items = seesEnrolled(options) ? found : found.map((q) => (q.visibility === "enrolled" ? lockedQuestion(q) : q));
 
   const counts = emptyCounts();
   for (const row of countRows) {
@@ -454,20 +474,24 @@ export const PRINT_LIMIT = 500;
 
 /**
  * Everything a chapter's printout holds: the questions the filters show, every section in order
- * (or only the board questions), with no paging.
+ * (or only the board questions), with no paging. A sheet has no use for a locked question, so
+ * someone not entitled to the enrolled-only ones gets a sheet without them.
  */
 export async function listChapterForPrint(
   db: Database,
   teacherId: string,
   place: { subjectId: string; chapterId: string | null },
-  options: { boardOnly?: boolean; filters?: ChapterFilters; includePrivate?: boolean },
+  options: { boardOnly?: boolean; filters?: ChapterFilters } & ChapterViewer,
 ): Promise<Question[]> {
   if (!validPlace(place)) return [];
   const { filtered } = chapterConditions(teacherId, place, options);
+  const conditions = [filtered];
+  if (options.boardOnly) conditions.push(ne(questions.board, ""));
+  if (!seesEnrolled(options)) conditions.push(eq(questions.visibility, "public"));
   return db
     .select()
     .from(questions)
-    .where(options.boardOnly ? and(filtered, ne(questions.board, "")) : filtered)
+    .where(and(...conditions))
     .orderBy(SECTION_ORDER, asc(questions.position), asc(questions.createdAt))
     .limit(PRINT_LIMIT);
 }

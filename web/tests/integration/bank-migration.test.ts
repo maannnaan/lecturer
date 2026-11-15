@@ -17,12 +17,13 @@ import { createCourse, deleteCourse } from "@/server/courses";
 import type { Database } from "@/server/db";
 import { courses } from "@/server/db/schema";
 import { getQuestion } from "@/server/questions";
-import { dbBeforeMigration, freshDb, makeTeacher } from "../helpers/db";
+import { dbBeforeMigration, makeTeacher } from "../helpers/db";
 
 describe("migration 0003_bank_by_class", () => {
   let db: Database;
   beforeAll(async () => {
-    db = await freshDb();
+    // The database as it was while courses still had their `level` column (0011 drops it).
+    db = (await dbBeforeMigration(11)).db;
   });
 
   it("reads each existing course's class from its old free-text level, or else its title", async () => {

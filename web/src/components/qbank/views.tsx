@@ -89,10 +89,24 @@ export function toCard(
   q: Question,
   number: number,
   { d, locale }: QbCtx,
-  { topic, ...extra }: Pick<QbCardData, "tools" | "privateLabel"> & { topic?: string } = {},
+  { topic, locked, ...extra }: Pick<QbCardData, "tools" | "privateLabel" | "locked"> & { topic?: string } = {},
 ): QbCardData {
   const tab = tabOf(q.type);
   const body = q.body;
+  // An enrolled-only question this visitor can't open: its label and tags, and nothing of its text.
+  if (locked) {
+    return {
+      id: q.id,
+      anchor: `q-${q.id}`,
+      kind: "sq",
+      tab,
+      badge: `${d.questions.tabsShort[tab]} ${formatNumber(number, locale)}`,
+      topic,
+      tags: q.board ? [boardTag(q, d, locale)] : [],
+      stem: null,
+      locked,
+    };
+  }
   /** A text field drawn, or null when it's empty; `inline` for one that sits in a line. */
   const rich = (value: RichText | undefined | null, inline = false) => (value ? <RichContent value={value} inline={inline} /> : null);
   const base = {
@@ -431,8 +445,11 @@ export function QbChapterView({
   cards,
   listActions,
   emptyActions,
+  lockedText,
 }: {
   ctx: QbCtx;
+  /** On the website, for a visitor who can't open enrolled-only questions: what the board list says in their place. */
+  lockedText?: string;
   /** The chapter's sub-chapters, for the filter. */
   topics?: { number: number; label: string }[];
   crumbs: ReactNode;
@@ -572,7 +589,7 @@ export function QbChapterView({
           />
           <div className="flex min-w-0 flex-[999_1_560px] flex-col gap-4">
             {tab === "board" ? (
-              <BoardTab ctx={ctx} links={links} filters={filters} list={list} summary={summary} href={href} emptyNote={emptyNote} />
+              <BoardTab ctx={ctx} links={links} filters={filters} list={list} summary={summary} href={href} emptyNote={emptyNote} lockedText={lockedText} />
             ) : (
               <QbQuestionList cards={cards} text={qbListText(ctx)} summary={summary} emptyNote={emptyNote} actions={listActions} />
             )}
@@ -593,10 +610,13 @@ function BoardTab({
   summary,
   href,
   emptyNote,
+  lockedText,
 }: {
   ctx: QbCtx;
   links: QbChapterLinks;
   filters: ChapterFilters;
+  /** What stands in for an enrolled-only question's text when this visitor can't open it. */
+  lockedText?: string;
   list: { items: Question[]; boards: string[] };
   summary: string;
   href: (query: Record<string, string>) => string;
@@ -663,8 +683,13 @@ function BoardTab({
                     {d.questions.tabsShort[section]}
                   </QbBadge>
                   <span className="line-clamp-2 min-w-0 flex-[999_1_180px] @min-[640px]:line-clamp-1 @min-[640px]:flex-[999_1_300px]">
-                    {/* One line: the stem's words and maths, without its tables or pictures. */}
-                    <MathText text={richPlain(q.body.stem).replace(/\s+/g, " ")} />
+                    {/* One line: the stem's words and maths, without its tables or pictures. An
+                        enrolled-only question this visitor can't open says so instead. */}
+                    {q.visibility === "enrolled" && lockedText ? (
+                      <span className="text-qb-subtle">{lockedText}</span>
+                    ) : (
+                      <MathText text={richPlain(q.body.stem).replace(/\s+/g, " ")} />
+                    )}
                   </span>
                   <span className="shrink-0 rounded-md bg-qb-board-soft px-2.5 py-1 text-[13px] font-semibold text-qb-board">{shortBoardTag(q, d, locale)}</span>
                   <Link

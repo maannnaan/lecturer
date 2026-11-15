@@ -8,7 +8,9 @@ import { getLocale } from "@/i18n/server";
 import { chapterLabel, topicLabels } from "@/lib/chapter-label";
 import { asciiDigits } from "@/lib/digits";
 import { SECTION_TABS, filtersFromParams, tabFromParam } from "@/lib/questions";
+import { getCurrentStudent, getCurrentTeacher } from "@/server/auth/current";
 import { getDb } from "@/server/db";
+import { hasActiveEnrollment } from "@/server/enrollments";
 import { CHAPTER_PAGE_SIZE, PRINT_LIMIT, listChapterForPrint, listChapterQuestions } from "@/server/questions";
 import { getSiteSubjects } from "../../../../data";
 import { getPageSubject } from "../data";
@@ -65,10 +67,20 @@ export default async function SiteBankChapterPage({ params, searchParams }: { pa
   const topics = topicLabels(chapter, index, locale);
   const topicOf = new Map(topics.map((t) => [t.id, t.label]));
   const pickedTopic = topics.find((t) => t.number === filters.topic)?.label;
+  // Enrolled-only questions open for a signed-in student who is in one of the teacher's courses,
+  // and for the teacher looking at their own site. Anyone else gets them locked: the data layer
+  // hands over no text for those.
+  const [student, signedInTeacher] = await Promise.all([getCurrentStudent(teacher.id), getCurrentTeacher()]);
+  const unlockEnrolled = signedInTeacher?.id === teacher.id || (student ? await hasActiveEnrollment(db, teacher.id, student.id) : false);
+  const locked = {
+    text: d.site.student.lockedText,
+    cta: student ? d.site.student.browse : d.site.student.loginButton,
+    href: student ? `${home}#courses` : `${home}/login?next=${encodeURIComponent(path)}`,
+  };
 
   if (s.print === "chapter" || s.print === "board") {
     const boardOnly = s.print === "board";
-    const questions = await listChapterForPrint(db, teacher.id, place, { boardOnly, filters });
+    const questions = await listChapterForPrint(db, teacher.id, place, { boardOnly, filters, unlockEnrolled });
     return (
       <QbPrintView
         ctx={ctx}
@@ -86,7 +98,7 @@ export default async function SiteBankChapterPage({ params, searchParams }: { pa
   // No tab asked for: open the first one that has questions.
   const tab = tabFromParam(s.tab) ?? SECTION_TABS.find((t) => allCounts[t] > 0) ?? SECTION_TABS[0];
   const page = Math.max(1, Number(asciiDigits(s.page ?? "")) || 1);
-  const list = await listChapterQuestions(db, teacher.id, place, { tab, filters, page, focus: s.q });
+  const list = await listChapterQuestions(db, teacher.id, place, { tab, filters, page, focus: s.q, unlockEnrolled });
   const all = await getSiteSubjects(teacher.id);
   const chapters = subject.chapters;
   const prev = chapters[index - 1];
@@ -124,8 +136,14 @@ export default async function SiteBankChapterPage({ params, searchParams }: { pa
       cards={
         tab === "board"
           ? []
-          : list.items.map((q, i) => toCard(q, (list.page - 1) * CHAPTER_PAGE_SIZE + i + 1, ctx, { topic: q.topicId ? topicOf.get(q.topicId) : undefined }))
+          : list.items.map((q, i) =>
+              toCard(q, (list.page - 1) * CHAPTER_PAGE_SIZE + i + 1, ctx, {
+                topic: q.topicId ? topicOf.get(q.topicId) : undefined,
+                locked: q.visibility === "enrolled" && !unlockEnrolled ? locked : undefined,
+              }),
+            )
       }
+      lockedText={unlockEnrolled ? undefined : locked.text}
     />
   );
 }

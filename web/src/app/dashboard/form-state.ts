@@ -5,7 +5,7 @@ import { getLocale } from "@/i18n/server";
 import type { FieldError, FieldErrors, Input } from "@/lib/form-input";
 
 /** The sentence for each reason a field can be refused, in the visitor's language. */
-function messages(e: Dictionary["errors"]): Record<FieldError, string> {
+export function messages(e: Dictionary["errors"]): Record<FieldError, string> {
   return {
     required: e.required,
     tooLong: e.tooLong,

@@ -159,6 +159,30 @@ function QbCard({
 
   const article = "scroll-mt-4 overflow-hidden rounded-2xl border border-qb-line bg-qb-surface focus:outline-none";
 
+  // For enrolled students only, and this visitor isn't one: that it exists, and the way in.
+  if (card.locked) {
+    return (
+      <article id={card.anchor} tabIndex={-1} aria-label={card.badge} className={article}>
+        <div className="flex flex-col gap-4 px-[22px] py-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <QbBadge tab={card.tab}>{card.badge}</QbBadge>
+            {tags}
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl bg-qb-surface-alt px-4 py-3.5">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 text-qb-subtle">
+              <rect x="4" y="11" width="16" height="10" rx="2" />
+              <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+            </svg>
+            <p className="m-0 min-w-0 flex-[1_1_220px] text-qb-muted">{card.locked.text}</p>
+            <a href={card.locked.href} className={cx(qbButton.accent, "h-11 px-4")} data-print-hide>
+              {card.locked.cta}
+            </a>
+          </div>
+        </div>
+      </article>
+    );
+  }
+
   if (card.kind === "cq") {
     const isOpen = !!open[card.id];
     const hasAnswers = card.parts?.some((p) => p.answer);

@@ -184,7 +184,7 @@ export default async function BankChapterPage({ params, searchParams }: { params
           : list.items.map((q, i) =>
               toCard(q, (list.page - 1) * BANK_PAGE_SIZE + i + 1, ctx, {
                 topic: q.topicId ? topicOf.get(q.topicId) : undefined,
-                privateLabel: q.visibility === "private" ? t.privateBadge : undefined,
+                privateLabel: q.visibility === "private" ? t.privateBadge : q.visibility === "enrolled" ? t.enrolledBadge : undefined,
                 tools: (
                   <Tools
                     question={q}

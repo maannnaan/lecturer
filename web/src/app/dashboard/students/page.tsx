@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Plus, Users } from "lucide-react";
+import { Download, Plus, Upload, Users } from "lucide-react";
 import { formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { asciiDigits } from "@/lib/digits";
@@ -57,10 +57,21 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
           <p className="page-lead">{t.lead}</p>
         </div>
         {all > 0 && (
-          <Link href="/dashboard/students/new" className="btn btn-primary btn-sm">
-            <Plus aria-hidden="true" />
-            {t.new}
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            {/* A file to download, so a plain link: the router mustn't try to open it as a page. */}
+            <a href="/dashboard/students/export" className="btn btn-ghost btn-sm" download>
+              <Download aria-hidden="true" />
+              {t.io.export}
+            </a>
+            <Link href="/dashboard/students/import" className="btn btn-ghost btn-sm">
+              <Upload aria-hidden="true" />
+              {t.io.import}
+            </Link>
+            <Link href="/dashboard/students/new" className="btn btn-primary btn-sm">
+              <Plus aria-hidden="true" />
+              {t.new}
+            </Link>
+          </div>
         )}
       </header>
 
@@ -70,10 +81,16 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
             <Users />
           </span>
           <p className="empty-text">{t.empty}</p>
-          <Link href="/dashboard/students/new" className="btn btn-primary">
-            <Plus aria-hidden="true" />
-            {t.new}
-          </Link>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Link href="/dashboard/students/new" className="btn btn-primary">
+              <Plus aria-hidden="true" />
+              {t.new}
+            </Link>
+            <Link href="/dashboard/students/import" className="btn btn-ghost">
+              <Upload aria-hidden="true" />
+              {t.io.import}
+            </Link>
+          </div>
         </div>
       ) : (
         <>

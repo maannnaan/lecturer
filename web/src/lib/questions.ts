@@ -118,7 +118,8 @@ export function activeFilters(filters: ChapterFilters): number {
   return Object.keys(filterParams(filters)).length;
 }
 
-export const VISIBILITIES = ["public", "private"] as const;
+/** Who sees a question on the website: everyone, only the teacher's enrolled students, or only the teacher. */
+export const VISIBILITIES = ["public", "enrolled", "private"] as const;
 export type Visibility = (typeof VISIBILITIES)[number];
 
 /** Education boards a board question can come from; names live in the dictionaries. */

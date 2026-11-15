@@ -501,7 +501,11 @@ export const bankTopics = pgTable(
 
 // In the database's own order: "textbook" was "problem" until migration 0003 renamed it.
 export const questionType = pgEnum("question_type", ["mcq", "mcq_multi", "short", "creative", "textbook", "practice"]);
-export const questionVisibility = pgEnum("question_visibility", ["public", "private"]);
+/**
+ * Who sees a question on the website: everyone (public), only the teacher (private), or only the
+ * teacher's students who are in a course (enrolled; everyone else sees that it exists, not what it says).
+ */
+export const questionVisibility = pgEnum("question_visibility", ["public", "private", "enrolled"]);
 
 export type QuestionImage = { mediaId: string; url: string };
 /** One part of a creative question (ক, খ, গ, ঘ) with its marks and, optionally, a worked answer. */

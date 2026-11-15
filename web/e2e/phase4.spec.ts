@@ -220,6 +220,109 @@ test("the teacher adds an offline student, enrols them, gives them a login, and 
   await expect(page.getByRole("row").nth(2)).toContainText("তাসনিম আক্তার");
 });
 
+test("a question for enrolled students only: others see that it exists, never what it says", async ({ page, request, browser }) => {
+  // The teacher writes one in chapter 4's SQ tab.
+  await teacherLogin(page);
+  await page.goto("/dashboard/bank");
+  await page.getByRole("region", { name: /শ্রেণি বেছে/ }).getByRole("link").filter({ hasText: "এইচএসসি" }).click();
+  await page.locator("#qb-subjects:visible > a").filter({ hasText: "পদার্থবিজ্ঞান ১ম পত্র" }).click();
+  await page.getByRole("list", { name: "অধ্যায়" }).getByRole("link").filter({ hasText: "নিউটনিয়ান বলবিদ্যা" }).click();
+  await page.getByRole("navigation", { name: "প্রশ্নের ধরন" }).getByRole("link").filter({ hasText: /^SQ/ }).click();
+  await expect(page).toHaveURL(/tab=sq/);
+  await page.getByRole("link", { name: /^নতুন / }).filter({ visible: true }).first().click();
+  await field(page, "প্রশ্ন").click();
+  await page.keyboard.type("ভর্তিদের বিশেষ প্রশ্ন: ঘাত বল বলতে কী বোঝ?");
+  await page.getByRole("radio", { name: /^শুধু ভর্তি শিক্ষার্থী/ }).check();
+  await page.getByRole("button", { name: "প্রশ্ন যোগ করুন" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/bank\/subject\/[0-9a-f-]{36}\/[0-9a-f-]{36}\?tab=sq$/);
+  await expect(page.getByRole("article").filter({ hasText: "ভর্তিদের বিশেষ প্রশ্ন" })).toContainText("শুধু ভর্তি শিক্ষার্থী");
+
+  // A visitor: the page says there is such a question, and not one word of it, in any form.
+  const CHAPTER = "/tanvir/bank/1/1/4";
+  for (const address of [`${CHAPTER}?tab=sq`, `${CHAPTER}?print=chapter`]) {
+    const html = await (await request.get(address)).text();
+    expect(html, address).not.toContain("ভর্তিদের বিশেষ প্রশ্ন");
+    expect(html, address).not.toContain("ঘাত বল বলতে");
+  }
+  const outsider = await browser.newContext();
+  const visit = await outsider.newPage();
+  await visit.goto(`${CHAPTER}?tab=sq`);
+  const lockedCard = visit.getByRole("article").filter({ hasText: "এই প্রশ্নটি শুধু ভর্তি শিক্ষার্থীদের জন্য।" });
+  await expect(lockedCard).toBeVisible();
+  // The way in: signing in brings them straight back to this chapter.
+  await lockedCard.getByRole("link", { name: "লগইন করো" }).click();
+  await expect(visit).toHaveURL(/\/tanvir\/login\?next=/);
+
+  // সাদিয়া has an account but was turned down: still locked, with the courses to look at.
+  await visit.getByLabel("মোবাইল নম্বর").fill("01900000002");
+  await visit.getByLabel("পাসওয়ার্ড").fill("student-password");
+  await visit.getByRole("button", { name: "লগইন করো" }).click();
+  await expect(visit).toHaveURL(new RegExp(`${CHAPTER}$`));
+  await visit.goto(`${CHAPTER}?tab=sq`);
+  await expect(visit.getByRole("article").filter({ hasText: "এই প্রশ্নটি শুধু ভর্তি শিক্ষার্থীদের জন্য।" }).getByRole("link", { name: "কোর্সগুলো দেখো" })).toBeVisible();
+  await expect(visit.getByText("ভর্তিদের বিশেষ প্রশ্ন")).toHaveCount(0);
+  await outsider.close();
+
+  // নাফিসা is in a course: for her it is a question like any other.
+  const enrolled = await browser.newContext();
+  const hers = await enrolled.newPage();
+  await hers.goto("/tanvir/login");
+  await hers.getByLabel("মোবাইল নম্বর").fill(STUDENT.phone);
+  await hers.getByLabel("পাসওয়ার্ড").fill("nafisa-new-pass");
+  await hers.getByRole("button", { name: "লগইন করো" }).click();
+  await expect(hers).toHaveURL(/\/tanvir\/me$/);
+  await hers.goto(`${CHAPTER}?tab=sq`);
+  await expect(hers.getByRole("article").filter({ hasText: "ভর্তিদের বিশেষ প্রশ্ন: ঘাত বল বলতে কী বোঝ?" })).toBeVisible();
+  await expect(hers.getByText("এই প্রশ্নটি শুধু ভর্তি শিক্ষার্থীদের জন্য।")).toHaveCount(0);
+  await enrolled.close();
+});
+
+test("students are downloaded as a CSV file, and added from one after a check", async ({ page }) => {
+  await teacherLogin(page);
+  await page.goto("/dashboard/students");
+
+  // The download: a file Excel opens with Bangla intact, with the list's students and their places.
+  const download = await page.request.get("/dashboard/students/export");
+  expect(download.headers()["content-type"]).toContain("text/csv");
+  expect(download.headers()["content-disposition"]).toMatch(/attachment; filename="students-tanvir-\d{4}-\d{2}-\d{2}\.csv"/);
+  const csv = (await download.body()).toString("utf8");
+  expect(csv.charCodeAt(0)).toBe(0xfeff);
+  expect(csv).toContain("নাম,মোবাইল নম্বর,অভিভাবকের নাম");
+  expect(csv).toContain("রাহিম উদ্দিন,01900000001,করিম উদ্দিন,01900000009,ঢাকা কলেজ,একাদশ,,পদার্থবিজ্ঞান ১ম পত্র,ক ব্যাচ,1,");
+
+  await page.getByRole("link", { name: "CSV থেকে যোগ করুন" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/students\/import$/);
+  const sheet = page.getByLabel("অথবা তালিকাটি এখানে পেস্ট করুন");
+
+  // A sheet with mistakes: each is named by its line, and nothing is added.
+  await sheet.fill("নাম,মোবাইল নম্বর,রোল\nআরিফ হোসেন,12345,\n,01933333331,x");
+  await page.getByRole("button", { name: "যাচাই করুন" }).click();
+  const report = page.locator("form [role=alert]");
+  await expect(report).toContainText("৩টি জায়গা ঠিক করতে হবে");
+  await expect(report).toContainText("লাইন ২ · মোবাইল নম্বর: সঠিক মোবাইল নম্বর দিন");
+  await expect(report).toContainText("লাইন ৩ · নাম: এটি পূরণ করুন");
+  await expect(report).toContainText("লাইন ৩ · রোল: রোল শুধু সংখ্যায় লিখুন");
+  await expect(page.getByRole("button", { name: "যোগ করুন", exact: true })).toHaveCount(0);
+
+  // Put right, checked, then added into the first course's batch খ; one of them was already on the list.
+  await sheet.fill("নাম,মোবাইল নম্বর,শ্রেণি,রোল\nআরিফ হোসেন,01933333331,একাদশ,৭১\nরাহিম উদ্দিন,01900000001,,\nমিতু আক্তার,1933333332,,");
+  await page.getByLabel("সবাইকে এই কোর্সে ভর্তি করুন").selectOption({ label: "পদার্থবিজ্ঞান ১ম পত্র" });
+  await page.getByLabel("ব্যাচ", { exact: true }).selectOption({ label: "খ ব্যাচ · রবি-মঙ্গল-বৃহস্পতি, সন্ধ্যা ৬টা" });
+  await page.getByRole("button", { name: "যাচাই করুন" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "সব ঠিক আছে: ৩ জন শিক্ষার্থী যোগ করা যাবে।" })).toBeVisible();
+  await shot(page, "dashboard-students-import-1280");
+  await page.getByRole("button", { name: "যোগ করুন", exact: true }).click();
+  const done = page.getByRole("status").filter({ hasText: "২ জন নতুন শিক্ষার্থী যোগ হয়েছে। ১ জন আগে থেকেই তালিকায় ছিল।" });
+  await expect(done).toContainText("৩ জন কোর্সে ভর্তি হয়েছে।");
+
+  await page.getByRole("link", { name: "শিক্ষার্থী তালিকা দেখুন" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/students$/);
+  await expect(page.getByRole("listitem").filter({ hasText: "আরিফ হোসেন" })).toContainText("পদার্থবিজ্ঞান ১ম পত্র · খ ব্যাচ · রোল ৭১");
+  // A number a spreadsheet had shortened is whole again; and রাহিম moved to the batch chosen, keeping his roll.
+  await expect(page.getByRole("listitem").filter({ hasText: "মিতু আক্তার" })).toContainText("01933333332");
+  await expect(page.getByRole("listitem").filter({ hasText: "রাহিম উদ্দিন" })).toContainText("খ ব্যাচ · রোল ১");
+});
+
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 360, height: 780 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 
@@ -229,7 +332,7 @@ test.describe("on a phone", () => {
       expect(await page.evaluate(() => document.documentElement.scrollWidth - 360), path).toBeLessThanOrEqual(0);
     }
     await teacherLogin(page);
-    for (const path of ["/dashboard/requests", "/dashboard/students", "/dashboard/students/new", "/dashboard/batches"]) {
+    for (const path of ["/dashboard/requests", "/dashboard/students", "/dashboard/students/new", "/dashboard/students/import", "/dashboard/batches"]) {
       await page.goto(path);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth - 360), path).toBeLessThanOrEqual(0);

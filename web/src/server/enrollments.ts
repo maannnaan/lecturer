@@ -264,6 +264,17 @@ export async function countPendingEnrollments(db: Database, teacherId: string): 
   return Number(total);
 }
 
+/** Whether a student is in any of the teacher's courses now: what opens the enrolled-only questions to them. */
+export async function hasActiveEnrollment(db: Database, teacherId: string, studentId: string): Promise<boolean> {
+  if (!isUuid(studentId)) return false;
+  const [row] = await db
+    .select({ id: enrollments.id })
+    .from(enrollments)
+    .where(and(eq(enrollments.teacherId, teacherId), eq(enrollments.studentId, studentId), eq(enrollments.status, "active")))
+    .limit(1);
+  return Boolean(row);
+}
+
 /** A student's enrolment in one course, if any: what the course page shows them. */
 export async function findEnrollment(db: Database, teacherId: string, studentId: string, courseId: string): Promise<Enrollment | null> {
   if (!isUuid(studentId) || !isUuid(courseId)) return null;

@@ -1,5 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { parseCourse } from "@/lib/courses";
+import { parseStudentCsv } from "@/lib/student-csv";
+import { exportStudents, importStudents } from "@/server/student-import";
 import { verifyPassword } from "@/server/auth/password";
 import { createSession, validateSession } from "@/server/auth/session";
 import { BatchNameTaken, createBatch, deleteBatch, listBatches, listOpenBatches, updateBatch } from "@/server/batches";
@@ -193,6 +195,47 @@ describe("admission", () => {
     expect(await approveEnrollment(db, stranger.id, asked.enrollment.id, place)).toEqual({ ok: false, reason: "missing" });
     expect(await closeEnrollment(db, stranger.id, asked.enrollment.id, "rejected")).toBeNull();
     expect(await listEnrollments(db, stranger.id, { courseId: mine.id })).toEqual([]);
+  });
+});
+
+describe("a sheet of students", () => {
+  it("adds new students, leaves the ones already there, and enrols everyone with the sheet's rolls", async () => {
+    const t = await makeTeacher(db);
+    const c = await course(t, "paid");
+    const batch = (await createBatch(db, t.id, c.id, { name: "ক", schedule: "", capacity: null, open: true }))!;
+    const known = await createStudent(db, { teacherId: t.id, name: "আগের জন", phone: "01911000001", password: "secret1" });
+    const sheet = parseStudentCsv(["নাম,মোবাইল,রোল", "নতুন এক,01911000002,7", "আগের জন (নতুন নাম),01911000001,", "নতুন দুই,01911000003,7"].join("\n"));
+    expect(sheet.problems).toEqual([]);
+
+    const result = await importStudents(db, t.id, sheet.students, { courseId: c.id, batchId: batch.id });
+    // The third row's roll is the first row's: that student is added, but not enrolled.
+    expect(result).toEqual({ added: 2, existing: 1, enrolled: 2, problems: [{ line: 4, reason: "rollTaken" }] });
+    // The one already there keeps their name and their login.
+    expect(await findStudent(db, t.id, known.id)).toMatchObject({ name: "আগের জন", hasLogin: true, source: "online" });
+    const places = await listEnrollments(db, t.id, { status: "active", courseId: c.id });
+    expect(places.map((e) => [e.studentName, e.roll, e.batchName, e.fee])).toEqual([
+      ["নতুন এক", "7", "ক", 1500],
+      ["আগের জন", "8", "ক", 1500],
+    ]);
+
+    // Without a course, they only join the list. Another teacher's course is no target at all.
+    const more = parseStudentCsv("নাম,মোবাইল\nতৃতীয়,01911000004");
+    expect(await importStudents(db, t.id, more.students)).toEqual({ added: 1, existing: 0, enrolled: 0, problems: [] });
+    const other = parseStudentCsv("নাম,মোবাইল\nচতুর্থ,01911000005");
+    expect((await importStudents(db, stranger.id, other.students, { courseId: c.id, batchId: null })).problems).toEqual([{ line: 2, reason: "course" }]);
+
+    // The download: a row per course a student is in, and one for a student in none.
+    const rows = await exportStudents(db, t.id);
+    expect(rows.map((row) => [row.student.name, row.place?.courseTitle ?? null, row.place?.roll ?? null])).toEqual([
+      ["আগের জন", "কোর্স paid", "8"],
+      ["তৃতীয়", null, null],
+      ["নতুন এক", "কোর্স paid", "7"],
+      ["নতুন দুই", null, null],
+    ]);
+    // Another teacher's download has their own students, none of these.
+    const theirs = (await exportStudents(db, stranger.id)).map((row) => row.student.name);
+    expect(theirs).toContain("চতুর্থ");
+    expect(theirs).not.toContain("নতুন এক");
   });
 });
 

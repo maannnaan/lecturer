@@ -34,7 +34,7 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ i
   const chapter = subject?.chapters.find((ch) => ch.id === question.chapterId);
   const bankClass = classes.find((x) => x.id === subject?.classId);
   const onSite =
-    question.visibility === "public" && subject && chapter && bankClass
+    question.visibility !== "private" && subject && chapter && bankClass
       ? `/${teacher.handle}/bank/${bankClass.number}/${subject.number}/${chapter.number}?tab=${tabOf(question.type)}`
       : null;
 

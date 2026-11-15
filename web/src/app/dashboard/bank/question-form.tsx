@@ -16,6 +16,8 @@ import {
   MIN_STATEMENTS,
   OPTION_COUNT,
   type QuestionType,
+  VISIBILITIES,
+  type Visibility,
   isMcq,
   isProblem,
 } from "@/lib/questions";
@@ -53,7 +55,7 @@ export type QuestionData = {
   subjectId: string;
   chapterId: string | null;
   topicId: string | null;
-  visibility: "public" | "private";
+  visibility: Visibility;
   body: QuestionBody;
   board: string;
   year: number | null;
@@ -346,7 +348,7 @@ export function QuestionForm({
           />
           <div className="flex flex-col gap-2" role="radiogroup" aria-label={t.visibility}>
             <span className="field-label">{t.visibility}</span>
-            {(["public", "private"] as const).map((option) => (
+            {VISIBILITIES.map((option) => (
               <label key={option} className="choice">
                 <input type="radio" name="visibility" value={option} defaultChecked={(s("visibility") || "public") === option} />
                 <span>{t.visibilityOptions[option]}</span>

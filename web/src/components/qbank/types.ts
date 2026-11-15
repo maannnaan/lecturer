@@ -40,6 +40,11 @@ export type QbCardData = {
   /** A problem's worked solution. */
   solution?: ReactNode | null;
   video?: string;
+  /**
+   * An enrolled-only question shown to someone who can't open it: what to tell them, and where to
+   * go (sign in, or the courses). The card then has no text of the question at all.
+   */
+  locked?: { text: string; cta: string; href: string };
   /** Teacher only: a private question, and the edit/copy/move buttons. */
   privateLabel?: string;
   tools?: ReactNode;

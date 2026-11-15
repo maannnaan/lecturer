@@ -308,6 +308,45 @@ describe("questions", () => {
   });
 });
 
+describe("enrolled-only questions", () => {
+  it("are counted and listed for everyone, but hand their text only to those entitled", async () => {
+    const t = await makeTeacher(db);
+    const { subject: s, ch1 } = await setup(t);
+    await created(t, input("mcq", s.id, ch1.id, { stem: "সবার প্রশ্ন" }));
+    await created(t, input("mcq", s.id, ch1.id, { stem: "ভর্তিদের গোপন প্রশ্ন", visibility: "enrolled", explanation: "গোপন ব্যাখ্যা", board: "dhaka", year: "2024", videoUrl: "https://youtu.be/abc" }));
+    await created(t, input("mcq", s.id, ch1.id, { stem: "শিক্ষকের নিজের", visibility: "private" }));
+    const place = { subjectId: s.id, chapterId: ch1.id };
+
+    // A visitor: both the public and the enrolled-only question are there, the private one never.
+    const visitor = await listChapterQuestions(db, t.id, place, { tab: "mcq" });
+    expect(visitor.total).toBe(2);
+    expect(visitor.counts.mcq).toBe(2);
+    const locked = visitor.items[1];
+    // Locked: that it exists, its type and where it is from. Nothing of what it says.
+    expect(locked).toMatchObject({ visibility: "enrolled", type: "mcq", board: "dhaka", year: 2024, body: { stem: "" }, videoUrl: "" });
+    expect(JSON.stringify(visitor.items)).not.toContain("গোপন");
+    expect(visitor.items[0].body.stem).toBe("সবার প্রশ্ন");
+    // The board tab and a focused question go the same way.
+    expect(JSON.stringify((await listChapterQuestions(db, t.id, place, { tab: "board", focus: locked.id })).items)).not.toContain("গোপন");
+
+    // An enrolled student (or the owner on their site) gets it whole; still never the private one.
+    const student = await listChapterQuestions(db, t.id, place, { tab: "mcq", unlockEnrolled: true });
+    expect(student.items.map((q) => q.body.stem)).toEqual(["সবার প্রশ্ন", "ভর্তিদের গোপন প্রশ্ন"]);
+    expect(student.items[1].body.explanation).toBe("গোপন ব্যাখ্যা");
+    // The teacher's own bank has all three.
+    expect((await listChapterQuestions(db, t.id, place, { tab: "mcq", includePrivate: true })).total).toBe(3);
+
+    // A printout leaves locked questions out altogether.
+    expect((await listChapterForPrint(db, t.id, place, {})).map((q) => q.body.stem)).toEqual(["সবার প্রশ্ন"]);
+    expect((await listChapterForPrint(db, t.id, place, { unlockEnrolled: true })).map((q) => q.body.stem)).toEqual(["সবার প্রশ্ন", "ভর্তিদের গোপন প্রশ্ন"]);
+    expect(await listChapterForPrint(db, t.id, place, { includePrivate: true })).toHaveLength(3);
+
+    // The website's counts include them (students should know there is more), never private ones.
+    const counts = await bankCounts(db, t.id, { publicOnly: true });
+    expect(counts.reduce((sum, row) => sum + row.n, 0)).toBe(2);
+  });
+});
+
 describe("sub-chapters", () => {
   it("are numbered on, never reused, come with their chapter in order, and move and rename", async () => {
     const t = await makeTeacher(db);
