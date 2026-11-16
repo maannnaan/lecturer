@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
-import { parseCourse } from "@/lib/courses";
 import {
   bankAddress,
   bankClassAddress,
@@ -13,11 +12,10 @@ import {
   listSubjectsWithChapters,
   removeBankClass,
 } from "@/server/bank";
-import { createCourse, deleteCourse } from "@/server/courses";
+import { deleteCourse } from "@/server/courses";
 import type { Database } from "@/server/db";
-import { courses } from "@/server/db/schema";
 import { getQuestion } from "@/server/questions";
-import { dbBeforeMigration, makeTeacher } from "../helpers/db";
+import { dbBeforeMigration } from "../helpers/db";
 
 describe("migration 0003_bank_by_class", () => {
   let db: Database;
@@ -27,7 +25,11 @@ describe("migration 0003_bank_by_class", () => {
   });
 
   it("reads each existing course's class from its old free-text level, or else its title", async () => {
-    const t = await makeTeacher(db);
+    // Rows go in with plain SQL: this is an older database, and today's code writes today's columns.
+    const one = async <T>(query: ReturnType<typeof sql>) => ((await db.execute(query)) as unknown as { rows: T[] }).rows[0];
+    const t = await one<{ id: string }>(
+      sql`insert into teachers (handle, name_bn, name_en, phone, password_hash) values ('old-teacher', 'ক', 'K', '01711111199', 'x') returning id`,
+    );
     // [title, old level, the class it should land in]
     const cases: [string, string, string][] = [
       ["পদার্থবিজ্ঞান ১ম পত্র", "এইচএসসি", "hsc"],
@@ -43,11 +45,11 @@ describe("migration 0003_bank_by_class", () => {
       ["স্পোকেন ইংলিশ", "", "other"],
     ];
     const ids: string[] = [];
-    for (const [title, level] of cases) {
-      const course = await createCourse(db, t.id, parseCourse({ title }).course);
+    for (const [i, [title, level]] of cases.entries()) {
       // As the course was before the migration: a level, and no class yet.
-      // (`level` has left the schema since, so it is set with plain SQL.)
-      await db.execute(sql`update courses set level = ${level}, grade = 'other' where id = ${course.id}`);
+      const course = await one<{ id: string }>(
+        sql`insert into courses (teacher_id, number, title, level, grade, position) values (${t.id}, ${i + 1}, ${title}, ${level}, 'other', ${i}) returning id`,
+      );
       ids.push(course.id);
     }
 
@@ -55,7 +57,7 @@ describe("migration 0003_bank_by_class", () => {
     const backfill = migration.split("--> statement-breakpoint").find((statement) => statement.includes("UPDATE"));
     await db.execute(sql.raw(backfill!));
 
-    const rows = await db.select({ id: courses.id, grade: courses.grade }).from(courses).where(eq(courses.teacherId, t.id));
+    const { rows } = (await db.execute(sql`select id, grade from courses where teacher_id = ${t.id}`)) as unknown as { rows: { id: string; grade: string }[] };
     const grades = new Map(rows.map((row) => [row.id, row.grade]));
     expect(ids.map((id) => grades.get(id))).toEqual(cases.map(([, , grade]) => grade));
   });
