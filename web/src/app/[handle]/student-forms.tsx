@@ -2,7 +2,8 @@
 
 import { useActionState } from "react";
 import { Field, FormMessages, SelectField, SubmitButton, TextAreaField, emptyForm } from "@/components/form";
-import { applyAction, changePasswordAction, joinAction, loginStudentAction } from "./student-actions";
+import { type PeriodOption, PeriodFields } from "@/components/period-fields";
+import { applyAction, changePasswordAction, claimPaymentAction, joinAction, loginStudentAction } from "./student-actions";
 
 // The forms of a student's account on a teacher's site. Their text arrives as plain strings: the
 // dictionaries hold functions too, which can't be handed to the browser.
@@ -113,7 +114,50 @@ export function ApplyForm({
   );
 }
 
-export type PasswordText = { currentPassword: string; newPassword: string; passwordHint: string; changePassword: string; working: string; saved: string };
+export type PayText = { months: string; total: string; method: string; txn: string; txnHint: string; sender: string; optional: string; submit: string; working: string };
+
+/**
+ * A student reports money they sent: which months, by which way, and its transaction id. The total
+ * shown is only for them to read; the server works the amount out itself.
+ */
+export function PayForm({
+  handle,
+  enrollmentId,
+  options,
+  fee,
+  taka,
+  methods,
+  t,
+}: {
+  handle: string;
+  enrollmentId: string;
+  options: PeriodOption[];
+  fee: number;
+  taka: string[];
+  /** The ways the teacher takes money, each with its name. */
+  methods: { value: string; label: string }[];
+  t: PayText;
+}) {
+  const [state, action] = useActionState(claimPaymentAction, emptyForm);
+  const v = (name: string) => state.values?.[name] ?? "";
+  const e = state.errors;
+  return (
+    <form action={action} className="flex flex-col gap-5" noValidate>
+      <input type="hidden" name="handle" value={handle} />
+      <input type="hidden" name="enrollmentId" value={enrollmentId} />
+      <PeriodFields options={options} fee={fee} legend={t.months} error={e.months} amountLabel={t.total} editable={false} taka={taka} />
+      <SelectField name="method" label={t.method} defaultValue={v("method") || methods[0]?.value || ""} error={e.method} options={methods} />
+      <div className="grid gap-5 sm:grid-cols-2">
+        <Field name="txnId" label={t.txn} hint={t.txnHint} defaultValue={v("txnId")} error={e.txnId} autoCapitalize="characters" autoComplete="off" required />
+        <Field name="senderNumber" label={t.sender} labelNote={t.optional} defaultValue={v("senderNumber")} error={e.senderNumber} inputMode="tel" placeholder="01XXXXXXXXX" />
+      </div>
+      <FormMessages state={state} saved="" />
+      <SubmitButton pendingLabel={t.working}>{t.submit}</SubmitButton>
+    </form>
+  );
+}
+
+export type PasswordText ={ currentPassword: string; newPassword: string; passwordHint: string; changePassword: string; working: string; saved: string };
 
 export function ChangePasswordForm({ handle, t }: { handle: string; t: PasswordText }) {
   const [state, action] = useActionState(changePasswordAction, emptyForm);

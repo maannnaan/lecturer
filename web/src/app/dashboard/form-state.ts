@@ -25,6 +25,10 @@ export function messages(e: Dictionary["errors"]): Record<FieldError, string> {
     roll: e.roll,
     rollTaken: e.rollTaken,
     batchTaken: e.batchTaken,
+    periodsTaken: e.periodsTaken,
+    txnTaken: e.txnTaken,
+    pickMonths: e.pickMonths,
+    payMethodOff: e.payMethodOff,
   };
 }
 

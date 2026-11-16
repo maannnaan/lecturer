@@ -64,7 +64,9 @@ export async function proxy(request: NextRequest) {
   // lecturer.bd/<handle>/me: a student's own page. Without their cookie for this teacher's site,
   // the way in (the page itself checks the session).
   if (rest[0] === "me") {
-    if (rest.length > 1) return notFound(request);
+    // Under it: paying (/me/pay) and a payment's receipt (/me/receipt/<id>).
+    const known = rest.length === 1 || (rest.length === 2 && rest[1] === "pay") || (rest.length === 3 && rest[1] === "receipt" && /^[0-9a-f-]{36}$/.test(rest[2]));
+    if (!known) return notFound(request);
     if (!request.cookies.has(studentCookie(site.teacherId))) return redirect(request, `/${handle}/login`, 307);
   }
   // lecturer.bd/<handle>/courses/<number>

@@ -8,6 +8,7 @@ import { getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { type FieldErrors, formInput } from "@/lib/form-input";
 import { isUuid } from "@/lib/ids";
+import { parseClaim } from "@/lib/payments";
 import { normalizePhone } from "@/lib/phone";
 import { parseJoin, parsePassword } from "@/lib/students";
 import { sessionCookieOptions, studentCookie } from "@/server/auth/cookies";
@@ -16,6 +17,7 @@ import { verifyDecoy, verifyPassword } from "@/server/auth/password";
 import { createSession, revokeSession } from "@/server/auth/session";
 import { getDb } from "@/server/db";
 import { requestEnrollment } from "@/server/enrollments";
+import { claimPayment } from "@/server/payments";
 import { clearAttempts, takeAttempt } from "@/server/rate-limit";
 import { StudentPhoneTaken, createStudent, findStudentForLogin, setStudentPassword, studentPasswordHash } from "@/server/students";
 import { resolveHandle } from "@/server/teachers";
@@ -130,6 +132,36 @@ export async function applyAction(_prev: FormState, formData: FormData): Promise
   if (!result.ok) return { errors: {}, formError: e.generic };
   refresh();
   return { ok: true, errors: {} };
+}
+
+/**
+ * The signed-in student reports money they sent for some months of a course of their own. The
+ * amount isn't theirs to state (the data layer works it out); the teacher verifies it afterwards.
+ */
+export async function claimPaymentAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const input = formInput(formData);
+  const e = await errorTexts();
+  const teacher = await siteTeacher(input.handle);
+  if (!teacher) return { errors: {}, formError: e.generic };
+  const student = await getCurrentStudent(teacher.id);
+  if (!student) redirect(`/${teacher.handle}/login`);
+
+  const { claim, errors } = parseClaim(input);
+  if (errors.months === "required") errors.months = "pickMonths";
+  const refusal = await refused(errors, input);
+  if (refusal) return refusal;
+
+  const db = await getDb();
+  // A handful of claims an hour is plenty; more is someone guessing transaction ids.
+  if (!(await takeAttempt(db, `student-claim:${student.id}`, 10, 3600))) return { errors: {}, formError: e.tooMany };
+  const result = await claimPayment(db, teacher.id, student.id, claim, teacher.paymentInfo);
+  if (!result.ok) {
+    if (result.reason === "txnTaken") return (await refused({ txnId: "txnTaken" }, input))!;
+    if (result.reason === "periods" || result.reason === "periodsTaken") return (await refused({ months: "periodsTaken" }, input))!;
+    if (result.reason === "method") return (await refused({ method: "payMethodOff" }, input))!;
+    return { errors: {}, formError: e.generic };
+  }
+  redirect(`/${teacher.handle}/me?paid=1`);
 }
 
 /** The signed-in student changes their own password, proving the current one first. */

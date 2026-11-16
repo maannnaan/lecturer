@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowRight, Ban, BadgeCheck, BookOpen, Check, CircleAlert, FilePlus2, Globe, Hourglass, Library, Megaphone, Plus } from "lucide-react";
-import { type Dictionary, type Locale, formatDate, formatNumber, getDictionary } from "@/i18n";
+import { ArrowRight, Ban, BadgeCheck, BookOpen, Check, CircleAlert, FilePlus2, Globe, Hourglass, Library, Megaphone, Plus, Users, Wallet } from "lucide-react";
+import { type Dictionary, type Locale, formatDate, formatNumber, formatTaka, getDictionary } from "@/i18n";
+import { dhakaMonth } from "@/lib/students";
+import { collectedByMonth, listDues } from "@/server/payments";
+import { countStudents } from "@/server/students";
 import { getLocale } from "@/i18n/server";
 import { richPlain } from "@/lib/rich-text";
 import { requireTeacher } from "@/server/auth/current";
@@ -27,11 +30,15 @@ export default async function DashboardHome() {
   const d = getDictionary(locale);
   const o = d.dashboard.overview;
   const db = await getDb();
-  const [courses, classes, byType, notices] = await Promise.all([
+  const month = dhakaMonth();
+  const [courses, classes, byType, notices, studentCount, collected, dues] = await Promise.all([
     listCourses(db, teacher.id),
     listBankClasses(db, teacher.id),
     countByType(db, teacher.id),
     listNotices(db, teacher.id),
+    countStudents(db, teacher.id),
+    collectedByMonth(db, teacher.id, [month]),
+    listDues(db, teacher.id, {}, month),
   ]);
   const questions = Object.values(byType).reduce((sum, n) => sum + (n ?? 0), 0);
   const site = teacher.site;
@@ -58,6 +65,11 @@ export default async function DashboardHome() {
         <h2 id="numbers-title" className="sr-only">
           {o.numbers}
         </h2>
+        <div className="mb-3 grid grid-cols-3 gap-3 sm:mb-4 sm:gap-4">
+          <Stat href="/dashboard/students" icon={<Users aria-hidden="true" />} value={formatNumber(studentCount, locale)} label={o.students} />
+          <Stat href="/dashboard/payments?tab=all" icon={<Wallet aria-hidden="true" />} value={formatTaka(collected.get(month) ?? 0, locale)} label={o.collected} />
+          <Stat href="/dashboard/payments?tab=dues" icon={<CircleAlert aria-hidden="true" />} value={formatTaka(dues.reduce((sum, due) => sum + due.amount, 0), locale)} label={o.dues} />
+        </div>
         <div className="grid grid-cols-3 gap-3 sm:gap-4">
           <Stat href="/dashboard/courses" icon={<BookOpen aria-hidden="true" />} value={formatNumber(courses.length, locale)} label={o.courses} />
           <Stat href="/dashboard/bank" icon={<Library aria-hidden="true" />} value={formatNumber(questions, locale)} label={o.questions} />

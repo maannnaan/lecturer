@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2, Wallet } from "lucide-react";
 import { PendingButton } from "@/components/form";
 import { formatDate, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
@@ -87,6 +87,12 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
                     />
                   )}
                   <div className="row-actions">
+                    {e.status === "active" && e.fee > 0 && (
+                      <Link href={`/dashboard/payments/new?e=${e.id}`} className="btn btn-soft btn-xs">
+                        <Wallet aria-hidden="true" />
+                        {d.dashboard.payments.record}
+                      </Link>
+                    )}
                     {(e.status === "active" || e.status === "pending") && (
                       <form action={closeEnrollmentAction}>
                         <input type="hidden" name="enrollmentId" value={e.id} />

@@ -48,6 +48,9 @@ export type SiteContact = {
   hours?: string;
 };
 
+/** The teacher's numbers for Send Money, and their own instructions. A method without a number isn't offered. */
+export type PaymentInfo = { bkash?: string; nagad?: string; rocket?: string; bank?: string; instructions?: string };
+
 /**
  * What the teacher's own website shows beyond the account fields. Every part is optional: a
  * section with nothing in it is simply left off the site. Validated in src/lib/site.ts.
@@ -107,6 +110,10 @@ export const teachers = pgTable(
     subjectCounter: integer("subject_counter").notNull().default(0),
     /** The same for the question bank's classes. */
     classCounter: integer("class_counter").notNull().default(0),
+    /** The last receipt number handed out. */
+    receiptCounter: integer("receipt_counter").notNull().default(0),
+    /** Where students send money, and what to tell them: shown on their payment page. */
+    paymentInfo: jsonb("payment_info").$type<PaymentInfo>().notNull().default({}),
     approvedAt: timestamp("approved_at", { withTimezone: true }),
     trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
     createdAt: createdAt(),
@@ -363,6 +370,79 @@ export const enrollments = pgTable(
     index("enrollments_teacher_status_idx").on(t.teacherId, t.status),
     index("enrollments_batch_idx").on(t.batchId),
   ],
+);
+
+export const paymentKind = pgEnum("payment_kind", ["monthly", "one_time", "other"]);
+/** `bkash_gateway` is a payment bKash itself confirmed; the rest are told to us (by the teacher, or a student's claim). */
+export const paymentMethod = pgEnum("payment_method", ["cash", "bkash", "nagad", "rocket", "bank", "other", "bkash_gateway"]);
+/** A student's claim waits (pending) until the teacher verifies or rejects it; `failed` is a gateway payment that didn't go through. */
+export const paymentStatus = pgEnum("payment_status", ["pending", "verified", "rejected", "failed"]);
+export const paymentRecorder = pgEnum("payment_recorder", ["teacher", "student"]);
+
+/**
+ * Money a student paid the teacher. Amounts are whole taka. A payment the teacher records is
+ * verified at once; one a student reports (Send Money with its TxnID) is pending until the
+ * teacher has checked it. `receiptNo` comes from teachers.receipt_counter when it is verified,
+ * and is never reused.
+ */
+export const payments = pgTable(
+  "payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => teachers.id, { onDelete: "cascade" }),
+    studentId: uuid("student_id")
+      .notNull()
+      .references(() => students.id, { onDelete: "cascade" }),
+    /** The course it is for; null for a payment for something else, or once the enrolment is deleted. */
+    enrollmentId: uuid("enrollment_id").references(() => enrollments.id, { onDelete: "set null" }),
+    kind: paymentKind("kind").notNull().default("monthly"),
+    amount: integer("amount").notNull(),
+    method: paymentMethod("method").notNull().default("cash"),
+    status: paymentStatus("status").notNull().default("pending"),
+    /** The transaction id of a mobile or bank payment, upper-cased; "" for cash. */
+    txnId: text("txn_id").notNull().default(""),
+    /** The number the money was sent from, or "". */
+    senderNumber: text("sender_number").notNull().default(""),
+    gatewayPaymentId: text("gateway_payment_id").notNull().default(""),
+    receiptNo: integer("receipt_no"),
+    /** The teacher's note, or why a claim was rejected (shown to the student). */
+    note: text("note").notNull().default(""),
+    recordedBy: paymentRecorder("recorded_by").notNull().default("teacher"),
+    paidAt: timestamp("paid_at", { withTimezone: true }).notNull().defaultNow(),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("payments_teacher_status_idx").on(t.teacherId, t.status, t.paidAt),
+    index("payments_student_idx").on(t.studentId),
+    // One transaction id can't be claimed twice (a rejected claim's id is free again).
+    uniqueIndex("payments_teacher_txn_key")
+      .on(t.teacherId, t.method, t.txnId)
+      .where(sql`${t.txnId} <> '' and ${t.status} in ('pending', 'verified')`),
+    uniqueIndex("payments_teacher_receipt_key").on(t.teacherId, t.receiptNo).where(sql`${t.receiptNo} is not null`),
+  ],
+);
+
+/**
+ * The months a payment covers, one row each ("YYYY-MM"; "once" for a course paid in one go). The
+ * unique index is what stops a month being paid twice; a rejected or failed payment's rows are
+ * deleted, which frees its months.
+ */
+export const paymentMonths = pgTable(
+  "payment_months",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    paymentId: uuid("payment_id")
+      .notNull()
+      .references(() => payments.id, { onDelete: "cascade" }),
+    enrollmentId: uuid("enrollment_id")
+      .notNull()
+      .references(() => enrollments.id, { onDelete: "cascade" }),
+    month: text("month").notNull(),
+  },
+  (t) => [uniqueIndex("payment_months_enrollment_month_key").on(t.enrollmentId, t.month), index("payment_months_payment_idx").on(t.paymentId)],
 );
 
 /** A notice on the teacher's website: a class moved, results out, admissions open. */

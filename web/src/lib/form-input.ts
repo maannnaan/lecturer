@@ -16,7 +16,11 @@ export type FieldError =
   | "phoneTaken"
   | "roll"
   | "rollTaken"
-  | "batchTaken";
+  | "batchTaken"
+  | "periodsTaken"
+  | "txnTaken"
+  | "pickMonths"
+  | "payMethodOff";
 
 export type FieldErrors = Record<string, FieldError>;
 

@@ -54,6 +54,19 @@ export function dayAndMonth(value: Date, locale: Locale): { day: string; month: 
   };
 }
 
+/** A month, "YYYY-MM", as people read it: "নভেম্বর ২০২৬", or "নভে ২৬" when `short`. */
+export function formatMonth(month: string, locale: Locale, short = false): string {
+  if (!/^\d{4}-\d{2}$/.test(month)) return month;
+  return new Intl.DateTimeFormat(intlLocale(locale), { month: short ? "short" : "long", year: short ? "2-digit" : "numeric", timeZone: "UTC" }).format(
+    new Date(`${month}-01T00:00:00Z`),
+  );
+}
+
+/** An amount of money in whole taka: "৳ ১,২০০". */
+export function formatTaka(amount: number, locale: Locale): string {
+  return `৳ ${formatNumber(amount, locale)}`;
+}
+
 /** A calendar date as people in Bangladesh read it, in Dhaka time. */
 export function formatDate(value: Date, locale: Locale): string {
   return new Intl.DateTimeFormat(intlLocale(locale), {

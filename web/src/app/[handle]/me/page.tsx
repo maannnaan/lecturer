@@ -3,11 +3,13 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowRight, LogOut } from "lucide-react";
 import { PendingButton } from "@/components/form";
-import { formatNumber, getDictionary } from "@/i18n";
+import { paymentFor } from "@/components/receipt";
+import { formatDate, formatNumber, formatTaka, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { getCurrentStudent } from "@/server/auth/current";
 import { getDb } from "@/server/db";
 import { listEnrollments } from "@/server/enrollments";
+import { listDues, listPayments } from "@/server/payments";
 import { getSite } from "../data";
 import { logoutStudentAction } from "../student-actions";
 import { ChangePasswordForm } from "../student-forms";
@@ -19,7 +21,7 @@ export const metadata: Metadata = { robots: { index: false } };
 const STATUS_BADGE = { pending: "badge badge-warn", active: "badge badge-ok", rejected: "badge badge-bad", left: "badge" } as const;
 
 /** The signed-in student's own page on this teacher's site: their courses and where each stands, and their account. */
-export default async function StudentHomePage({ params }: { params: Promise<{ handle: string }> }) {
+export default async function StudentHomePage({ params, searchParams }: { params: Promise<{ handle: string }>; searchParams: Promise<{ paid?: string }> }) {
   const site = await getSite((await params).handle.toLowerCase());
   if (!site) notFound();
   const teacher = site.teacher;
@@ -29,7 +31,15 @@ export default async function StudentHomePage({ params }: { params: Promise<{ ha
   const d = getDictionary(locale);
   const t = d.site.student;
   const home = `/${teacher.handle}`;
-  const enrollments = await listEnrollments(await getDb(), teacher.id, { studentId: student.id });
+  const db = await getDb();
+  const [enrollments, dues, payments] = await Promise.all([
+    listEnrollments(db, teacher.id, { studentId: student.id }),
+    listDues(db, teacher.id, { studentId: student.id, all: true }),
+    listPayments(db, teacher.id, { studentId: student.id, limit: 30 }),
+  ]);
+  const dueOf = new Map(dues.map((due) => [due.enrollmentId, due]));
+  const p = d.dashboard.payments;
+  const justPaid = Boolean((await searchParams).paid);
   const details = [
     [t.phone, student.phone],
     [t.institution, student.institution],
@@ -90,6 +100,63 @@ export default async function StudentHomePage({ params }: { params: Promise<{ ha
                     )}
                   </div>
                   <span className={STATUS_BADGE[enrollment.status]}>{t.statuses[enrollment.status]}</span>
+                  {/* What is owed in this course, and the way to pay it (or ahead). */}
+                  {(() => {
+                    const due = dueOf.get(enrollment.id);
+                    if (!due || due.fee <= 0) return null;
+                    return (
+                      <div className="flex basis-full flex-wrap items-center gap-3">
+                        <span className={due.amount > 0 ? "font-semibold text-bad" : "text-[14.5px] text-muted"}>
+                          {due.amount > 0 ? t.dues(formatTaka(due.amount, locale)) : t.noDues}
+                        </span>
+                        {due.payable.length > 0 && (
+                          <Link href={`${home}/me/pay?e=${enrollment.id}`} className={due.amount > 0 ? "btn btn-primary btn-xs" : "btn btn-ghost btn-xs"}>
+                            {t.pay}
+                          </Link>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="card p-5 sm:p-6" aria-labelledby="my-payments">
+          <h2 id="my-payments" className="text-xl">
+            {t.history}
+          </h2>
+          {justPaid && (
+            <p className="form-ok mt-3" role="status">
+              {t.payDone}
+            </p>
+          )}
+          {payments.length === 0 ? (
+            <p className="mt-3 text-ink-2">{t.noHistory}</p>
+          ) : (
+            <ul className="mt-2 divide-y divide-line">
+              {payments.map((payment) => (
+                <li key={payment.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-3.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-ink">{paymentFor(payment, d, locale)}</p>
+                    <p className="text-[14px] text-muted">
+                      {[formatDate(payment.paidAt, locale), p.methods[payment.method], payment.txnId].filter(Boolean).join(" · ")}
+                    </p>
+                    {payment.status === "rejected" && payment.note && (
+                      <p className="text-[14.5px] text-ink-2">
+                        <b>{t.rejectedWhy}</b> {payment.note}
+                      </p>
+                    )}
+                  </div>
+                  <b className="font-num text-[18px] text-ink">{formatTaka(payment.amount, locale)}</b>
+                  {payment.status === "verified" ? (
+                    <Link href={`${home}/me/receipt/${payment.id}`} className="btn btn-ghost btn-xs">
+                      {t.receipt}
+                    </Link>
+                  ) : (
+                    <span className={payment.status === "pending" ? "badge badge-warn" : "badge badge-bad"}>{p.statuses[payment.status]}</span>
+                  )}
                 </li>
               ))}
             </ul>

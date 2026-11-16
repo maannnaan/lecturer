@@ -28,6 +28,7 @@ import { getLocale } from "@/i18n/server";
 import { requireTeacher } from "@/server/auth/current";
 import { getDb } from "@/server/db";
 import { countPendingEnrollments } from "@/server/enrollments";
+import { countPendingPayments } from "@/server/payments";
 import { logoutAction } from "./actions";
 import { MobileMenu } from "./mobile-menu";
 import { NavLink } from "./nav-link";
@@ -39,7 +40,7 @@ export const instant = false;
  * The dashboard's sections, shared by the sidebar (wide screens) and the menu sheet (phones):
  * what works today first, then what arrives in later phases, folded away under one line.
  */
-function DashNav({ d, pending }: { d: Dictionary; pending: string | null }) {
+function DashNav({ d, pending, claims }: { d: Dictionary; pending: string | null; claims: string | null }) {
   const t = d.dashboard;
   const soon = (Icon: LucideIcon, label: string) => (
     <span className="side-link" aria-disabled="true">
@@ -83,6 +84,11 @@ function DashNav({ d, pending }: { d: Dictionary; pending: string | null }) {
         <Layers aria-hidden="true" />
         {t.nav.batches}
       </NavLink>
+      <NavLink href="/dashboard/payments" className="side-link">
+        <Wallet aria-hidden="true" />
+        {t.nav.payments}
+        {claims && <span className="side-count">{claims}</span>}
+      </NavLink>
       <details className="side-soon">
         <summary>
           {t.comingSoon}
@@ -90,7 +96,6 @@ function DashNav({ d, pending }: { d: Dictionary; pending: string | null }) {
         </summary>
         {soon(Radio, t.nav.live)}
         {soon(Printer, t.nav.papers)}
-        {soon(Wallet, t.nav.payments)}
         {soon(ScanLine, t.nav.scanner)}
       </details>
     </>
@@ -103,9 +108,11 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const d = getDictionary(locale);
   const t = d.dashboard;
   const name = locale === "bn" ? teacher.nameBn : teacher.nameEn;
-  // Requests waiting for the teacher, shown beside the menu's link.
-  const waiting = await countPendingEnrollments(await getDb(), teacher.id);
+  // What is waiting for the teacher, shown beside the menu's links: admission requests, and payments to verify.
+  const db = await getDb();
+  const [waiting, toVerify] = await Promise.all([countPendingEnrollments(db, teacher.id), countPendingPayments(db, teacher.id)]);
   const pending = waiting > 0 ? formatNumber(waiting, locale) : null;
+  const claims = toVerify > 0 ? formatNumber(toVerify, locale) : null;
   const siteLink = (
     <Link href={`/${teacher.handle}`} className="side-site">
       <span className="min-w-0">
@@ -124,7 +131,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             <Logo />
           </Link>
           {siteLink}
-          <DashNav d={d} pending={pending} />
+          <DashNav d={d} pending={pending} claims={claims} />
 
           <div className="side-account">
             <div className="side-who">
@@ -152,7 +159,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           <header className="dash-mobile-top">
             <MobileMenu label={d.common.menu}>
               {siteLink}
-              <DashNav d={d} pending={pending} />
+              <DashNav d={d} pending={pending} claims={claims} />
             </MobileMenu>
             <Logo />
             <div className="ml-auto flex items-center gap-2">

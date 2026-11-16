@@ -20,6 +20,7 @@ import { addBankTopics, createBankClass, createSubject, getSubject } from "@/ser
 import { createBatch } from "@/server/batches";
 import { addChapter, createCourse, listCourses } from "@/server/courses";
 import { enrollStudent, requestEnrollment } from "@/server/enrollments";
+import { setPaymentInfo } from "@/server/payments";
 import { createStudent } from "@/server/students";
 import { createNotice } from "@/server/notices";
 import { createQuestion } from "@/server/questions";
@@ -540,6 +541,8 @@ async function main() {
         await enrollStudent(db, id, rahim.id, physics.id, { batchId: first!.id, roll: null, fee: null });
         const sadia = await createStudent(db, { teacherId: id, name: "সাদিয়া ইসলাম", phone: "01900000002", password: "student-password", classLevel: "একাদশ" });
         await requestEnrollment(db, id, sadia.id, physics.id, { batchId: first!.id, note: "আমি শনিবারের ব্যাচে পড়তে চাই।" });
+        // Where his students send money; রাহিম owes this month's fee.
+        await setPaymentInfo(db, id, { bkash: "01700000000", instructions: "Send Money করুন। রেফারেন্সে নিজের রোল লিখুন।" });
       }
       for (const n of t.notices) {
         const notice = await createNotice(db, id, { title: n.title, body: n.body ?? "", bodyRich: null, pinned: n.pinned ?? false });
