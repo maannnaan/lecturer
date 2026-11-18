@@ -866,6 +866,12 @@
   .opt.wrong { border-color: var(--lb-bad); background: var(--lb-bad-soft); }
   .opt.wrong .k { background: var(--lb-bad); border-color: var(--lb-bad); color: #fff; }
   .opt.wrong .mark { color: var(--lb-bad); }
+  /* An exam being sat: the option picked, and the clock that stays in view. */
+  button.opt.opt-chosen { border-color: var(--lb-primary); background: var(--lb-primary-soft); box-shadow: 0 0 0 1px var(--lb-primary); }
+  button.opt.opt-chosen .k { background: var(--lb-primary); border-color: var(--lb-primary); color: var(--lb-on-primary); }
+  button.opt:disabled { cursor: default; opacity: 0.7; }
+  .exam-bar { position: sticky; top: 72px; z-index: 15; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; padding: 10px 18px; border-radius: var(--lb-r-md); border: 1px solid var(--lb-line); background: var(--lb-surface); box-shadow: var(--lb-shadow-float); color: var(--lb-ink); }
+  .exam-bar-urgent { border-color: var(--lb-bad); background: var(--lb-bad-soft); color: var(--lb-bad); }
   .explain { margin-top: 14px; padding: 14px 18px; border-radius: var(--lb-r-md); background: var(--lb-surface-2); border-left: 3px solid var(--lb-primary); font-size: 15.5px; line-height: 1.85; color: var(--lb-ink-2); }
   .explain b { color: var(--lb-ink); }
   .stem { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 280px); gap: 22px; align-items: center; padding: 18px 20px; border-radius: var(--lb-r-md); background: var(--lb-bg); border: 1px solid var(--lb-line); }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowRight, LogOut } from "lucide-react";
+import { ArrowRight, LogOut, Radio } from "lucide-react";
 import { PendingButton } from "@/components/form";
 import { paymentFor } from "@/components/receipt";
 import { formatDate, formatNumber, formatTaka, getDictionary } from "@/i18n";
@@ -56,13 +56,21 @@ export default async function StudentHomePage({ params, searchParams }: { params
             <p className="eyebrow">{locale === "bn" ? teacher.nameBn : teacher.nameEn}</p>
             <h1 className="mt-1 text-[clamp(26px,4vw,36px)]">{t.hello(student.name)}</h1>
           </div>
-          <form action={logoutStudentAction}>
-            <input type="hidden" name="handle" value={teacher.handle} />
-            <PendingButton className="btn btn-ghost btn-sm">
-              <LogOut aria-hidden="true" />
-              {t.logout}
-            </PendingButton>
-          </form>
+          <div className="flex flex-wrap gap-2">
+            {enrollments.some((e) => e.status === "active") && (
+              <Link href={`${home}/exams`} className="btn btn-primary btn-sm">
+                <Radio aria-hidden="true" />
+                {t.exams}
+              </Link>
+            )}
+            <form action={logoutStudentAction}>
+              <input type="hidden" name="handle" value={teacher.handle} />
+              <PendingButton className="btn btn-ghost btn-sm">
+                <LogOut aria-hidden="true" />
+                {t.logout}
+              </PendingButton>
+            </form>
+          </div>
         </header>
 
         <section className="card p-5 sm:p-6" aria-labelledby="my-courses">

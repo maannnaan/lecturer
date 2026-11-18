@@ -69,6 +69,11 @@ export async function proxy(request: NextRequest) {
     if (!known) return notFound(request);
     if (!request.cookies.has(studentCookie(site.teacherId))) return redirect(request, `/${handle}/login`, 307);
   }
+  // lecturer.bd/<handle>/exams[/<number>]: a student's exams, behind their sign-in like /me.
+  if (rest[0] === "exams") {
+    if (rest.length > 2 || (rest.length === 2 && !/^\d{1,6}$/.test(rest[1]))) return notFound(request);
+    if (!request.cookies.has(studentCookie(site.teacherId))) return redirect(request, `/${handle}/login`, 307);
+  }
   // lecturer.bd/<handle>/courses/<number>
   if (rest[0] === "courses" && rest.length > 1) {
     if (rest.length > 2 || !/^\d{1,6}$/.test(rest[1])) return notFound(request);

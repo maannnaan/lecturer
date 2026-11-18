@@ -112,6 +112,8 @@ export const teachers = pgTable(
     classCounter: integer("class_counter").notNull().default(0),
     /** The last receipt number handed out. */
     receiptCounter: integer("receipt_counter").notNull().default(0),
+    /** The last exam number handed out: an exam's address is lecturer.bd/<handle>/exams/<number>. */
+    examCounter: integer("exam_counter").notNull().default(0),
     /** Where students send money, and what to tell them: shown on their payment page. */
     paymentInfo: jsonb("payment_info").$type<PaymentInfo>().notNull().default({}),
     approvedAt: timestamp("approved_at", { withTimezone: true }),
@@ -691,4 +693,108 @@ export const rateLimits = pgTable(
     count: integer("count").notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.key, t.windowStart] })],
+);
+
+export const examStatus = pgEnum("exam_status", ["draft", "published"]);
+/** When students see their result: as soon as they submit, or once the exam's window has closed. */
+export const examResults = pgEnum("exam_results", ["immediate", "after_end"]);
+
+/**
+ * An online MCQ exam for a course's students (or one batch of it). A student may start any time
+ * between `startsAt` and `endsAt`, and has `durationMin` minutes, never past `endsAt`: a "live"
+ * exam is simply one whose window is as long as its duration. A draft can be changed freely; once
+ * published its questions are frozen (`exam_questions.snapshot`), and once anyone has started, its
+ * questions and marking can't change.
+ */
+export const exams = pgTable(
+  "exams",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => teachers.id, { onDelete: "cascade" }),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    /** Only this batch of the course sits it; null for every active student of the course. */
+    batchId: uuid("batch_id").references(() => batches.id, { onDelete: "set null" }),
+    /** From teachers.exam_counter; never reused. */
+    number: integer("number").notNull(),
+    title: text("title").notNull(),
+    instructions: text("instructions").notNull().default(""),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    durationMin: integer("duration_min").notNull(),
+    /** Marks for a right answer, in hundredths (100 = one mark). */
+    markHundredths: integer("mark_hundredths").notNull().default(100),
+    /** Marks taken off for a wrong answer, in hundredths (25 = a quarter mark); 0 for none. */
+    negativeHundredths: integer("negative_hundredths").notNull().default(0),
+    shuffleQuestions: boolean("shuffle_questions").notNull().default(true),
+    shuffleOptions: boolean("shuffle_options").notNull().default(false),
+    results: examResults("results").notNull().default("after_end"),
+    /** Whether students see, after their result, which option was right and why. */
+    showAnswers: boolean("show_answers").notNull().default(true),
+    status: examStatus("status").notNull().default("draft"),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [uniqueIndex("exams_teacher_number_key").on(t.teacherId, t.number), index("exams_course_idx").on(t.courseId, t.startsAt)],
+);
+
+/** An MCQ as an exam keeps it: the question's type and body as they were, so later edits in the bank change nothing. */
+export type ExamQuestionSnapshot = { type: "mcq" | "mcq_multi"; body: QuestionBody };
+
+/** A question of an exam, in the teacher's order. `snapshot` is filled when the exam is published. */
+export const examQuestions = pgTable(
+  "exam_questions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    examId: uuid("exam_id")
+      .notNull()
+      .references(() => exams.id, { onDelete: "cascade" }),
+    /** The bank question it came from; kept as null if that question is deleted later. */
+    questionId: uuid("question_id").references(() => questions.id, { onDelete: "set null" }),
+    position: integer("position").notNull().default(0),
+    snapshot: jsonb("snapshot").$type<ExamQuestionSnapshot>(),
+  },
+  (t) => [index("exam_questions_exam_idx").on(t.examId, t.position), uniqueIndex("exam_questions_exam_question_key").on(t.examId, t.questionId)],
+);
+
+/** A student's place in a student's attempt: the order they see the questions in, and each question's options. */
+export type AttemptOrder = { questions: string[]; options: Record<string, number[]> };
+
+/**
+ * One student's sitting of one exam. `answers` maps an exam question's id to the option chosen
+ * (its index in the question as written, not as shuffled). Scored when submitted, or when the
+ * deadline has passed without a submission.
+ */
+export const attempts = pgTable(
+  "attempts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => teachers.id, { onDelete: "cascade" }),
+    examId: uuid("exam_id")
+      .notNull()
+      .references(() => exams.id, { onDelete: "cascade" }),
+    studentId: uuid("student_id")
+      .notNull()
+      .references(() => students.id, { onDelete: "cascade" }),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    /** The earlier of the start plus the exam's duration, and the end of its window. */
+    deadlineAt: timestamp("deadline_at", { withTimezone: true }).notNull(),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    answers: jsonb("answers").$type<Record<string, number>>().notNull().default({}),
+    order: jsonb("order").$type<AttemptOrder>().notNull(),
+    correct: integer("correct"),
+    wrong: integer("wrong"),
+    skipped: integer("skipped"),
+    scoreHundredths: integer("score_hundredths"),
+  },
+  (t) => [uniqueIndex("attempts_exam_student_key").on(t.examId, t.studentId), index("attempts_teacher_idx").on(t.teacherId)],
 );

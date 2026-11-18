@@ -17,6 +17,7 @@ import { verifyDecoy, verifyPassword } from "@/server/auth/password";
 import { createSession, revokeSession } from "@/server/auth/session";
 import { getDb } from "@/server/db";
 import { requestEnrollment } from "@/server/enrollments";
+import { saveAnswer, startAttempt, submitAttempt } from "@/server/exams";
 import { claimPayment } from "@/server/payments";
 import { clearAttempts, takeAttempt } from "@/server/rate-limit";
 import { StudentPhoneTaken, createStudent, findStudentForLogin, setStudentPassword, studentPasswordHash } from "@/server/students";
@@ -162,6 +163,39 @@ export async function claimPaymentAction(_prev: FormState, formData: FormData): 
     return { errors: {}, formError: e.generic };
   }
   redirect(`/${teacher.handle}/me?paid=1`);
+}
+
+/** The signed-in student starts an exam (or goes back into the one they started): the clock is the server's. */
+export async function startExamAction(formData: FormData) {
+  const teacher = await siteTeacher(String(formData.get("handle") ?? ""));
+  if (!teacher) redirect("/");
+  const student = await getCurrentStudent(teacher.id);
+  if (!student) redirect(`/${teacher.handle}/login`);
+  await startAttempt(await getDb(), teacher.id, student.id, String(formData.get("examId") ?? ""), new Date());
+  redirect(`/${teacher.handle}/exams/${String(formData.get("number") ?? "")}`);
+}
+
+/**
+ * Saves one answer of the signed-in student's own sitting while it is open. Called from the
+ * exam page on every pick; false tells the page it wasn't saved (time up, or handed in).
+ */
+export async function saveAnswerAction(handle: string, attemptId: string, examQuestionId: string, choice: number | null): Promise<boolean> {
+  const teacher = await siteTeacher(handle);
+  if (!teacher) return false;
+  const student = await getCurrentStudent(teacher.id);
+  if (!student) return false;
+  if (choice !== null && (!Number.isInteger(choice) || choice < 0 || choice > 9)) return false;
+  return saveAnswer(await getDb(), teacher.id, student.id, attemptId, examQuestionId, choice, new Date());
+}
+
+/** The signed-in student hands in (or the page does, when time runs out). */
+export async function submitExamAction(formData: FormData) {
+  const teacher = await siteTeacher(String(formData.get("handle") ?? ""));
+  if (!teacher) redirect("/");
+  const student = await getCurrentStudent(teacher.id);
+  if (!student) redirect(`/${teacher.handle}/login`);
+  await submitAttempt(await getDb(), teacher.id, student.id, String(formData.get("attemptId") ?? ""), new Date());
+  redirect(`/${teacher.handle}/exams/${String(formData.get("number") ?? "")}`);
 }
 
 /** The signed-in student changes their own password, proving the current one first. */

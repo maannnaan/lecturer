@@ -178,9 +178,9 @@ test.describe("on a phone", () => {
     await page.locator("summary[aria-label='মেনু']").click();
     await expect(page.getByRole("navigation", { name: "মেনু" }).getByRole("link", { name: "প্রশ্নব্যাংক" })).toBeVisible();
     await expect(page.getByRole("navigation", { name: "মেনু" }).getByRole("link", { name: "শিক্ষার্থী তালিকা" })).toBeVisible();
-    await expect(page.getByRole("navigation", { name: "মেনু" }).getByText("লাইভ MCQ")).toBeHidden();
+    await expect(page.getByRole("navigation", { name: "মেনু" }).getByText("প্রশ্নপত্র ও OMR")).toBeHidden();
     await page.getByRole("navigation", { name: "মেনু" }).getByText("শীঘ্রই আসছে").click();
-    await expect(page.getByRole("navigation", { name: "মেনু" }).getByText("লাইভ MCQ")).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "মেনু" }).getByText("প্রশ্নপত্র ও OMR")).toBeVisible();
   });
 });
 

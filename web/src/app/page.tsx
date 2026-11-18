@@ -26,8 +26,8 @@ import { THEMES } from "@/lib/themes";
 export const instant = false;
 
 // In the same order as landing.ready and landing.soon in the dictionaries.
-const READY_ICONS = [Globe, BookOpen, Library, Megaphone, Palette, Languages, Users, Wallet];
-const SOON_ICONS = [Radio, Printer];
+const READY_ICONS = [Globe, BookOpen, Library, Megaphone, Palette, Languages, Users, Radio, Wallet];
+const SOON_ICONS = [Printer];
 
 export default async function LandingPage() {
   const locale = await getLocale();

@@ -67,6 +67,22 @@ export function formatTaka(amount: number, locale: Locale): string {
   return `৳ ${formatNumber(amount, locale)}`;
 }
 
+/** A moment as people in Bangladesh read it: "২০ নভেম্বর, সকাল ১০:০০", in Dhaka time. */
+export function formatDateTime(value: Date, locale: Locale): string {
+  return new Intl.DateTimeFormat(intlLocale(locale), {
+    day: "numeric",
+    month: "long",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "Asia/Dhaka",
+  }).format(value);
+}
+
+/** A number of marks from hundredths, in the page's digits: 175 → "১.৭৫". */
+export function formatMarks(hundredths: number, locale: Locale): string {
+  return new Intl.NumberFormat(intlLocale(locale), { maximumFractionDigits: 2 }).format(hundredths / 100);
+}
+
 /** A calendar date as people in Bangladesh read it, in Dhaka time. */
 export function formatDate(value: Date, locale: Locale): string {
   return new Intl.DateTimeFormat(intlLocale(locale), {
