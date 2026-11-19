@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Field, FormMessages, SelectField, SubmitButton, TextAreaField, emptyForm } from "@/components/form";
-import { addExamQuestionsAction, createExamAction, deleteExamAction, updateExamAction } from "./actions";
+import { createExamAction, deleteExamAction, updateExamAction } from "./actions";
 
 // The dashboard's exam forms. Their text arrives as plain strings (the dictionaries hold functions
 // too, which can't be handed to the browser).
@@ -156,82 +156,6 @@ export function ExamForm({
         <FormMessages state={state} saved={c.saved} />
       </div>
     </form>
-  );
-}
-
-/** The bank's MCQs of one chapter, to tick and add; or a number of them at random. */
-export function AddQuestionsForm({
-  examId,
-  subjectId,
-  chapterId,
-  items,
-  t,
-}: {
-  examId: string;
-  subjectId: string;
-  chapterId: string;
-  /** The chapter's MCQs; `stem` already drawn on the server. */
-  items: { id: string; stem: React.ReactNode; tags: string; inExam: boolean }[];
-  t: { pickHint: string; add: string; already: string; noMcqs: string; random: string; randomCount: string; addRandom: string; saving: string };
-}) {
-  const [state, action] = useActionState(addExamQuestionsAction, emptyForm);
-  const free = items.filter((item) => !item.inExam).length;
-  return (
-    <div className="flex flex-col gap-4">
-      {state.formError && (
-        <p className="form-alert" role="alert">
-          {state.formError}
-        </p>
-      )}
-      {state.ok && state.values?.added && (
-        <p className="form-ok" role="status">
-          {state.values.added}
-        </p>
-      )}
-      {items.length === 0 ? (
-        <p className="text-[15px] text-muted">{t.noMcqs}</p>
-      ) : (
-        <>
-          <form action={action} className="flex flex-col gap-3">
-            <input type="hidden" name="examId" value={examId} />
-            <p className="field-hint">{t.pickHint}</p>
-            <ul className="flex max-h-[480px] flex-col gap-2 overflow-y-auto rounded-md border border-line p-2">
-              {items.map((item) => (
-                <li key={item.id}>
-                  <label className={`flex items-start gap-3 rounded-md p-2.5 ${item.inExam ? "opacity-60" : "cursor-pointer hover:bg-surface-2"}`}>
-                    <input type="checkbox" name="questionId" value={item.id} disabled={item.inExam} className="mt-1.5 accent-[var(--lb-primary)]" />
-                    <span className="min-w-0 flex-1">
-                      <span className="line-clamp-3 text-[15px] text-ink">{item.stem}</span>
-                      <span className="mt-0.5 block text-[13px] text-muted">{item.inExam ? t.already : item.tags}</span>
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-            <SubmitButton className="btn btn-primary btn-sm self-start" pendingLabel={t.saving}>
-              {t.add}
-            </SubmitButton>
-          </form>
-          {free > 0 && (
-            <form action={action} className="flex flex-wrap items-end gap-3 border-t border-line pt-4">
-              <input type="hidden" name="examId" value={examId} />
-              <input type="hidden" name="mode" value="random" />
-              <input type="hidden" name="subjectId" value={subjectId} />
-              <input type="hidden" name="chapterId" value={chapterId} />
-              <div className="field w-28">
-                <label className="field-label" htmlFor="random-count">
-                  {t.randomCount}
-                </label>
-                <input id="random-count" name="count" className="input" inputMode="numeric" defaultValue={String(Math.min(10, free))} />
-              </div>
-              <SubmitButton className="btn btn-ghost btn-sm" pendingLabel={t.saving}>
-                {t.addRandom}
-              </SubmitButton>
-            </form>
-          )}
-        </>
-      )}
-    </div>
   );
 }
 

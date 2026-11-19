@@ -88,6 +88,10 @@ function DashNav({ d, pending, claims }: { d: Dictionary; pending: string | null
         <Radio aria-hidden="true" />
         {t.nav.live}
       </NavLink>
+      <NavLink href="/dashboard/papers" className="side-link">
+        <Printer aria-hidden="true" />
+        {t.nav.papers}
+      </NavLink>
       <NavLink href="/dashboard/payments" className="side-link">
         <Wallet aria-hidden="true" />
         {t.nav.payments}
@@ -98,7 +102,6 @@ function DashNav({ d, pending, claims }: { d: Dictionary; pending: string | null
           {t.comingSoon}
           <ChevronDown aria-hidden="true" />
         </summary>
-        {soon(Printer, t.nav.papers)}
         {soon(ScanLine, t.nav.scanner)}
       </details>
     </>

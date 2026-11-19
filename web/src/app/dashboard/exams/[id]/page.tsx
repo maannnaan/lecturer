@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, BarChart3, ChevronDown, ChevronUp, Eye, EyeOff, Send, Trash2 } from "lucide-react";
 import { PendingButton } from "@/components/form";
+import { QuestionPicker } from "@/components/question-picker";
 import { RichContent } from "@/components/rich-content";
 import { boardTag } from "@/components/qbank/views";
 import { formatNumber, getDictionary } from "@/i18n";
@@ -16,8 +17,8 @@ import { getDb } from "@/server/db";
 import { getExam, hasAttempts, listExamQuestions } from "@/server/exams";
 import { listChapterQuestions } from "@/server/questions";
 import { batchLabel } from "../../students/text";
-import { moveExamQuestionAction, publishExamAction, removeExamQuestionAction } from "../actions";
-import { AddQuestionsForm, DeleteExamForm, ExamForm } from "../exam-forms";
+import { addExamQuestionsAction, moveExamQuestionAction, publishExamAction, removeExamQuestionAction } from "../actions";
+import { DeleteExamForm, ExamForm } from "../exam-forms";
 import { STATE_BADGE, examFormText, examState, examValues } from "../text";
 
 export const instant = false;
@@ -190,23 +191,21 @@ export default async function ExamPage({ params, searchParams }: { params: Promi
                 </button>
               </form>
               {chapter && (
-                <AddQuestionsForm
+                <QuestionPicker
                   key={chapter.id}
-                  examId={exam.id}
-                  subjectId={subject.id}
-                  chapterId={chapter.id}
+                  action={addExamQuestionsAction}
+                  hidden={{ examId: exam.id, subjectId: subject.id, chapterId: chapter.id }}
                   items={bank.map((q) => ({
                     id: q.id,
                     stem: <RichContent value={q.body.stem} />,
                     tags: [d.questions.types[q.type], q.board ? boardTag(q, d, locale) : q.source].filter(Boolean).join(" · "),
-                    inExam: inExam.has(q.id),
+                    added: inExam.has(q.id),
                   }))}
                   t={{
                     pickHint: t.pickHint,
                     add: t.add,
                     already: t.already,
-                    noMcqs: t.noMcqs,
-                    random: t.random,
+                    none: t.noMcqs,
                     randomCount: t.randomCount,
                     addRandom: t.addRandom,
                     saving: d.common.saving,

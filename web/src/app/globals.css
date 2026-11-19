@@ -1009,6 +1009,30 @@
   .qb-flash { animation: qb-flash 1.8s ease-out; }
   @keyframes qb-flash { 0%, 35% { box-shadow: 0 0 0 3px var(--color-qb-board-cta); } 100% { box-shadow: 0 0 0 3px transparent; } }
   @media (prefers-reduced-motion: reduce) { .qb-flash { animation: none; } }
+
+  /* ── A question paper as it prints: an A4 sheet per set, its questions in two columns ── */
+  .paper-sheets { display: flex; flex-direction: column; align-items: center; gap: 24px; }
+  .paper-sheet { width: 100%; max-width: 210mm; padding: 12mm 11mm; background: #fff; color: #111; border: 1px solid var(--lb-line); border-radius: var(--lb-r-lg); font-size: 13.5px; line-height: 1.55; --rich-line: #c9c9c9; --rich-head: #f2f2f2; }
+  .paper-sheet :is(h2, h3) { font-family: inherit; color: inherit; letter-spacing: normal; line-height: 1.4; }
+  .paper-head { text-align: center; border-bottom: 1.5px solid #111; padding-bottom: 8px; margin-bottom: 4px; }
+  .paper-org { margin: 0; font-size: 19px; font-weight: 700; }
+  .paper-title { margin: 0; font-size: 16px; font-weight: 700; }
+  .paper-sub { margin: 0; font-size: 14px; }
+  .paper-meta { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 16px; margin-top: 6px; font-size: 13.5px; }
+  .paper-set { border: 1.5px solid #111; border-radius: 4px; padding: 0 8px; font-weight: 700; }
+  .paper-note { margin: 4px 0 0; font-size: 12.5px; text-align: left; }
+  .paper-part { margin: 12px 0 0; font-size: 14.5px; font-weight: 700; text-align: center; }
+  .paper-cols { list-style: none; margin: 8px 0 0; padding: 0; columns: 2; column-gap: 8mm; column-rule: 1px solid #cfcfcf; }
+  .paper-q { display: flex; gap: 6px; margin: 0 0 8px; break-inside: avoid; }
+  .paper-qn { flex: none; min-width: 1.6em; font-weight: 700; }
+  .paper-opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px 10px; margin-top: 3px; }
+  .paper-stmt { margin: 0; padding-left: 12px; }
+  .paper-cq-part { display: flex; gap: 6px; margin-top: 2px; }
+  .paper-sheet .rich-img { max-height: 180px; }
+  @media (max-width: 640px) {
+    .paper-sheet { padding: 16px 14px; }
+    .paper-cols { columns: 1; }
+  }
 }
 
 /* Printing a question bank sheet: only the sheet, without the site's or dashboard's frame. */
@@ -1016,4 +1040,10 @@
   .dash { display: block; }
   .dash-side, .dash-topbar, .dash-mobile-top, .bottom-nav, .site-header, .site-footer, .nav-progress, [data-print-hide] { display: none !important; }
   .qb { background: #fff; }
+  /* A question paper: A4, every set starting on a new page, without the screen's frame. */
+  @page paper { size: A4; margin: 11mm; }
+  .paper-sheets { display: block; }
+  .paper-sheet { page: paper; max-width: none; padding: 0; border: 0; border-radius: 0; break-after: page; }
+  .paper-sheet:last-child { break-after: auto; }
+  .paper-cols { columns: 2; }
 }

@@ -30,7 +30,8 @@ export type ExamRow = Exam & { courseTitle: string; batchName: string | null; qu
 /** Why an exam's change was refused. */
 export type ExamRefusal = "course" | "batch" | "locked" | "noQuestions" | "missing";
 
-async function ownCourseAndBatch(db: Database | Tx, teacherId: string, courseId: string, batchId: string | null): Promise<"course" | "batch" | null> {
+/** Whether a course is the teacher's, and a batch (when given) is one of that course's: what's wrong, or null. Shared with papers. */
+export async function ownCourseAndBatch(db: Database | Tx, teacherId: string, courseId: string, batchId: string | null): Promise<"course" | "batch" | null> {
   if (!isUuid(courseId)) return "course";
   const [course] = await db
     .select({ id: courses.id })

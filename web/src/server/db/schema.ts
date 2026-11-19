@@ -114,6 +114,8 @@ export const teachers = pgTable(
     receiptCounter: integer("receipt_counter").notNull().default(0),
     /** The last exam number handed out: an exam's address is lecturer.bd/<handle>/exams/<number>. */
     examCounter: integer("exam_counter").notNull().default(0),
+    /** The last question paper number handed out. */
+    paperCounter: integer("paper_counter").notNull().default(0),
     /** Where students send money, and what to tell them: shown on their payment page. */
     paymentInfo: jsonb("payment_info").$type<PaymentInfo>().notNull().default({}),
     approvedAt: timestamp("approved_at", { withTimezone: true }),
@@ -797,4 +799,84 @@ export const attempts = pgTable(
     scoreHundredths: integer("score_hundredths"),
   },
   (t) => [uniqueIndex("attempts_exam_student_key").on(t.examId, t.studentId), index("attempts_teacher_idx").on(t.teacherId)],
+);
+
+/** A paper being put together, or final: its questions (and so its sets and answer keys) frozen. */
+export const paperStatus = pgEnum("paper_status", ["draft", "final"]);
+/** Where a question sits on a paper: the MCQs, answered on an OMR sheet, or the written part. */
+export const paperSection = pgEnum("paper_section", ["mcq", "written"]);
+
+/** What a printed paper says at its top, as the teacher typed it. Any of it may be left empty. */
+export type PaperHeader = {
+  institution: string;
+  subject: string;
+  className: string;
+  date: string;
+  duration: string;
+  fullMarks: string;
+  instructions: string;
+};
+
+/**
+ * A question paper to print, for a course's students (or one batch of it): MCQs, answered on an
+ * OMR sheet, and a written part. The MCQs come in sets, coded from `firstSet` on (three digits, as
+ * the OMR sheet's set-code grid reads them): the first set in the teacher's order, every other one
+ * shuffled from `seed` and its code, so a set comes out the same however often it is printed.
+ * Once final, the questions are frozen (`paper_questions.snapshot`), and the sets with them.
+ */
+export const papers = pgTable(
+  "papers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => teachers.id, { onDelete: "cascade" }),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    /** Only this batch of the course sits it; null for every active student of the course. */
+    batchId: uuid("batch_id").references(() => batches.id, { onDelete: "set null" }),
+    /** From teachers.paper_counter; never reused. */
+    number: integer("number").notNull(),
+    title: text("title").notNull(),
+    header: jsonb("header").$type<PaperHeader>().notNull(),
+    setCount: integer("set_count").notNull().default(1),
+    firstSet: integer("first_set").notNull().default(101),
+    /** Picked at random when the paper is made; with a set's code it decides that set's order. */
+    seed: integer("seed").notNull(),
+    shuffleQuestions: boolean("shuffle_questions").notNull().default(true),
+    shuffleOptions: boolean("shuffle_options").notNull().default(false),
+    /** Marks for a right MCQ answer, in hundredths (100 = one mark). */
+    markHundredths: integer("mark_hundredths").notNull().default(100),
+    /** Marks taken off for a wrong one, in hundredths; 0 for none. */
+    negativeHundredths: integer("negative_hundredths").notNull().default(0),
+    status: paperStatus("status").notNull().default("draft"),
+    finalizedAt: timestamp("finalized_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [uniqueIndex("papers_teacher_number_key").on(t.teacherId, t.number), index("papers_course_idx").on(t.courseId)],
+);
+
+/** A question as a paper keeps it: its type and body as they were when the paper was made final. */
+export type PaperQuestionSnapshot = { type: (typeof questionType.enumValues)[number]; body: QuestionBody };
+
+/** A question of a paper, in the teacher's order within its section. `snapshot` is filled when the paper is made final. */
+export const paperQuestions = pgTable(
+  "paper_questions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    paperId: uuid("paper_id")
+      .notNull()
+      .references(() => papers.id, { onDelete: "cascade" }),
+    /** The bank question it came from; kept as null if that question is deleted later. */
+    questionId: uuid("question_id").references(() => questions.id, { onDelete: "set null" }),
+    section: paperSection("section").notNull(),
+    position: integer("position").notNull().default(0),
+    snapshot: jsonb("snapshot").$type<PaperQuestionSnapshot>(),
+  },
+  (t) => [index("paper_questions_paper_idx").on(t.paperId, t.section, t.position), uniqueIndex("paper_questions_paper_question_key").on(t.paperId, t.questionId)],
 );

@@ -26,7 +26,7 @@ export function toDhakaInput(date: Date): string {
 }
 
 /** A mark typed as "1", "0.5", "০.২৫": hundredths of a mark, or null when it isn't one (or is too many). */
-function hundredths(raw: string | undefined, max: number): number | null {
+export function parseHundredths(raw: string | undefined, max: number): number | null {
   const value = asciiDigits(raw ?? "").trim();
   if (!/^\d{1,3}(\.\d{1,2})?$/.test(value)) return null;
   const result = Math.round(Number(value) * 100);
@@ -49,9 +49,9 @@ export function parseExam(input: Input) {
   if (!rawDuration) errors.durationMin = "required";
   else if (durationMin < 1 || durationMin > MAX_DURATION_MIN) errors.durationMin = "number";
 
-  const mark = hundredths(input.mark || "1", 10_000);
+  const mark = parseHundredths(input.mark || "1", 10_000);
   if (mark === null || mark === 0) errors.mark = "number";
-  const negative = hundredths(input.negative || "0", 10_000);
+  const negative = parseHundredths(input.negative || "0", 10_000);
   if (negative === null) errors.negative = "number";
   else if (mark && negative > mark) errors.negative = "invalid";
 
