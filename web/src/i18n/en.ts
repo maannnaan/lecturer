@@ -71,10 +71,9 @@ export const en: Dictionary = {
       { title: "Live MCQ exams", text: "Online exams from your question bank's MCQs: they open at a set time, hand themselves in when time is up, and marks and a merit list follow at once." },
       { title: "Payments and dues", text: "Write down cash; students send by bKash or Nagad and report the TxnID, and you verify it. Dues month by month, and numbered receipts." },
       { title: "Question papers and sets", text: "Printable papers from your question bank: each set with its own question and option order, and each with its answer key. A written part too." },
+      { title: "OMR scanner app", text: "Scan OMR sheets with the phone's camera for marks at once, checked against each set's key. Results go to Lecturer.bd in one tap." },
     ],
-    soon: [
-      { title: "OMR scanner app", text: "Scan OMR sheets with the phone's camera for marks at once, checked against each set's key. Results go straight to Lecturer.bd." },
-    ],
+    soon: [],
     bank: {
       kicker: "Question bank",
       title: "All your questions, arranged by chapter",

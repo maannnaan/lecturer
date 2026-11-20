@@ -1,9 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
 import {
   BookOpen,
-  ChevronDown,
   ExternalLink,
   Globe,
   House,
@@ -36,18 +34,9 @@ import { NavLink } from "./nav-link";
 // Everything here belongs to the signed-in teacher, so it renders per request.
 export const instant = false;
 
-/**
- * The dashboard's sections, shared by the sidebar (wide screens) and the menu sheet (phones):
- * what works today first, then what arrives in later phases, folded away under one line.
- */
+/** The dashboard's sections, shared by the sidebar (wide screens) and the menu sheet (phones). */
 function DashNav({ d, pending, claims }: { d: Dictionary; pending: string | null; claims: string | null }) {
   const t = d.dashboard;
-  const soon = (Icon: LucideIcon, label: string) => (
-    <span className="side-link" aria-disabled="true">
-      <Icon aria-hidden="true" />
-      {label}
-    </span>
-  );
   return (
     <>
       <NavLink href="/dashboard" exact className="side-link">
@@ -97,13 +86,10 @@ function DashNav({ d, pending, claims }: { d: Dictionary; pending: string | null
         {t.nav.payments}
         {claims && <span className="side-count">{claims}</span>}
       </NavLink>
-      <details className="side-soon">
-        <summary>
-          {t.comingSoon}
-          <ChevronDown aria-hidden="true" />
-        </summary>
-        {soon(ScanLine, t.nav.scanner)}
-      </details>
+      <NavLink href="/dashboard/scanner" className="side-link">
+        <ScanLine aria-hidden="true" />
+        {t.nav.scanner}
+      </NavLink>
     </>
   );
 }

@@ -27,8 +27,8 @@ import { THEMES } from "@/lib/themes";
 export const instant = false;
 
 // In the same order as landing.ready and landing.soon in the dictionaries.
-const READY_ICONS = [Globe, BookOpen, Library, Megaphone, Palette, Languages, Users, Radio, Wallet, Printer];
-const SOON_ICONS = [ScanLine];
+const READY_ICONS = [Globe, BookOpen, Library, Megaphone, Palette, Languages, Users, Radio, Wallet, Printer, ScanLine];
+const SOON_ICONS: typeof READY_ICONS = [];
 
 export default async function LandingPage() {
   const locale = await getLocale();
@@ -102,21 +102,25 @@ export default async function LandingPage() {
             </ul>
 
             {/* What's on the way: named, but quieter than what works today. */}
-            <h3 className="lp-group-title mt-12">{t.soonTitle}</h3>
-            <ul className="lp-soon">
-              {t.soon.map((f, i) => {
-                const Icon = SOON_ICONS[i] ?? Radio;
-                return (
-                  <li key={f.title} className="lp-soon-item">
-                    <Icon aria-hidden="true" />
-                    <div className="min-w-0">
-                      <h4>{f.title}</h4>
-                      <p>{f.text}</p>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+            {t.soon.length > 0 && (
+              <>
+                <h3 className="lp-group-title mt-12">{t.soonTitle}</h3>
+                <ul className="lp-soon">
+                  {t.soon.map((f, i) => {
+                    const Icon = SOON_ICONS[i] ?? Radio;
+                    return (
+                      <li key={f.title} className="lp-soon-item">
+                        <Icon aria-hidden="true" />
+                        <div className="min-w-0">
+                          <h4>{f.title}</h4>
+                          <p>{f.text}</p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )}
           </div>
         </section>
 

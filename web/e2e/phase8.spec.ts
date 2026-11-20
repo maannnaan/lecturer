@@ -6,6 +6,11 @@ import { type Page, expect, test } from "@playwright/test";
 
 const PAPER = "অর্ধবার্ষিক পরীক্ষা: বলবিদ্যা";
 
+const SHOTS = process.env.SHOTS_DIR;
+async function shot(page: Page, name: string) {
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true });
+}
+
 async function teacherLogin(page: Page) {
   await page.goto("/login");
   await page.getByLabel("মোবাইল নম্বর বা ইমেইল").fill("01710000001");
@@ -78,4 +83,26 @@ test("scanned sheets are marked on the server and land on the teacher's results 
   // Signing out ends the app's session.
   expect((await request.post("/api/omr/logout", { headers: auth() })).status()).toBe(204);
   expect((await request.get("/api/omr/papers", { headers: auth() })).status()).toBe(401);
+});
+
+test("the dashboard's scanner page hands out the app and lists the papers it will find", async ({ page }) => {
+  await teacherLogin(page);
+  await page.getByRole("complementary", { name: "মেনু" }).getByRole("link", { name: "স্ক্যানার অ্যাপ" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/scanner$/);
+  await expect(page.getByRole("link", { name: "অ্যাপ ডাউনলোড (Android)" })).toHaveAttribute("href", "https://github.com/maannnaan/OMR/releases/latest/download/omr-scanner.apk");
+  const papers = page.getByRole("region", { name: "অ্যাপে যে প্রশ্নপত্রগুলো পাবেন" });
+  await expect(papers.getByRole("listitem").filter({ hasText: PAPER })).toContainText(/^P-\d+/);
+  await shot(page, "dashboard-scanner-1280");
+});
+
+test.describe("on a phone", () => {
+  test.use({ viewport: { width: 360, height: 780 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+
+  test("the scanner page fits a 360px screen", async ({ page }) => {
+    await teacherLogin(page);
+    await page.goto("/dashboard/scanner");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - 360)).toBeLessThanOrEqual(0);
+    await shot(page, "dashboard-scanner-360");
+  });
 });

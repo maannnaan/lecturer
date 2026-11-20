@@ -174,13 +174,12 @@ test.describe("on a phone", () => {
     await expect(page).toHaveURL(/\/dashboard$/);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - 360)).toBeLessThanOrEqual(0);
     await shot(page, "dashboard-360");
-    // The phone menu holds every section, with what's coming folded away.
+    // The phone menu holds every section.
     await page.locator("summary[aria-label='মেনু']").click();
-    await expect(page.getByRole("navigation", { name: "মেনু" }).getByRole("link", { name: "প্রশ্নব্যাংক" })).toBeVisible();
-    await expect(page.getByRole("navigation", { name: "মেনু" }).getByRole("link", { name: "শিক্ষার্থী তালিকা" })).toBeVisible();
-    await expect(page.getByRole("navigation", { name: "মেনু" }).getByText("স্ক্যানার অ্যাপ")).toBeHidden();
-    await page.getByRole("navigation", { name: "মেনু" }).getByText("শীঘ্রই আসছে").click();
-    await expect(page.getByRole("navigation", { name: "মেনু" }).getByText("স্ক্যানার অ্যাপ")).toBeVisible();
+    const menu = page.getByRole("navigation", { name: "মেনু" });
+    for (const section of ["প্রশ্নব্যাংক", "শিক্ষার্থী তালিকা", "প্রশ্নপত্র", "স্ক্যানার অ্যাপ"]) {
+      await expect(menu.getByRole("link", { name: section, exact: true })).toBeVisible();
+    }
   });
 });
 
