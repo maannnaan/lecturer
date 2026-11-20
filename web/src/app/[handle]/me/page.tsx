@@ -4,11 +4,12 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowRight, LogOut, Radio } from "lucide-react";
 import { PendingButton } from "@/components/form";
 import { paymentFor } from "@/components/receipt";
-import { formatDate, formatNumber, formatTaka, getDictionary } from "@/i18n";
+import { formatDate, formatMarks, formatNumber, formatTaka, formatYear, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { getCurrentStudent } from "@/server/auth/current";
 import { getDb } from "@/server/db";
 import { listEnrollments } from "@/server/enrollments";
+import { listStudentPaperResults } from "@/server/paper-results";
 import { listDues, listPayments } from "@/server/payments";
 import { getSite } from "../data";
 import { logoutStudentAction } from "../student-actions";
@@ -32,11 +33,13 @@ export default async function StudentHomePage({ params, searchParams }: { params
   const t = d.site.student;
   const home = `/${teacher.handle}`;
   const db = await getDb();
-  const [enrollments, dues, payments] = await Promise.all([
+  const [enrollments, dues, payments, results] = await Promise.all([
     listEnrollments(db, teacher.id, { studentId: student.id }),
     listDues(db, teacher.id, { studentId: student.id, all: true }),
     listPayments(db, teacher.id, { studentId: student.id, limit: 30 }),
+    listStudentPaperResults(db, teacher.id, student.id),
   ]);
+  const marks = (hundredths: number) => formatMarks(hundredths, locale);
   const dueOf = new Map(dues.map((due) => [due.enrollmentId, due]));
   const p = d.dashboard.payments;
   const justPaid = Boolean((await searchParams).paid);
@@ -130,6 +133,36 @@ export default async function StudentHomePage({ params, searchParams }: { params
             </ul>
           )}
         </section>
+
+        {/* Results of the teacher's papers, once the teacher has published them. */}
+        {results.length > 0 && (
+          <section className="card p-5 sm:p-6" aria-labelledby="my-results">
+            <h2 id="my-results" className="text-xl">
+              {t.myResults}
+            </h2>
+            <ul className="mt-2 divide-y divide-line">
+              {results.map((result) => (
+                <li key={result.paperId} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-3.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-ink">{result.title}</p>
+                    <p className="text-[14px] text-muted">
+                      {t.resultFacts(formatYear(result.setCode, locale), formatNumber(result.rank, locale), formatNumber(result.of, locale))}
+                    </p>
+                    <p className="text-[14px] text-ink-2">
+                      {[
+                        t.mcqMarks(marks(result.scoreHundredths), marks(result.mcqTotalHundredths)),
+                        result.writtenHundredths !== null && t.writtenMarks(marks(result.writtenHundredths)),
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  </div>
+                  <b className="font-num text-[19px] text-ink">{t.totalMarks(marks(result.totalHundredths))}</b>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <section className="card p-5 sm:p-6" aria-labelledby="my-payments">
           <h2 id="my-payments" className="text-xl">

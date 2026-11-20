@@ -1,12 +1,13 @@
 import { randomInt } from "node:crypto";
 import { type SQL, and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { isUuid } from "@/lib/ids";
-import { MAX_PAPER_MCQS, MAX_PAPER_WRITTEN, type PaperInput, setKey, setOrder } from "@/lib/papers";
+import { decodeMarks, gradeSheet } from "@/lib/omr";
+import { MAX_PAPER_MCQS, MAX_PAPER_WRITTEN, type PaperInput, setCodes, setKey, setOrder } from "@/lib/papers";
 import { type BankTab, OPTION_COUNT, type QuestionType, isMcq, tabTypes } from "@/lib/questions";
 import type { Database } from "@/server/db";
-import { type PaperQuestionSnapshot, batches, courses, paperQuestions, papers, questions, teachers } from "@/server/db/schema";
+import { type PaperQuestionSnapshot, batches, courses, paperQuestions, paperResults, papers, questions, teachers } from "@/server/db/schema";
 import { ownCourseAndBatch } from "./exams";
-import { renumber, swapped } from "./ordering";
+import { type Tx, renumber, swapped } from "./ordering";
 
 // Question papers to print. Every function takes the teacher's id and filters on it. A draft's
 // questions are read from the bank as they are now; making a paper final freezes them, and with
@@ -71,17 +72,51 @@ export async function createPaper(db: Database, teacherId: string, input: PaperI
   });
 }
 
+/** Whether any answer sheet of the paper is in: from then on it stays final, and its audience stays as it is. */
+export async function hasResults(db: Database | Tx, paperId: string): Promise<boolean> {
+  if (!isUuid(paperId)) return false;
+  const [row] = await db.select({ id: paperResults.id }).from(paperResults).where(eq(paperResults.paperId, paperId)).limit(1);
+  return Boolean(row);
+}
+
+/** Every set's answer key of a paper, by set code. */
+export async function paperKeys(db: Database, teacherId: string, paper: Paper): Promise<Map<number, number[]>> {
+  const sets = paperSets(paper, await listPaperQuestions(db, teacherId, paper.id), setCodes(paper));
+  return new Map(sets.map((set) => [set.code, set.key]));
+}
+
+/** Marks every sheet of a paper again from what was marked on it: after the paper's marking changed. */
+export async function regradePaper(db: Database, teacherId: string, paper: Paper): Promise<void> {
+  const keys = await paperKeys(db, teacherId, paper);
+  const rows = await db
+    .select({ id: paperResults.id, setCode: paperResults.setCode, marks: paperResults.marks })
+    .from(paperResults)
+    .where(and(eq(paperResults.paperId, paper.id), eq(paperResults.teacherId, teacherId)));
+  if (rows.length === 0) return;
+  await db.transaction(async (tx) => {
+    for (const row of rows) {
+      const score = gradeSheet(decodeMarks(row.marks), keys.get(row.setCode) ?? [], paper);
+      await tx
+        .update(paperResults)
+        .set({ correct: score.correct, wrong: score.wrong, blank: score.blank, doubled: score.double, scoreHundredths: score.scoreHundredths })
+        .where(eq(paperResults.id, row.id));
+    }
+  });
+}
+
 /**
  * Changes a paper's settings. A final paper may already be printed, so what decides its sets (how
- * many, and what is shuffled) stays as it was; its header, marking and audience can still change.
+ * many, and what is shuffled) stays as it was; once its sheets are coming in, so does who it is
+ * for (their rolls name the sheets). Its header and marking can still change: a change in the
+ * marking marks every sheet again.
  */
 export async function updatePaper(db: Database, teacherId: string, paperId: string, input: PaperInput): Promise<{ ok: true; paper: Paper } | { ok: false; reason: PaperRefusal }> {
   const current = await getPaper(db, teacherId, paperId);
   if (!current) return { ok: false, reason: "missing" };
-  const settings =
-    current.status === "final"
-      ? { ...input, setCount: current.setCount, shuffleQuestions: current.shuffleQuestions, shuffleOptions: current.shuffleOptions }
-      : input;
+  const resulted = current.status === "final" && (await hasResults(db, paperId));
+  let settings = input;
+  if (current.status === "final") settings = { ...settings, setCount: current.setCount, shuffleQuestions: current.shuffleQuestions, shuffleOptions: current.shuffleOptions };
+  if (resulted) settings = { ...settings, courseId: current.courseId, batchId: current.batchId };
   const problem = await ownCourseAndBatch(db, teacherId, settings.courseId, settings.batchId);
   if (problem) return { ok: false, reason: problem };
   const [paper] = await db
@@ -89,6 +124,7 @@ export async function updatePaper(db: Database, teacherId: string, paperId: stri
     .set(settings)
     .where(and(eq(papers.id, paperId), eq(papers.teacherId, teacherId)))
     .returning();
+  if (resulted && (paper.markHundredths !== current.markHundredths || paper.negativeHundredths !== current.negativeHundredths)) await regradePaper(db, teacherId, paper);
   return { ok: true, paper };
 }
 
@@ -262,10 +298,14 @@ export async function finalizePaper(db: Database, teacherId: string, paperId: st
   });
 }
 
-/** Takes a final paper back to a draft: its questions follow the bank again, and can change. */
-export async function reopenPaper(db: Database, teacherId: string, paperId: string): Promise<boolean> {
+/**
+ * Takes a final paper back to a draft: its questions follow the bank again, and can change. Not
+ * once any sheet is in: those were marked against its sets as they are.
+ */
+export async function reopenPaper(db: Database, teacherId: string, paperId: string): Promise<boolean | "locked"> {
   const paper = await getPaper(db, teacherId, paperId);
   if (!paper) return false;
+  if (await hasResults(db, paperId)) return "locked";
   await db.transaction(async (tx) => {
     await tx.update(paperQuestions).set({ snapshot: null }).where(eq(paperQuestions.paperId, paperId));
     await tx.update(papers).set({ status: "draft", finalizedAt: null }).where(eq(papers.id, paperId));

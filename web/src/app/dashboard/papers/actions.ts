@@ -3,19 +3,23 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import type { FormState } from "@/components/form";
-import { formatNumber, getDictionary } from "@/i18n";
+import { formatMarks, formatNumber, formatRoll, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
+import { parseHundredths } from "@/lib/exams";
 import { type Input, formInput } from "@/lib/form-input";
-import { parsePaper } from "@/lib/papers";
+import { parsePaper, parseResult } from "@/lib/papers";
 import { SECTION_TABS, type SectionTab } from "@/lib/questions";
 import { requireTeacher } from "@/server/auth/current";
 import { getDb } from "@/server/db";
+import { deleteResult, saveResult, setResultsPublished, setWrittenMarks } from "@/server/paper-results";
 import {
   type PaperRefusal,
   addPaperQuestions,
   createPaper,
   deletePaper,
   finalizePaper,
+  getPaper,
+  listPaperQuestions,
   movePaperQuestion,
   randomPaperQuestionIds,
   removePaperQuestion,
@@ -98,6 +102,57 @@ export async function finalizePaperAction(formData: FormData) {
   const paperId = String(formData.get("paperId") ?? "");
   if (formData.get("reopen") === "1") await reopenPaper(db, teacher.id, paperId);
   else await finalizePaper(db, teacher.id, paperId);
+  refresh();
+}
+
+/**
+ * One answer sheet typed in by the teacher, marked at once against its set's key. Answers back
+ * with a line saying whose it is and what it scored, and the set chosen, for the next sheet.
+ */
+export async function saveResultAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const teacher = await requireTeacher();
+  const db = await getDb();
+  const input = formInput(formData);
+  const locale = await getLocale();
+  const d = getDictionary(locale);
+  const r = d.dashboard.papers.results;
+  const paper = await getPaper(db, teacher.id, String(input.paperId ?? ""));
+  if (!paper) return { errors: {}, formError: d.errors.generic };
+  if (paper.status !== "final") return { errors: {}, formError: r.notFinal, values: keep(input) };
+  const mcqCount = (await listPaperQuestions(db, teacher.id, paper.id)).filter((q) => q.section === "mcq" && q.question).length;
+  const { result, errors } = parseResult(input, paper, mcqCount);
+  const refusedForm = await refused(errors, input);
+  if (refusedForm) return refusedForm;
+  const saved = await saveResult(db, teacher.id, paper.id, { ...result, source: "manual" });
+  if (!saved.ok) {
+    if (saved.reason === "set") return (await refused({ setCode: "invalid" }, input))!;
+    return { errors: {}, formError: saved.reason === "notFinal" ? r.notFinal : d.errors.generic, values: keep(input) };
+  }
+  refresh();
+  const score = d.dashboard.exams.outOf(formatMarks(saved.result.scoreHundredths, locale), formatMarks(mcqCount * paper.markHundredths, locale));
+  return { ok: true, errors: {}, values: { line: r.savedLine(formatRoll(result.roll, locale), saved.name ?? r.nobody, score), setCode: String(result.setCode) } };
+}
+
+/** A sheet's marks for the written part; left empty, they are taken back. Marks that aren't a number change nothing. */
+export async function setWrittenAction(formData: FormData) {
+  const teacher = await requireTeacher();
+  const raw = String(formData.get("written") ?? "").trim();
+  const hundredths = raw ? parseHundredths(raw, 100_000) : null;
+  if (raw && hundredths === null) return;
+  await setWrittenMarks(await getDb(), teacher.id, String(formData.get("resultId") ?? ""), hundredths);
+  refresh();
+}
+
+export async function deleteResultAction(formData: FormData) {
+  const teacher = await requireTeacher();
+  await deleteResult(await getDb(), teacher.id, String(formData.get("resultId") ?? ""));
+  refresh();
+}
+
+/** Lets the paper's students see their results, or (with `hide`) stops it. */
+export async function publishResultsAction(formData: FormData) {
+  const teacher = await requireTeacher();
+  await setResultsPublished(await getDb(), teacher.id, String(formData.get("paperId") ?? ""), formData.get("hide") !== "1");
   refresh();
 }
 

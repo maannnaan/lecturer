@@ -20,7 +20,8 @@ export type FieldError =
   | "periodsTaken"
   | "txnTaken"
   | "pickMonths"
-  | "payMethodOff";
+  | "payMethodOff"
+  | "answers";
 
 export type FieldErrors = Record<string, FieldError>;
 

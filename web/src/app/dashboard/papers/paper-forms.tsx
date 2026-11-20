@@ -38,6 +38,7 @@ export type PaperFormText = {
   negativeHint: string;
   create: string;
   locked: string;
+  audienceLocked: string;
 };
 
 export type PaperValues = {
@@ -61,12 +62,16 @@ export type PaperValues = {
 
 type TextName = Exclude<keyof PaperValues, "id" | "shuffleQuestions" | "shuffleOptions">;
 
-/** Create a paper (no `paper`), or change one. With `locked` (a final paper), what decides its sets can't change and is shown as it is. */
+/**
+ * Create a paper (no `paper`), or change one. With `locked` (a final paper), what decides its sets
+ * can't change and is shown as it is; with `audienceLocked` (its sheets are coming in), nor can its course and batch.
+ */
 export function PaperForm({
   paper,
   defaults,
   courses,
   locked = false,
+  audienceLocked = false,
   t,
   c,
 }: {
@@ -74,6 +79,7 @@ export function PaperForm({
   defaults: Omit<PaperValues, "id">;
   courses: { id: string; title: string; batches: { id: string; label: string }[] }[];
   locked?: boolean;
+  audienceLocked?: boolean;
   t: PaperFormText;
   c: Common;
 }) {
@@ -90,7 +96,7 @@ export function PaperForm({
   return (
     <form action={action} className="card flex flex-col gap-5 p-5" noValidate>
       {paper && <input type="hidden" name="paperId" value={paper.id} />}
-      {locked && <p className="form-alert">{t.locked}</p>}
+      {locked && <p className="form-alert">{audienceLocked ? `${t.locked} ${t.audienceLocked}` : t.locked}</p>}
       <Field name="title" label={t.title} placeholder={t.titlePlaceholder} defaultValue={v("title")} error={e.title} required />
       <div className="grid gap-4 sm:grid-cols-2">
         <SelectField
@@ -98,6 +104,7 @@ export function PaperForm({
           label={t.course}
           defaultValue={courseId}
           error={e.courseId}
+          disabled={audienceLocked}
           onChange={(event) => setCourseId(event.target.value)}
           options={courses.map((course) => ({ value: course.id, label: course.title }))}
         />
@@ -107,9 +114,17 @@ export function PaperForm({
           label={t.batch}
           defaultValue={courseId === (paper?.courseId ?? defaults.courseId) ? v("batchId") : ""}
           error={e.batchId}
+          disabled={audienceLocked}
           options={[{ value: "", label: t.allBatches }, ...batches.map((b) => ({ value: b.id, label: b.label }))]}
         />
       </div>
+      {/* A disabled field isn't posted: when locked, its value goes along hidden. */}
+      {audienceLocked && (
+        <>
+          <input type="hidden" name="courseId" value={paper?.courseId} />
+          <input type="hidden" name="batchId" value={paper?.batchId} />
+        </>
+      )}
 
       <fieldset className="flex flex-col gap-4 border-t border-line pt-4">
         <legend className="panel-title pr-2">{t.headerTitle}</legend>

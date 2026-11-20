@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ChevronDown, ChevronUp, Eye, KeyRound, Lock, LockOpen, Printer, Trash2 } from "lucide-react";
+import { ArrowLeft, BarChart3, ChevronDown, ChevronUp, Eye, KeyRound, Lock, LockOpen, Printer, Trash2 } from "lucide-react";
 import { PendingButton } from "@/components/form";
 import { QuestionPicker } from "@/components/question-picker";
 import { RichContent } from "@/components/rich-content";
@@ -16,7 +16,7 @@ import { listSubjectsWithChapters } from "@/server/bank";
 import { listBatches } from "@/server/batches";
 import { listCourses } from "@/server/courses";
 import { getDb } from "@/server/db";
-import { type PaperQuestion, getPaper, listPaperQuestions } from "@/server/papers";
+import { type PaperQuestion, getPaper, hasResults, listPaperQuestions } from "@/server/papers";
 import { listChapterQuestions } from "@/server/questions";
 import { batchLabel } from "../../students/text";
 import { addPaperQuestionsAction, finalizePaperAction, movePaperQuestionAction, removePaperQuestionAction } from "../actions";
@@ -95,6 +95,8 @@ export default async function PaperPage({ params, searchParams }: { params: Prom
     listBatches(db, teacher.id),
   ]);
   const final = paper.status === "final";
+  // Once answer sheets are in, the paper stays final.
+  const resulted = final && (await hasResults(db, paper.id));
   const mcqs = list.filter((q) => q.section === "mcq");
   const written = list.filter((q) => q.section === "written");
 
@@ -124,26 +126,36 @@ export default async function PaperPage({ params, searchParams }: { params: Prom
             {[t.mcqCount(n(mcqs.length)), written.length > 0 && t.writtenCount(n(written.length)), t.setCount(n(paper.setCount))].filter(Boolean).join(" · ")}
           </p>
         </div>
-        <form action={finalizePaperAction}>
-          <input type="hidden" name="paperId" value={paper.id} />
-          {final ? (
-            <>
-              <input type="hidden" name="reopen" value="1" />
-              <PendingButton className="btn btn-ghost btn-sm">
-                <LockOpen aria-hidden="true" />
-                {t.reopen}
-              </PendingButton>
-            </>
-          ) : (
-            <PendingButton className="btn btn-primary btn-sm" disabled={list.length === 0}>
-              <Lock aria-hidden="true" />
-              {t.finalize}
-            </PendingButton>
+        <div className="flex flex-wrap gap-2">
+          {final && (
+            <Link href={`${base}/results`} className="btn btn-primary btn-sm">
+              <BarChart3 aria-hidden="true" />
+              {t.results.title}
+            </Link>
           )}
-        </form>
+          {!resulted && (
+            <form action={finalizePaperAction}>
+              <input type="hidden" name="paperId" value={paper.id} />
+              {final ? (
+                <>
+                  <input type="hidden" name="reopen" value="1" />
+                  <PendingButton className="btn btn-ghost btn-sm">
+                    <LockOpen aria-hidden="true" />
+                    {t.reopen}
+                  </PendingButton>
+                </>
+              ) : (
+                <PendingButton className="btn btn-primary btn-sm" disabled={list.length === 0}>
+                  <Lock aria-hidden="true" />
+                  {t.finalize}
+                </PendingButton>
+              )}
+            </form>
+          )}
+        </div>
       </header>
       <p className={final ? "form-ok" : "text-[15px] text-ink-2"} role="status">
-        {final ? t.finalNote : list.length === 0 ? t.needQuestions : t.draftHint}
+        {final ? (resulted ? `${t.finalNote} ${t.results.lockedNote}` : t.finalNote) : list.length === 0 ? t.needQuestions : t.draftHint}
       </p>
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
@@ -299,6 +311,7 @@ export default async function PaperPage({ params, searchParams }: { params: Prom
               paper={paperValues(paper)}
               defaults={paperValues(paper)}
               locked={final}
+              audienceLocked={resulted}
               courses={courses.map((course) => ({
                 id: course.id,
                 title: course.title,

@@ -852,6 +852,8 @@ export const papers = pgTable(
     negativeHundredths: integer("negative_hundredths").notNull().default(0),
     status: paperStatus("status").notNull().default("draft"),
     finalizedAt: timestamp("finalized_at", { withTimezone: true }),
+    /** When the teacher let students see their results; null while they can't. */
+    resultsPublishedAt: timestamp("results_published_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
@@ -879,4 +881,48 @@ export const paperQuestions = pgTable(
     snapshot: jsonb("snapshot").$type<PaperQuestionSnapshot>(),
   },
   (t) => [index("paper_questions_paper_idx").on(t.paperId, t.section, t.position), uniqueIndex("paper_questions_paper_question_key").on(t.paperId, t.questionId)],
+);
+
+/** How a sheet's marks came in: typed by the teacher, or read by the OMR Scanner app. */
+export const paperResultSource = pgEnum("paper_result_source", ["manual", "scanner"]);
+
+/**
+ * One answer sheet of a final paper: the roll on it (who that is comes from the course's rolls
+ * whenever it is read), its set, and what was marked on each MCQ, in the OMR app's mark string,
+ * so a scanned sheet and a typed one are kept alike. Its counts and score are worked out on the
+ * server from those marks and that set's key, never taken as sent.
+ */
+export const paperResults = pgTable(
+  "paper_results",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => teachers.id, { onDelete: "cascade" }),
+    paperId: uuid("paper_id")
+      .notNull()
+      .references(() => papers.id, { onDelete: "cascade" }),
+    /** Digits, without leading zeros, as rolls are kept. */
+    roll: text("roll").notNull(),
+    setCode: integer("set_code").notNull(),
+    /** One token per MCQ, comma separated: "2" option 2 · "-" blank · "d1.3" two marks. See src/lib/omr.ts. */
+    marks: text("marks").notNull().default(""),
+    correct: integer("correct").notNull().default(0),
+    wrong: integer("wrong").notNull().default(0),
+    blank: integer("blank").notNull().default(0),
+    /** Questions with two or more bubbles filled: wrong, under the board's rule. */
+    doubled: integer("doubled").notNull().default(0),
+    /** The MCQ score, in hundredths of a mark. */
+    scoreHundredths: integer("score_hundredths").notNull().default(0),
+    /** The written part's marks as the teacher gives them, in hundredths; null until given. */
+    writtenHundredths: integer("written_hundredths"),
+    source: paperResultSource("source").notNull().default("manual"),
+    scannedAt: timestamp("scanned_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [uniqueIndex("paper_results_paper_roll_key").on(t.paperId, t.roll), index("paper_results_teacher_idx").on(t.teacherId)],
 );

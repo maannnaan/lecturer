@@ -39,6 +39,7 @@ export function paperFormText(d: Dictionary, locale: Locale): PaperFormText {
     negativeHint: f.negativeHint,
     create: f.create,
     locked: f.locked,
+    audienceLocked: f.audienceLocked,
   };
 }
 

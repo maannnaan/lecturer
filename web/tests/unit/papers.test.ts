@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SETS_PER_PRINT, parsePaper, printRuns, printSets, setCodes, setKey, setOrder } from "@/lib/papers";
+import { SETS_PER_PRINT, parsePaper, parseResult, printRuns, printSets, rankResults, setCodes, setKey, setOrder } from "@/lib/papers";
 
 const paper = { seed: 12345, firstSet: 101, shuffleQuestions: true, shuffleOptions: true };
 /** Twenty four-option questions, the right answer cycling through ক–ঘ. */
@@ -82,6 +82,43 @@ describe("a paper's sets", () => {
     }
     // A question without an answer has none in the key.
     expect(setKey([{ id: "q0", answer: -1 }], setOrder([{ id: "q0", optionCount: 4 }], paper, 101))).toEqual([-1]);
+  });
+});
+
+describe("an answer sheet typed in", () => {
+  const sets = { firstSet: 101, setCount: 3 };
+  it("reads the roll, set, answers and written marks, Bangla digits and all", () => {
+    expect(parseResult({ roll: "০১২", setCode: "১০২", answers: "কখ-গ", written: "৮.৫" }, sets, 4)).toEqual({
+      result: { roll: "12", setCode: 102, marks: "0,1,-,2", writtenHundredths: 850 },
+      errors: {},
+    });
+    // Written marks left empty stay as they were.
+    expect(parseResult({ roll: "7", setCode: "101", answers: "ক" }, sets, 4).result.writtenHundredths).toBeUndefined();
+  });
+
+  it("refuses what doesn't fit", () => {
+    expect(parseResult({ roll: "", setCode: "101", answers: "" }, sets, 4).errors).toEqual({ roll: "required" });
+    expect(parseResult({ roll: "1", setCode: "104", answers: "" }, sets, 4).errors).toEqual({ setCode: "invalid" });
+    expect(parseResult({ roll: "1", setCode: "101", answers: "কখগঘক" }, sets, 4).errors).toEqual({ answers: "answers" });
+    expect(parseResult({ roll: "1", setCode: "101", answers: "কx" }, sets, 4).errors).toEqual({ answers: "answers" });
+    expect(parseResult({ roll: "1", setCode: "101", answers: "ক", written: "আট" }, sets, 4).errors).toEqual({ written: "number" });
+  });
+});
+
+describe("a paper's merit list", () => {
+  it("goes by the total, then the MCQs; equal on both share a place", () => {
+    const ranked = rankResults([
+      { roll: "3", totalHundredths: 400, scoreHundredths: 400 },
+      { roll: "1", totalHundredths: 450, scoreHundredths: 300 },
+      { roll: "2", totalHundredths: 400, scoreHundredths: 400 },
+      { roll: "4", totalHundredths: 400, scoreHundredths: 350 },
+    ]);
+    expect(ranked.map((row) => [row.roll, row.rank])).toEqual([
+      ["1", 1],
+      ["2", 2],
+      ["3", 2],
+      ["4", 4],
+    ]);
   });
 });
 

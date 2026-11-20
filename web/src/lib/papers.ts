@@ -1,6 +1,8 @@
 import { asciiDigits } from "./digits";
 import { attemptOrder, parseHundredths, seedOf } from "./exams";
 import { type FieldErrors, type Input, text } from "./form-input";
+import { encodeMarks, parseAnswers } from "./omr";
+import { parseRoll } from "./students";
 
 // Printed question papers: their settings as the teacher's form gives them, and the pure
 // arithmetic of their sets (each set's order of questions and options, and its answer key).
@@ -107,6 +109,44 @@ export function printSets(raw: string | undefined, paper: { firstSet: number; se
   const to = match[2] === undefined ? from : Number(match[2]);
   const picked = codes.filter((code) => code >= from && code <= to).slice(0, SETS_PER_PRINT);
   return picked.length > 0 ? picked : null;
+}
+
+/**
+ * One answer sheet as the teacher types it in: the roll, the set, the answers (see parseAnswers,
+ * no more than the paper's MCQs), and the written part's marks, which may be left for later.
+ */
+export function parseResult(input: Input, paper: { firstSet: number; setCount: number }, mcqCount: number) {
+  const errors: FieldErrors = {};
+  const roll = parseRoll(input.roll, errors);
+  if (!roll && !errors.roll) errors.roll = "required";
+  const setCode = Number(asciiDigits(input.setCode ?? "").trim());
+  if (!setCodes(paper).includes(setCode)) errors.setCode = "invalid";
+  const answers = parseAnswers(input.answers ?? "");
+  if (answers === null || answers.length > mcqCount) errors.answers = "answers";
+  const rawWritten = (input.written ?? "").trim();
+  const writtenHundredths = rawWritten ? parseHundredths(rawWritten, 100_000) : undefined;
+  if (writtenHundredths === null) errors.written = "number";
+  return {
+    result: { roll: roll ?? "", setCode, marks: encodeMarks(answers ?? []), writtenHundredths: writtenHundredths ?? undefined },
+    errors,
+  };
+}
+
+/**
+ * Places on a paper's merit list: by the total (the MCQs and the written part together), then by
+ * the MCQ score; equal on both share a place (1, 2, 2, 4). Within a place, by roll.
+ */
+export function rankResults<T extends { totalHundredths: number; scoreHundredths: number; roll: string }>(rows: T[]): (T & { rank: number })[] {
+  const sorted = [...rows].sort(
+    (a, b) => b.totalHundredths - a.totalHundredths || b.scoreHundredths - a.scoreHundredths || Number(a.roll) - Number(b.roll) || a.roll.localeCompare(b.roll),
+  );
+  const ranked: (T & { rank: number })[] = [];
+  sorted.forEach((row, i) => {
+    const before = ranked[i - 1];
+    const tie = before !== undefined && before.totalHundredths === row.totalHundredths && before.scoreHundredths === row.scoreHundredths;
+    ranked.push({ ...row, rank: tie ? before.rank : i + 1 });
+  });
+  return ranked;
 }
 
 /** A paper's sets in runs of SETS_PER_PRINT, for the print links: "101-110", "111-120", … */

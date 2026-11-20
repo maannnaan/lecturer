@@ -29,6 +29,7 @@ export function messages(e: Dictionary["errors"]): Record<FieldError, string> {
     txnTaken: e.txnTaken,
     pickMonths: e.pickMonths,
     payMethodOff: e.payMethodOff,
+    answers: e.answers,
   };
 }
 

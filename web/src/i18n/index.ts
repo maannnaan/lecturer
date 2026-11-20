@@ -28,6 +28,11 @@ export function formatYear(value: number, locale: Locale): string {
   return new Intl.NumberFormat(intlLocale(locale), { useGrouping: false }).format(value);
 }
 
+/** A roll number in the page's digits, never grouped: ১২৩৪৫, not ১২,৩৪৫. */
+export function formatRoll(roll: string, locale: Locale): string {
+  return /^\d{1,15}$/.test(roll) ? formatYear(Number(roll), locale) : roll;
+}
+
 const calendarDay = (iso: string) => new Date(`${iso}T00:00:00Z`);
 
 /**
