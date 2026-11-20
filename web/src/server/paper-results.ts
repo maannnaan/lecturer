@@ -37,42 +37,64 @@ export type Sheet = {
   scannedAt?: Date | null;
 };
 
+export type SavedSheet = { ok: true; result: PaperResult; name: string | null } | { ok: false; reason: "set" };
+
 /**
- * Saves one answer sheet of a final paper, marked against its set's key. A sheet for a roll the
- * paper already has replaces it (a sheet scanned or typed again). Returns it with the name of
- * the course's student who has that roll, if anyone does.
+ * Saves answer sheets of a final paper, each marked against its own set's key. A sheet for a roll
+ * the paper already has replaces it (a sheet scanned or typed again). Each comes back with the
+ * name of the course's student who has that roll, if anyone does; a sheet for a set the paper
+ * doesn't have is refused on its own, the others are still saved.
  */
+export async function saveResults(
+  db: Database,
+  teacherId: string,
+  paperId: string,
+  sheets: Sheet[],
+): Promise<{ ok: true; paper: Paper; saved: SavedSheet[] } | { ok: false; reason: Exclude<ResultRefusal, "set"> }> {
+  const paper = await getPaper(db, teacherId, paperId);
+  if (!paper) return { ok: false, reason: "missing" };
+  if (paper.status !== "final") return { ok: false, reason: "notFinal" };
+  const [keys, book] = await Promise.all([paperKeys(db, teacherId, paper), rollBook(db, paper)]);
+  const saved: SavedSheet[] = [];
+  for (const sheet of sheets) {
+    const key = keys.get(sheet.setCode);
+    if (!key) {
+      saved.push({ ok: false, reason: "set" });
+      continue;
+    }
+    const score = gradeSheet(decodeMarks(sheet.marks), key, paper);
+    const changes = {
+      setCode: sheet.setCode,
+      marks: sheet.marks,
+      correct: score.correct,
+      wrong: score.wrong,
+      blank: score.blank,
+      doubled: score.double,
+      scoreHundredths: score.scoreHundredths,
+      source: sheet.source ?? "manual",
+      scannedAt: sheet.scannedAt ?? null,
+      ...(sheet.writtenHundredths !== undefined ? { writtenHundredths: sheet.writtenHundredths } : {}),
+    };
+    const [result] = await db
+      .insert(paperResults)
+      .values({ teacherId, paperId, roll: sheet.roll, ...changes })
+      .onConflictDoUpdate({ target: [paperResults.paperId, paperResults.roll], set: { ...changes, updatedAt: new Date() } })
+      .returning();
+    saved.push({ ok: true, result, name: book.get(sheet.roll)?.name ?? null });
+  }
+  return { ok: true, paper, saved };
+}
+
+/** Saves one answer sheet of a final paper (see saveResults). */
 export async function saveResult(
   db: Database,
   teacherId: string,
   paperId: string,
   sheet: Sheet,
 ): Promise<{ ok: true; result: PaperResult; name: string | null } | { ok: false; reason: ResultRefusal }> {
-  const paper = await getPaper(db, teacherId, paperId);
-  if (!paper) return { ok: false, reason: "missing" };
-  if (paper.status !== "final") return { ok: false, reason: "notFinal" };
-  const key = (await paperKeys(db, teacherId, paper)).get(sheet.setCode);
-  if (!key) return { ok: false, reason: "set" };
-  const score = gradeSheet(decodeMarks(sheet.marks), key, paper);
-  const changes = {
-    setCode: sheet.setCode,
-    marks: sheet.marks,
-    correct: score.correct,
-    wrong: score.wrong,
-    blank: score.blank,
-    doubled: score.double,
-    scoreHundredths: score.scoreHundredths,
-    source: sheet.source ?? "manual",
-    scannedAt: sheet.scannedAt ?? null,
-    ...(sheet.writtenHundredths !== undefined ? { writtenHundredths: sheet.writtenHundredths } : {}),
-  };
-  const [result] = await db
-    .insert(paperResults)
-    .values({ teacherId, paperId, roll: sheet.roll, ...changes })
-    .onConflictDoUpdate({ target: [paperResults.paperId, paperResults.roll], set: { ...changes, updatedAt: new Date() } })
-    .returning();
-  const name = (await rollBook(db, paper)).get(sheet.roll)?.name ?? null;
-  return { ok: true, result, name };
+  const done = await saveResults(db, teacherId, paperId, [sheet]);
+  if (!done.ok) return done;
+  return done.saved[0];
 }
 
 /** Gives (or with null, takes back) a sheet's marks for the written part. */

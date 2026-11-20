@@ -58,6 +58,9 @@ export function parsePaper(input: Input) {
 }
 export type PaperInput = ReturnType<typeof parsePaper>["paper"];
 
+/** A paper's code, as the dashboard shows it and the OMR app lists it: "P-7". */
+export const paperCode = (paper: { number: number }) => `P-${paper.number}`;
+
 /** A paper's set codes, in order: 101, 102, … */
 export function setCodes(paper: { firstSet: number; setCount: number }): number[] {
   return Array.from({ length: Math.max(1, paper.setCount) }, (_, i) => paper.firstSet + i);

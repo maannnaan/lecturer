@@ -6,6 +6,7 @@ import { getLocale } from "@/i18n/server";
 import { requireTeacher } from "@/server/auth/current";
 import { listCourses } from "@/server/courses";
 import { getDb } from "@/server/db";
+import { paperCode } from "@/lib/papers";
 import { listPapers } from "@/server/papers";
 import { STATUS_BADGE } from "./text";
 
@@ -58,7 +59,9 @@ export default async function PapersPage() {
                   <b className="block font-semibold text-ink">{paper.title}</b>
                   <span className="block text-[14px] text-ink-2">{[paper.courseTitle, paper.batchName].filter(Boolean).join(" · ")}</span>
                   <span className="block text-[13.5px] text-muted">
-                    {[t.mcqCount(n(paper.mcqCount)), paper.writtenCount > 0 && t.writtenCount(n(paper.writtenCount)), t.setCount(n(paper.setCount))].filter(Boolean).join(" · ")}
+                    {[paperCode(paper), t.mcqCount(n(paper.mcqCount)), paper.writtenCount > 0 && t.writtenCount(n(paper.writtenCount)), t.setCount(n(paper.setCount))]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </span>
                 </span>
                 <span className={STATUS_BADGE[paper.status]}>{t.statuses[paper.status]}</span>

@@ -771,6 +771,23 @@ export const en: Dictionary = {
         lockedNote: "Answer sheets are in, so the paper can no longer go back to a draft.",
       },
     },
+    scanner: {
+      title: "Scanner app",
+      lead: "Scan OMR answer sheets with the phone's camera: marked against each set's key, then in one tap into the paper's results here.",
+      download: "Download the app (Android)",
+      downloadNote: "Runs on Android 8 or later. When the phone asks, allow installing from this source. The app is in English and prints its answer sheets in Bangla.",
+      stepsTitle: "How it works",
+      steps: [
+        { title: "Sign in", text: "In the app's Settings › Lecturer.bd, sign in with this account's mobile number and password." },
+        { title: "Bring in a paper", text: "Exams › New exam › Import from Lecturer.bd: pick a final paper. Every set's key, the students' rolls and the answer sheet's layout come with it." },
+        { title: "Print and scan", text: "Print the answer sheets from the app. After the exam, hold the camera over each one in turn." },
+        { title: "Send the results", text: "Tap Upload results: the marks arrive in the paper's results here, marked again on the server. Written marks you gave stay as they are." },
+      ],
+      papersTitle: "Papers the app will find",
+      papersLead: "Final papers that have MCQs. The app can search them by code too.",
+      noPapers: "No final papers yet.",
+      toPapers: "Go to papers",
+    },
     payments: {
       title: "Payments and dues",
       lead: "Who paid what, who owes what, and checking the payments students report.",

@@ -1,6 +1,9 @@
 // What an answer sheet says, kept the way the OMR Scanner app keeps it (MarkCodec in its
 // omr/Model.kt), so a scanned sheet and one the teacher typed in are stored, and marked, alike.
 
+/** The OMR Scanner app's newest release, as its GitHub release workflow publishes it. */
+export const OMR_APP_URL = "https://github.com/maannnaan/OMR/releases/latest/download/omr-scanner.apk";
+
 /** A question left empty. */
 export const BLANK = -1;
 /** A question with two or more bubbles filled. */

@@ -9,7 +9,7 @@ import { boardTag } from "@/components/qbank/views";
 import { type Dictionary, type Locale, formatNumber, getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { chapterLabel } from "@/lib/chapter-label";
-import { printRuns, setCodes } from "@/lib/papers";
+import { paperCode, printRuns, setCodes } from "@/lib/papers";
 import { SECTION_TABS, type SectionTab } from "@/lib/questions";
 import { requireTeacher } from "@/server/auth/current";
 import { listSubjectsWithChapters } from "@/server/bank";
@@ -123,7 +123,7 @@ export default async function PaperPage({ params, searchParams }: { params: Prom
           <h1 className="page-title">{paper.title}</h1>
           <p className="page-lead flex flex-wrap items-center gap-2">
             <span className={STATUS_BADGE[paper.status]}>{t.statuses[paper.status]}</span>
-            {[t.mcqCount(n(mcqs.length)), written.length > 0 && t.writtenCount(n(written.length)), t.setCount(n(paper.setCount))].filter(Boolean).join(" · ")}
+            {[paperCode(paper), t.mcqCount(n(mcqs.length)), written.length > 0 && t.writtenCount(n(written.length)), t.setCount(n(paper.setCount))].filter(Boolean).join(" · ")}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
