@@ -1,14 +1,14 @@
 "use server";
 
 import { refresh } from "next/cache";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { FormState } from "@/components/form";
 import { getDictionary } from "@/i18n";
 import { getLocale } from "@/i18n/server";
 import { type FieldErrors, formInput } from "@/lib/form-input";
 import { isUuid } from "@/lib/ids";
-import { parseClaim } from "@/lib/payments";
+import { parseClaim, parseGatewayPay } from "@/lib/payments";
 import { normalizePhone } from "@/lib/phone";
 import { parseJoin, parsePassword } from "@/lib/students";
 import { sessionCookieOptions, studentCookie } from "@/server/auth/cookies";
@@ -18,6 +18,7 @@ import { createSession, revokeSession } from "@/server/auth/session";
 import { getDb } from "@/server/db";
 import { requestEnrollment } from "@/server/enrollments";
 import { saveAnswer, startAttempt, submitAttempt } from "@/server/exams";
+import { startGatewayPayment } from "@/server/gateway";
 import { claimPayment } from "@/server/payments";
 import { clearAttempts, takeAttempt } from "@/server/rate-limit";
 import { StudentPhoneTaken, createStudent, findStudentForLogin, setStudentPassword, studentPasswordHash } from "@/server/students";
@@ -163,6 +164,43 @@ export async function claimPaymentAction(_prev: FormState, formData: FormData): 
     return { errors: {}, formError: e.generic };
   }
   redirect(`/${teacher.handle}/me?paid=1`);
+}
+
+/** This site's own address, as the request reached it: where bKash sends a student back to. */
+async function siteOrigin(): Promise<string> {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  return `${proto.split(",")[0].trim()}://${host.split(",")[0].trim()}`;
+}
+
+/**
+ * The signed-in student pays for some months of a course of theirs through bKash: the payment is
+ * opened at bKash for the fee those months come to, and the student goes to bKash's page. They
+ * come back through /api/bkash/callback, where it settles itself.
+ */
+export async function startGatewayPaymentAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const input = formInput(formData);
+  const e = await errorTexts();
+  const teacher = await siteTeacher(input.handle);
+  if (!teacher) return { errors: {}, formError: e.generic };
+  const student = await getCurrentStudent(teacher.id);
+  if (!student) redirect(`/${teacher.handle}/login`);
+
+  const { pay, errors } = parseGatewayPay(input);
+  if (errors.months === "required") errors.months = "pickMonths";
+  const refusal = await refused(errors, input);
+  if (refusal) return refusal;
+
+  const db = await getDb();
+  if (!(await takeAttempt(db, `student-bkash:${student.id}`, 20, 3600))) return { errors: {}, formError: e.tooMany };
+  const result = await startGatewayPayment(db, teacher.id, student.id, pay, await siteOrigin());
+  if (!result.ok) {
+    if (result.reason === "periods" || result.reason === "periodsTaken") return (await refused({ months: "periodsTaken" }, input))!;
+    const t = getDictionary(await getLocale(teacher.locale)).site.student;
+    return { errors: {}, formError: result.reason === "bkash" ? t.bkashRefused(result.message ?? "") : result.reason === "off" ? t.bkashOff : e.generic, values: input as Record<string, string> };
+  }
+  redirect(result.url);
 }
 
 /** The signed-in student starts an exam (or goes back into the one they started): the clock is the server's. */

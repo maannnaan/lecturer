@@ -88,6 +88,41 @@ export function parseClaim(input: Input) {
 }
 export type ClaimInput = ReturnType<typeof parseClaim>["claim"];
 
+/** What a student pays through bKash: which periods of which course. The amount is the server's to work out, and bKash gives the transaction id. */
+export function parseGatewayPay(input: Input) {
+  const errors: FieldErrors = {};
+  const periods = periodsField(input, errors);
+  if (periods.length === 0 && !errors.months) errors.months = "required";
+  const enrollmentId = (input.enrollmentId ?? "").trim();
+  if (!enrollmentId) errors.enrollmentId = "required";
+  return { pay: { enrollmentId, periods }, errors };
+}
+export type GatewayPayInput = ReturnType<typeof parseGatewayPay>["pay"];
+
+/**
+ * A teacher's bKash merchant account (Tokenized Checkout) as the settings form gives it: test
+ * (sandbox) or live, and the four things bKash issues. A password or app secret left empty keeps
+ * the saved one; `saved` says whether there is one.
+ */
+export function parseGateway(input: Input, saved: boolean) {
+  const errors: FieldErrors = {};
+  const secret = (name: "password" | "appSecret") => {
+    const value = (input[name] ?? "").trim();
+    if (!value && !saved) errors[name] = "required";
+    else if (value.length > 300) errors[name] = "tooLong";
+    return value || null;
+  };
+  const gateway = {
+    mode: input.mode === "live" ? ("live" as const) : ("sandbox" as const),
+    username: text(input, "username", 120, errors, true),
+    appKey: text(input, "appKey", 200, errors, true),
+    password: secret("password"),
+    appSecret: secret("appSecret"),
+  };
+  return { gateway, errors };
+}
+export type GatewayInput = ReturnType<typeof parseGateway>["gateway"];
+
 /** Where students send money, as the teacher's settings form gives it. A number is a mobile number; the bank line is free text. */
 export function parsePaymentInfo(input: Input) {
   const errors: FieldErrors = {};

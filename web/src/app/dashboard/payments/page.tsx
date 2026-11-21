@@ -110,6 +110,13 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                       <dd className="font-semibold text-ink">{claim.senderNumber || "—"}</dd>
                     </div>
                   </dl>
+                  {/* A bKash payment comes here only when bKash's answer couldn't be had. */}
+                  {claim.method === "bkash_gateway" && (
+                    <p className="form-alert">
+                      {t.gateway.unconfirmed}
+                      {claim.note && ` (${claim.note})`}
+                    </p>
+                  )}
                   <div className="flex flex-wrap items-center gap-3">
                     <form action={verifyPaymentAction}>
                       <input type="hidden" name="paymentId" value={claim.id} />

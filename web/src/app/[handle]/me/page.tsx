@@ -42,7 +42,9 @@ export default async function StudentHomePage({ params, searchParams }: { params
   const marks = (hundredths: number) => formatMarks(hundredths, locale);
   const dueOf = new Map(dues.map((due) => [due.enrollmentId, due]));
   const p = d.dashboard.payments;
-  const justPaid = Boolean((await searchParams).paid);
+  // Back from paying: a reported payment, one bKash confirmed, or one bKash couldn't confirm.
+  const paid = (await searchParams).paid;
+  const paidNote = paid === "bkash" ? t.payDoneBkash : paid === "checking" ? t.payChecking : paid ? t.payDone : null;
   const details = [
     [t.phone, student.phone],
     [t.institution, student.institution],
@@ -168,9 +170,9 @@ export default async function StudentHomePage({ params, searchParams }: { params
           <h2 id="my-payments" className="text-xl">
             {t.history}
           </h2>
-          {justPaid && (
-            <p className="form-ok mt-3" role="status">
-              {t.payDone}
+          {paidNote && (
+            <p className={paid === "checking" ? "form-alert mt-3" : "form-ok mt-3"} role="status">
+              {paidNote}
             </p>
           )}
           {payments.length === 0 ? (

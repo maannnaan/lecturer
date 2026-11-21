@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { Field, FormMessages, SelectField, SubmitButton, TextAreaField, emptyForm } from "@/components/form";
 import { type PeriodOption, PeriodFields } from "@/components/period-fields";
-import { applyAction, changePasswordAction, claimPaymentAction, joinAction, loginStudentAction } from "./student-actions";
+import { applyAction, changePasswordAction, claimPaymentAction, joinAction, loginStudentAction, startGatewayPaymentAction } from "./student-actions";
 
 // The forms of a student's account on a teacher's site. Their text arrives as plain strings: the
 // dictionaries hold functions too, which can't be handed to the browser.
@@ -153,6 +153,41 @@ export function PayForm({
       </div>
       <FormMessages state={state} saved="" />
       <SubmitButton pendingLabel={t.working}>{t.submit}</SubmitButton>
+    </form>
+  );
+}
+
+export type GatewayPayText = { months: string; total: string; submit: string; working: string };
+
+/**
+ * A student pays through bKash: they tick the months, then go to bKash's own page to pay. Nothing
+ * to type and nothing for the teacher to check; it confirms itself when they come back.
+ */
+export function GatewayPayForm({
+  handle,
+  enrollmentId,
+  options,
+  fee,
+  taka,
+  t,
+}: {
+  handle: string;
+  enrollmentId: string;
+  options: PeriodOption[];
+  fee: number;
+  taka: string[];
+  t: GatewayPayText;
+}) {
+  const [state, action] = useActionState(startGatewayPaymentAction, emptyForm);
+  return (
+    <form action={action} className="flex flex-col gap-5" noValidate>
+      <input type="hidden" name="handle" value={handle} />
+      <input type="hidden" name="enrollmentId" value={enrollmentId} />
+      <PeriodFields options={options} fee={fee} legend={t.months} error={state.errors.months} amountLabel={t.total} editable={false} taka={taka} />
+      <FormMessages state={state} saved="" />
+      <SubmitButton className="btn btn-bkash self-start" pendingLabel={t.working}>
+        {t.submit}
+      </SubmitButton>
     </form>
   );
 }

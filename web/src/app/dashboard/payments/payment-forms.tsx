@@ -1,10 +1,70 @@
 "use client";
 
 import { useActionState } from "react";
-import { Field, FormMessages, SelectField, SubmitButton, TextAreaField, emptyForm } from "@/components/form";
+import { Field, FormMessages, PendingButton, SelectField, SubmitButton, TextAreaField, emptyForm } from "@/components/form";
 import { type PeriodOption, PeriodFields } from "@/components/period-fields";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/payments";
-import { recordPaymentAction, savePaymentInfoAction } from "./actions";
+import { recordPaymentAction, removeGatewayAction, saveGatewayAction, savePaymentInfoAction } from "./actions";
+
+export type GatewayText = {
+  mode: string;
+  sandbox: string;
+  live: string;
+  username: string;
+  password: string;
+  appKey: string;
+  appSecret: string;
+  keepSaved: string;
+  save: string;
+  testing: string;
+  ok: string;
+};
+
+/**
+ * The teacher's bKash merchant account. The password and app secret are never shown again once
+ * saved: left empty, the saved ones stay.
+ */
+export function GatewayForm({ saved, t }: { saved: { mode: "sandbox" | "live"; username: string; appKey: string } | null; t: GatewayText }) {
+  const [state, action] = useActionState(saveGatewayAction, emptyForm);
+  const v = (name: "username" | "appKey") => state.values?.[name] ?? saved?.[name] ?? "";
+  const mode = state.values?.mode ?? saved?.mode ?? "sandbox";
+  const e = state.errors;
+  return (
+    <form action={action} className="flex flex-col gap-4" noValidate>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="field-label mb-1">{t.mode}</legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {(["sandbox", "live"] as const).map((value) => (
+            <label key={value} className="choice">
+              <input type="radio" name="mode" value={value} defaultChecked={mode === value} />
+              <span>{t[value]}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field name="username" label={t.username} defaultValue={v("username")} error={e.username} autoComplete="off" spellCheck={false} required />
+        <Field name="password" type="password" label={t.password} placeholder={saved ? t.keepSaved : undefined} error={e.password} autoComplete="new-password" required={!saved} />
+        <Field name="appKey" label={t.appKey} defaultValue={v("appKey")} error={e.appKey} autoComplete="off" spellCheck={false} required />
+        <Field name="appSecret" type="password" label={t.appSecret} placeholder={saved ? t.keepSaved : undefined} error={e.appSecret} autoComplete="new-password" required={!saved} />
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <SubmitButton className="btn btn-primary" pendingLabel={t.testing}>
+          {t.save}
+        </SubmitButton>
+        <FormMessages state={state} saved={t.ok} />
+      </div>
+    </form>
+  );
+}
+
+export function RemoveGatewayForm({ label }: { label: string }) {
+  return (
+    <form action={removeGatewayAction}>
+      <PendingButton className="btn btn-danger btn-sm">{label}</PendingButton>
+    </form>
+  );
+}
 
 // The dashboard's payment forms. Their text arrives as plain strings (the dictionaries hold
 // functions too, which can't be handed to the browser).

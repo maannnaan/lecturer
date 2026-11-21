@@ -410,6 +410,12 @@ export const payments = pgTable(
     /** The number the money was sent from, or "". */
     senderNumber: text("sender_number").notNull().default(""),
     gatewayPaymentId: text("gateway_payment_id").notNull().default(""),
+    /**
+     * A pending bKash gateway payment's stage: "" while the student is at bKash's page, "checking"
+     * once they are back and it is being confirmed, "unconfirmed" when bKash's answer couldn't be
+     * had: then the teacher checks their merchant account and verifies or rejects it.
+     */
+    gatewayState: text("gateway_state").notNull().default(""),
     receiptNo: integer("receipt_no"),
     /** The teacher's note, or why a claim was rejected (shown to the student). */
     note: text("note").notNull().default(""),
@@ -448,6 +454,40 @@ export const paymentMonths = pgTable(
   },
   (t) => [uniqueIndex("payment_months_enrollment_month_key").on(t.enrollmentId, t.month), index("payment_months_payment_idx").on(t.paymentId)],
 );
+
+/** A bKash merchant account in bKash's test system (sandbox) or the real one (live). */
+export const gatewayMode = pgEnum("gateway_mode", ["sandbox", "live"]);
+
+/**
+ * A teacher's own bKash merchant account (Tokenized Checkout), so their students can pay through
+ * bKash and the payment confirms itself. The password and app secret are kept sealed
+ * (src/server/crypto.ts, with the server's SECRETS_KEY), and so are the tokens bKash hands out: a
+ * token is reused until it runs out, since bKash refuses more than two new ones an hour.
+ */
+export const teacherGateways = pgTable("teacher_gateways", {
+  teacherId: uuid("teacher_id")
+    .primaryKey()
+    .references(() => teachers.id, { onDelete: "cascade" }),
+  mode: gatewayMode("mode").notNull().default("sandbox"),
+  username: text("username").notNull(),
+  appKey: text("app_key").notNull(),
+  passwordSealed: text("password_sealed").notNull(),
+  appSecretSealed: text("app_secret_sealed").notNull(),
+  /** Offered to students: true once bKash has accepted the account. */
+  enabled: boolean("enabled").notNull().default(false),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  idTokenSealed: text("id_token_sealed"),
+  tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
+  refreshTokenSealed: text("refresh_token_sealed"),
+  refreshExpiresAt: timestamp("refresh_expires_at", { withTimezone: true }),
+  /** When new tokens were last asked for (ISO times, the last two): bKash blocks a third within the hour. */
+  tokenCalls: jsonb("token_calls").$type<string[]>().notNull().default([]),
+  createdAt: createdAt(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
 
 /** A notice on the teacher's website: a class moved, results out, admissions open. */
 export const notices = pgTable(

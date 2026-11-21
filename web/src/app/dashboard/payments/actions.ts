@@ -3,12 +3,50 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import type { FormState } from "@/components/form";
+import { formatDateTime, getDictionary } from "@/i18n";
+import { getLocale } from "@/i18n/server";
 import { formInput } from "@/lib/form-input";
-import { parsePayment, parsePaymentInfo } from "@/lib/payments";
+import { parseGateway, parsePayment, parsePaymentInfo } from "@/lib/payments";
 import { requireTeacher } from "@/server/auth/current";
 import { getDb } from "@/server/db";
+import { getGatewayView, removeGateway, saveGateway } from "@/server/gateway";
 import { cancelPayment, recordPayment, setPaymentInfo, verifyPayment } from "@/server/payments";
 import { errorTexts, refused } from "../form-state";
+
+/**
+ * The teacher's bKash merchant account: saved, then tried with bKash at once. The password and
+ * app secret never go back to the browser, not even when the form is refused.
+ */
+export async function saveGatewayAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const teacher = await requireTeacher();
+  const input = formInput(formData);
+  const typed = { ...input, password: "", appSecret: "" };
+  const db = await getDb();
+  const saved = await getGatewayView(db, teacher.id);
+  const { gateway, errors } = parseGateway(input, saved !== null);
+  const refusal = await refused(errors, typed);
+  if (refusal) return refusal;
+
+  const result = await saveGateway(db, teacher.id, gateway);
+  refresh();
+  if (result.ok) return { ok: true, errors: {} };
+  const locale = await getLocale();
+  const t = getDictionary(locale).dashboard.payments.gateway;
+  const message = {
+    secrets: t.notReady,
+    missing: t.retype,
+    rate: t.rate(result.retryAt ? formatDateTime(result.retryAt, locale) : ""),
+    bkash: t.refused(result.message ?? ""),
+  }[result.reason];
+  return { errors: {}, formError: message, values: Object.fromEntries(Object.entries(typed).map(([k, v]) => [k, v ?? ""])) };
+}
+
+/** Takes the teacher's bKash account away: students go back to sending money and reporting it. */
+export async function removeGatewayAction() {
+  const teacher = await requireTeacher();
+  await removeGateway(await getDb(), teacher.id);
+  refresh();
+}
 
 // Payments. Each action re-reads the session and passes the teacher's own id down: the data layer
 // then refuses a student, enrolment or payment that isn't theirs.

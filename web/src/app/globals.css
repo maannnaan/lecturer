@@ -280,6 +280,9 @@
   .btn-ghost { background: var(--lb-surface); border-color: var(--lb-line-strong); color: var(--lb-ink); }
   .btn-ghost:hover:not(:disabled) { border-color: var(--lb-primary); }
   .btn-soft { background: var(--lb-primary-soft); color: var(--lb-primary-text); }
+  /* Paying through bKash: bKash's own pink, so it is known at a glance (white on it: 6.1 : 1). */
+  .btn-bkash { background: #e2136e; color: #fff; box-shadow: var(--lb-shadow-btn); }
+  .btn-bkash:hover:not(:disabled) { background: #c40f5f; }
   .btn-danger { background: var(--lb-surface); border-color: var(--lb-line-strong); color: var(--lb-bad); }
   .btn-danger:hover:not(:disabled) { border-color: var(--lb-bad); }
   .btn-sm { height: 38px; padding: 0 14px; font-size: 14px; }

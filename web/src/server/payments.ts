@@ -1,4 +1,4 @@
-import { type SQL, and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { type SQL, and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { type FeePlan, ONCE, duesOf, payablePeriods } from "@/lib/dues";
 import { isUuid } from "@/lib/ids";
 import type { ClaimInput, PaymentInput, PaymentStatus } from "@/lib/payments";
@@ -26,7 +26,7 @@ export type PayResult =
   | { ok: false; reason: "student" | "enrollment" | "periods" | "periodsTaken" | "txnTaken" | "method" };
 
 /** An enrolment of this teacher's, with how its course is paid for. */
-async function feePlan(db: Database | Tx, teacherId: string, enrollmentId: string) {
+export async function feePlan(db: Database | Tx, teacherId: string, enrollmentId: string) {
   if (!isUuid(enrollmentId)) return null;
   const [row] = await db
     .select({
@@ -45,19 +45,53 @@ async function feePlan(db: Database | Tx, teacherId: string, enrollmentId: strin
 }
 
 /** The periods of an enrolment some payment already covers (a rejected payment's are freed as it is rejected). */
-async function coveredPeriods(db: Database | Tx, enrollmentId: string): Promise<string[]> {
+export async function coveredPeriods(db: Database | Tx, enrollmentId: string): Promise<string[]> {
   const rows = await db.select({ month: paymentMonths.month }).from(paymentMonths).where(eq(paymentMonths.enrollmentId, enrollmentId));
   return rows.map((row) => row.month);
 }
 
 /** The next receipt number of the teacher's; never handed out twice. */
-async function nextReceipt(tx: Tx, teacherId: string): Promise<number> {
+export async function nextReceipt(tx: Tx, teacherId: string): Promise<number> {
   const [{ receiptNo }] = await tx
     .update(teachers)
     .set({ receiptCounter: sql`${teachers.receiptCounter} + 1` })
     .where(eq(teachers.id, teacherId))
     .returning({ receiptNo: teachers.receiptCounter });
   return receiptNo;
+}
+
+/**
+ * A bKash gateway payment still on its way: the student is at bKash's page, or back and being
+ * confirmed. Not a claim for the teacher to check; it settles itself (see src/server/gateway.ts).
+ */
+const inFlight = sql`(${payments.method} = 'bkash_gateway' and ${payments.gatewayState} in ('', 'checking'))`;
+
+/** A pending payment the teacher has to decide on: a student's claim, or a bKash payment bKash didn't confirm. */
+const awaitingTeacher = and(eq(payments.status, "pending"), sql`not ${inFlight}`)!;
+
+/** How long a bKash payment may stay on its way before it is given up (or, once back, handed to the teacher). */
+export const GATEWAY_PATIENCE_MS = 60 * 60_000;
+
+/**
+ * Gateway payments of the teacher's that never came back from bKash: failed, and their periods
+ * owed again. Nothing was taken for them: money moves only when bKash's payment is executed,
+ * which happens only once the student is back. `scope` narrows it to one enrolment (a new try
+ * replaces an old one at once) or to those older than a time. Ones that came back but whose
+ * confirmation was cut short go to the teacher instead ("unconfirmed"), never failed unasked.
+ */
+export async function abandonGatewayPayments(db: Database, teacherId: string, scope: { enrollmentId?: string; olderThan?: Date }): Promise<void> {
+  const mine: SQL[] = [eq(payments.teacherId, teacherId), eq(payments.method, "bkash_gateway"), eq(payments.status, "pending")];
+  if (scope.enrollmentId) mine.push(eq(payments.enrollmentId, scope.enrollmentId));
+  if (scope.olderThan) mine.push(sql`${payments.createdAt} < ${scope.olderThan}`);
+  await db.transaction(async (tx) => {
+    const gone = await tx
+      .update(payments)
+      .set({ status: "failed" })
+      .where(and(...mine, eq(payments.gatewayState, "")))
+      .returning({ id: payments.id });
+    if (gone.length > 0) await tx.delete(paymentMonths).where(inArray(paymentMonths.paymentId, gone.map((g) => g.id)));
+    if (scope.olderThan) await tx.update(payments).set({ gatewayState: "unconfirmed" }).where(and(...mine, eq(payments.gatewayState, "checking")));
+  });
 }
 
 /** Which rule a refused insert broke: the same transaction id twice, or a period already paid for. */
@@ -219,7 +253,10 @@ export type PaymentFilters = { status?: PaymentStatus; studentId?: string; limit
 /** The teacher's payments with their names and periods: claims oldest first (first come, first checked), the rest newest first. */
 export async function listPayments(db: Database, teacherId: string, filters: PaymentFilters = {}): Promise<PaymentRow[]> {
   const conditions: SQL[] = [eq(payments.teacherId, teacherId)];
-  if (filters.status) conditions.push(eq(payments.status, filters.status));
+  // "Pending" for the teacher means waiting on them: a bKash payment still on its way isn't. And a
+  // bKash try that didn't go through (no money moved) is no payment at all, unless asked for.
+  if (filters.status) conditions.push(filters.status === "pending" ? awaitingTeacher : eq(payments.status, filters.status));
+  else conditions.push(ne(payments.status, "failed"));
   if (filters.studentId !== undefined) {
     if (!isUuid(filters.studentId)) return [];
     conditions.push(eq(payments.studentId, filters.studentId));
@@ -256,12 +293,12 @@ export async function getPayment(db: Database, teacherId: string, paymentId: str
   return { ...payment, ...names, periods: periods.get(paymentId) ?? [] };
 }
 
-/** How many claims are waiting for the teacher. */
+/** How many payments are waiting for the teacher's decision. */
 export async function countPendingPayments(db: Database, teacherId: string): Promise<number> {
   const [{ total }] = await db
     .select({ total: count() })
     .from(payments)
-    .where(and(eq(payments.teacherId, teacherId), eq(payments.status, "pending")));
+    .where(and(eq(payments.teacherId, teacherId), awaitingTeacher));
   return Number(total);
 }
 
@@ -295,6 +332,8 @@ export async function listDues(
   filters: { studentId?: string; courseId?: string; batchId?: string; all?: boolean } = {},
   now: string = dhakaMonth(),
 ): Promise<Due[]> {
+  // A bKash payment abandoned at bKash's page gives its months back before anything is counted.
+  await abandonGatewayPayments(db, teacherId, { olderThan: new Date(Date.now() - GATEWAY_PATIENCE_MS) });
   const conditions: SQL[] = [eq(enrollments.teacherId, teacherId), eq(enrollments.status, "active")];
   for (const [column, id] of [
     [enrollments.studentId, filters.studentId],
